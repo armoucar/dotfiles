@@ -1,0 +1,234 @@
+"Use Vim settings, rather then Vi settings (much better!).
+"This must be first, because it changes other options as a side effect.
+set nocompatible
+
+"store lots of :cmdline history
+set history=1000
+
+" In right bottom corner (before ruler) little useful bits about actual state of keyboard input in normal are displayed.
+set showcmd
+
+" find the next match as we type the search
+set incsearch
+
+" hilight searches by default
+set hlsearch
+
+" add line numbers
+set number
+set showbreak=...
+set wrap linebreak nolist
+
+"add some line space for easy reading
+set linespace=4
+
+"disable beeping (aka "bell") and window flashing
+set visualbell t_vb=
+
+"turn off needless toolbar on gvim/mvim
+set guioptions-=T
+
+"indent settings
+set autoindent
+
+"fold (hide code) based on indent
+" zc will close a fold
+" zo will open a fold
+" za which will toggle the current fold
+" zR to open all folds
+" zM to close all folds
+set foldmethod=indent
+
+"dont fold by default
+set nofoldenable
+
+"make cmdline tab completion similar to bash
+set wildmode=list:longest
+
+"enable ctrl-n and ctrl-p to scroll thru matches
+set wildmenu
+
+"stuff to ignore when tab completing
+set wildignore=*.o,*.obj,*~
+
+"dont continue comments when pushing o/O
+set formatoptions-=o
+
+"vertical/horizontal scroll off settings
+set scrolloff=3
+set sidescrolloff=7
+set sidescroll=1
+
+"some stuff to get the mouse going in term
+set mouse=a
+set ttymouse=xterm2
+
+"Activate smartcase
+set ic
+set smartcase
+
+"hide buffers when not displayed
+set hidden
+
+colorscheme desert
+
+if has("gui_running")
+  "tell the term has 256 colors
+  au GUIEnter * set fullscreen
+  set t_Co=256
+  set guifont=Menlo:h22
+  set guitablabel=%M%t
+  set lines=40
+  set columns=115
+else
+  let g:CSApprox_loaded = 1
+  if $COLORTERM == 'gnome-terminal'
+    set term=gnome-256color
+    colorscheme railscasts
+  else
+    if $TERM == 'xterm'
+      set term=xterm-256color
+      colorscheme railscasts
+    else
+      colorscheme default
+    endif
+  endif
+endif
+
+" NERDTree mapping
+nmap <leader>p :NERDTreeToggle<CR>
+let NERDTreeIgnore=['\.swp$']
+
+"make <c-l> clear the highlight as well as redraw
+nmap <C-L> :nohls<CR>
+inoremap <C-L> <C-O>:nohls<CR>
+
+"make \b open CtrlPBuffer
+nnoremap <leader>b :CtrlPBuffer<CR>
+
+"make Y consistent with C and D
+nnoremap Y y$
+
+"mark syntax errors with :signs
+let g:syntastic_enable_signs=1
+
+"visual search mappings
+function! s:VSetSearch()
+    let temp = @@
+    norm! gvy
+    let @/ = '\V' . substitute(escape(@@, '\'), '\n', '\\n', 'g')
+    let @@ = temp
+endfunction
+vnoremap * :<C-u>call <SID>VSetSearch()<CR>//<CR>
+vnoremap # :<C-u>call <SID>VSetSearch()<CR>??<CR>
+
+" sets
+set directory=~/.vimtmp
+
+" To reduce how often you see the "Hit ENTER to continue" prompt
+set shortmess+=A
+
+set timeout
+set ttimeoutlen=100
+
+" used to customize the way whitespace characters are shown
+set listchars=tab:▸\ ,eol:¬
+
+set clipboard=unnamed
+set ts=2 sts=2 sw=2 expandtab
+
+" Yellow spaces
+" match Todo /\s\+$/
+
+" Shortcut to rapidly toggle `set list`
+nmap <leader>l :set list!<CR>
+
+" source $MYVIMRC reloads the saved $MYVIMRC
+nmap <Leader>s :source $MYVIMRC<CR>
+
+" opens $MYVIMRC for editing, or use :tabedit $MYVIMRC
+nmap <Leader>v :tabedit $MYVIMRC<CR>
+"
+" Invisible character colors
+highlight NonText guifg=#4a4a59
+highlight SpecialKey guifg=#4a4a59
+
+" Tab configurations
+" Use :Stab
+" Set tabstop, softtabstop and shiftwidth to the same value
+command! -nargs=* Stab call Stab()
+function! Stab()
+  let l:tabstop = 1 * input('set tabstop = softtabstop = shiftwidth = ')
+  if l:tabstop > 0
+    let &l:sts = l:tabstop
+    let &l:ts = l:tabstop
+    let &l:sw = l:tabstop
+  endif
+  call SummarizeTabs()
+endfunction
+
+function! SummarizeTabs()
+  try
+    echohl ModeMsg
+    echon 'tabstop='.&l:ts
+    echon ' shiftwidth='.&l:sw
+    echon ' softtabstop='.&l:sts
+    if &l:et
+      echon ' expandtab'
+    else
+      echon ' noexpandtab'
+    endif
+  finally
+    echohl None
+  endtry
+endfunction
+
+" Toggle diff view on the left, center, or right windows. Find 'DiffToggle' in
+" this file.
+nmap <silent> <leader>dl :call DiffToggle(1)<cr>
+nmap <silent> <leader>dc :call DiffToggle(2)<cr>
+nmap <silent> <leader>dr :call DiffToggle(3)<cr>
+
+" Disable one diff window during a three-way diff allowing you to cut out the
+" noise of a three-way diff and focus on just the changes between two versions
+" at a time. Inspired by Steve Losh's Splice
+function! DiffToggle(window)
+  " Save the cursor position and turn on diff for all windows
+  let l:save_cursor = getpos('.')
+  windo :diffthis
+  " Turn off diff for the specified window (but keep scrollbind) and move
+  " the cursor to the left-most diff window
+  exe a:window . "wincmd w"
+  diffoff
+  set scrollbind
+  set cursorbind
+  exe a:window . "wincmd " . (a:window == 1 ? "l" : "h")
+  " Update the diff and restore the cursor position
+  diffupdate
+  call setpos('.', l:save_cursor)
+endfunction
+
+"load ftplugins and indent files
+filetype plugin on
+filetype indent on
+
+"turn on syntax highlighting
+syntax on
+
+" let Vundle manage Vundle
+filetype off  " Vundle required!
+set rtp+=~/.vim/bundle/vundle/
+call vundle#rc()
+filetype plugin indent on " required!
+
+Bundle 'gmarik/vundle'
+Bundle 'akitaonrails/snipmate.vim'
+Bundle 'kien/ctrlp.vim'
+Bundle 'plasticboy/vim-markdown'
+Bundle 'scrooloose/nerdtree'
+Bundle 'scrooloose/syntastic'
+Bundle 'tpope/vim-fugitive'
+Bundle 'tpope/vim-ragtag'
+Bundle 'tpope/vim-surround'
+Bundle 'ervandew/supertab'
+Bundle 'mattn/gist-vim'
