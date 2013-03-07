@@ -128,13 +128,16 @@ set directory=~/.vimtmp
 " To reduce how often you see the "Hit ENTER to continue" prompt
 set shortmess+=A
 
-set timeout
-set ttimeoutlen=100
+" timeout keypress ('w' command sux)
+set timeout timeoutlen=100 ttimeoutlen=100
 
 " used to customize the way whitespace characters are shown
 set listchars=tab:▸\ ,eol:¬
 
-set clipboard=unnamed
+" clipboard mappings
+nnoremap y "+y
+vnoremap y "+y
+set clipboard=unnamedplus
 set ts=2 sts=2 sw=2 expandtab
 
 " Yellow spaces
@@ -221,11 +224,35 @@ set rtp+=~/.vim/bundle/vundle/
 call vundle#rc()
 filetype plugin indent on " required!
 
+" feature that change close or save commands when typing
+cab W w
+cab Q q
+cab Wq wq
+cab wQ wq
+cab WQ wq
+
+" next search in the middle of screen
+nmap n nzz
+nmap N Nzz
+
+" backup files folder
+set backup
+set backupdir=/tmp
+set dir=/tmp
+
+" New tab
+map <C-t> <Esc>:tabnew<CR>
+map <C-x> <Esc>:tabclose<CR>
+
+" Back to the last buff file
+nmap <C-e> :e#<CR>
+
 Bundle 'gmarik/vundle'
 Bundle 'akitaonrails/snipmate.vim'
 Bundle 'kien/ctrlp.vim'
 Bundle 'plasticboy/vim-markdown'
 Bundle 'scrooloose/nerdtree'
+Bundle 'scrooloose/nerdcommenter'
 Bundle 'scrooloose/syntastic'
 Bundle 'tpope/vim-fugitive'
 Bundle 'tpope/vim-ragtag'
