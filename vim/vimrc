@@ -70,16 +70,18 @@ set smartcase
 "hide buffers when not displayed
 set hidden
 
-colorscheme desert
+colorscheme railscasts
 
 if has("gui_running")
   "tell the term has 256 colors
-  au GUIEnter * set fullscreen
   set t_Co=256
-  set guifont=Menlo:h22
   set guitablabel=%M%t
-  set lines=40
-  set columns=115
+
+  if has("gui_mac") || has("gui_macvim")
+    set guifont=Menlo:h22
+  else
+    set guifont=Monospace\ Bold\ 14
+  endif
 else
   let g:CSApprox_loaded = 1
   if $COLORTERM == 'gnome-terminal'
