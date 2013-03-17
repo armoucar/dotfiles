@@ -64,7 +64,7 @@ set mouse=a
 set ttymouse=xterm2
 
 "Activate smartcase
-set ic
+set ignorecase
 set smartcase
 
 "hide buffers when not displayed
@@ -97,16 +97,28 @@ else
   endif
 endif
 
+" Forcing the use of hjkl keys to navigate
+nnoremap <Up> <nop>
+nnoremap <Down> <nop>
+nnoremap <Left> <nop>
+nnoremap <Right> <nop>
+
 " NERDTree mapping
 nmap <leader>p :NERDTreeToggle<CR>
 let NERDTreeIgnore=['\.swp$']
 
-"make <c-l> clear the highlight as well as redraw
+" make <c-l> clear the highlight as well as redraw
 nmap <C-L> :nohls<CR>
 inoremap <C-L> <C-O>:nohls<CR>
 
-"make \b open CtrlPBuffer
+" CtrlPBuffer
 nnoremap <leader>b :CtrlPBuffer<CR>
+set wildignore+=*/tmp/*,*.so,*.swp,*.zip
+let g:ctrlp_custom_ignore = {
+\ 'dir':  '\.git$\|\.hg$\|\.svn$',
+\ 'file': '\.exe$\|\.so$\|\.dll$',
+\ 'link': 'some_bad_symbolic_links',
+\ }
 
 "make Y consistent with C and D
 nnoremap Y y$
@@ -136,14 +148,17 @@ set timeout timeoutlen=100 ttimeoutlen=100
 " used to customize the way whitespace characters are shown
 set listchars=tab:▸\ ,eol:¬
 
-" clipboard mappings
-nnoremap y "+y
-vnoremap y "+y
-set clipboard=unnamedplus
-set ts=2 sts=2 sw=2 expandtab
+" Yanks go on clipboard instead.
+set clipboard=unnamed
+
+" Autoindent with two spaces, always expand tabs
+set tabstop=2
+set softtabstop=2
+set shiftwidth=2
+set expandtab
 
 " Yellow spaces
-" match Todo /\s\+$/
+match Todo /\s\+$/
 
 " Shortcut to rapidly toggle `set list`
 nmap <leader>l :set list!<CR>
@@ -250,7 +265,6 @@ map <C-x> <Esc>:tabclose<CR>
 nmap <C-e> :e#<CR>
 
 Bundle 'gmarik/vundle'
-Bundle 'akitaonrails/snipmate.vim'
 Bundle 'kien/ctrlp.vim'
 Bundle 'plasticboy/vim-markdown'
 Bundle 'scrooloose/nerdtree'
@@ -261,3 +275,12 @@ Bundle 'tpope/vim-ragtag'
 Bundle 'tpope/vim-surround'
 Bundle 'ervandew/supertab'
 Bundle 'mattn/gist-vim'
+Bundle 'flomotlik/vim-livereload'
+
+" Install dependencies for vim-snipmate
+Bundle "MarcWeber/vim-addon-mw-utils"
+Bundle "tomtom/tlib_vim"
+Bundle "honza/snipmate-snippets"
+
+" vim-snipmate
+Bundle "garbas/vim-snipmate"
