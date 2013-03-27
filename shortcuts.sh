@@ -4,6 +4,7 @@ alias l="ls -lhG"
 alias ll="ls -alhG"
 alias cd..="cd .."
 alias gitk="gitk --all 2>/dev/null &"
+alias mcc="mvn clean compile"
 
 #edit program config files
 alias eg="vim ~/.gitconfig"
