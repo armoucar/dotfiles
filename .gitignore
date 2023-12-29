@@ -1,0 +1,4 @@
+plugins/zsh-autosuggestions
+plugins/example
+themes/example*
+keys.zsh

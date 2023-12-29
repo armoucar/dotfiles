@@ -1,0 +1,11 @@
+{
+  "namespaces": [
+    "customer-service",
+    "neon-risk"
+  ],
+
+  "pods": {
+    "customer-service": ["neon-gpt"],
+    "neon-risk": ["bacen-cadoc3040", "bacen-cadoc3040-bff"]
+  }
+}
