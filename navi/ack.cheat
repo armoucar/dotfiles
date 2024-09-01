@@ -1,0 +1,4 @@
+% ack
+
+# double search
+ack -l '<search_string_a>' | xargs ack -l '<search_string_b>'

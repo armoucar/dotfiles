@@ -64,3 +64,5 @@ bindkey '^g' _navi_widget
 
 zle -N _navi_widget_clip
 bindkey '^h' _navi_widget_clip
+
+export NAVI_PATH='$HOME/.oh-my-zsh/custom/navi'

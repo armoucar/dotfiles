@@ -1,0 +1,15 @@
+% python
+
+# rm cache files
+find . | grep -E "(/__pycache__$|\.pyc$|\.pyo$)" | xargs rm -rf
+
+# watchmedo, watch, wmdpy
+watchmedo shell-command --recursive --patterns="*.py" --drop --command='printf "\33c"; python <python_file_path>' .
+
+# watchmedo, watch, pytest, wmdte, no coverage
+watchmedo shell-command --recursive --patterns="*.py" --drop --command='printf "\33c"; pytest <python_test_file_path>' .
+
+# watchmedo, watch, pytest, wmdteco, with coverage
+watchmedo shell-command --recursive --patterns="*.py" --drop --command='printf "\33c"; pytest <python_test_file_path> --cov=<testing_path> --cov-report html:tests/reports/html' .
+
+$ testing_path: echo $python_test_file_path | sed "s|tests/\(.*\)/test_.*|\1|"

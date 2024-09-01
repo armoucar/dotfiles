@@ -1,0 +1,31 @@
+% pyenv
+
+# Initialize a new project with Poetry
+poetry init
+
+# Install all dependencies specified in poetry.lock
+poetry install
+
+# Add a new package to your project dependencies
+poetry add <package-name>
+
+# Remove a package from your project dependencies
+poetry remove <package-name>
+
+# Update all dependencies to their latest versions
+poetry update
+
+# Build your project for publication
+poetry build
+
+# Publish your package to PyPI
+poetry publish
+
+# Run a command in the virtual environment created by Poetry
+poetry run command
+
+# Show information about the project's dependencies
+poetry show
+
+# Start a shell within the virtual environment
+poetry shell

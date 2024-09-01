@@ -1,0 +1,19 @@
+% pyenv
+
+# List all available Python versions
+pyenv install --list
+
+# Install a specific Python version (e.g., Python 3.9.1)
+pyenv install <version>
+
+# Set the global Python version (used system-wide in your shell)
+pyenv global <version>
+
+# Set a local Python version (for a specific project)
+pyenv local <version>
+
+# List all Python versions installed
+pyenv versions
+
+# Uninstall a Python version
+pyenv uninstall <version>
