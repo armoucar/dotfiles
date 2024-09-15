@@ -22,3 +22,9 @@ alias a-docker='printContentAfterMatch "## Aliases" $HOME/.oh-my-zsh/plugins/doc
 alias a-docker-compose='printContentAfterMatch "## Aliases" $HOME/.oh-my-zsh/plugins/docker-compose/README.md'
 alias a-git='printContentAfterMatch "## Aliases" $HOME/.oh-my-zsh/plugins/git/README.md'
 alias a-git-commit='printContentBetweenMatches "## Syntax" "- \`wip\`" $HOME/.oh-my-zsh/plugins/git-commit/README.md'
+alias agc='a-git-commit'
+
+ag() {
+  searchString="$1"
+  a-git | grep "$searchString" | awk -F'|' '{print $2 " -> " $3}'
+}

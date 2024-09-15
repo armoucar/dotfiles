@@ -6,6 +6,9 @@ find . | grep -E "(/__pycache__$|\.pyc$|\.pyo$)" | xargs rm -rf
 # watchmedo, watch, wmdpy
 watchmedo shell-command --recursive --patterns="*.py" --drop --command='printf "\33c"; python <python_file_path>' .
 
+# watchmedo, watch, wmdpipenvpy
+watchmedo shell-command --recursive --patterns="*.py" --drop --command='printf "\33c"; PYTHONPATH=. pipenv run python <python_file_path>' .
+
 # watchmedo, watch, pytest, wmdte, no coverage
 watchmedo shell-command --recursive --patterns="*.py" --drop --command='printf "\33c"; pytest <python_test_file_path>' .
 

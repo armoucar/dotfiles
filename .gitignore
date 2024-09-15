@@ -3,4 +3,5 @@ plugins/example
 themes/example*
 bin/tmp
 bin
-**/*-ign*
+private/*
+navi/_*
