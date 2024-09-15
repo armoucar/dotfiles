@@ -36,15 +36,15 @@ distractions, and optimizes the use of available tools.
 - **Screen a:** Postman
 - **Screen b:** Insomnia
 
-**7. Communication**
+**7. Async Communication**
 
 - **Screen a:** Slack & TextEdit (Draft.txt)
-- **Screen b:** Gmail
+- **Screen b:** Chrome Window -> Main Gmail
 
 **8. Meetings**
 
 - **Screen a:** Google Meet & TextEdit (Meet.txt)
-- **Screen b:** Calendar
+- **Screen b:** Chrome Window -> Main Calendar
 
 **9. Background Tools**
 
