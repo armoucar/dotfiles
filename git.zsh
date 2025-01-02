@@ -1,6 +1,7 @@
 #!/bin/bash
 
 alias ggpt="git push origin --tags"
+alias gbrprune='git checkout -q main && git for-each-ref refs/heads/ "--format=%(refname:short)" | while read branch; do mergeBase=$(git merge-base main $branch) && [[ $(git cherry main $(git commit-tree $(git rev-parse "$branch^{tree}") -p $mergeBase -m _)) == "-"* ]] && git branch -D $branch; done'
 
 # Function to automate git tagging
 increment_tag() {

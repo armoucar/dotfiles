@@ -6,6 +6,8 @@ alias ip="ifconfig | grep broadcast | sed 's/.*inet \(.*\) netmask.*/\1/'"
 alias cls='printf "\33c[3J"'
 alias ntl='ntl -A'
 alias tree='tree -I "__pycache__"'
+alias showpath="echo \$PATH | tr ':' '\n' | sort"
+alias alsg="als --groups"
 
 function fg() {
   ignored_folders=(.venv __pycache__ node_modules dist build)

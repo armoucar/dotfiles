@@ -1,0 +1,10 @@
+% dotnet
+
+# test with coverage
+dotnet test --collect:"XPlat Code Coverage"
+
+# test single, specific, one
+dotnet test --filter "FullyQualifiedName~<test_name>"
+
+# html coverage report
+reportgenerator -reports:<coverage_cobertura_xml> -targetdir:coverage-report -reporttypes:Html

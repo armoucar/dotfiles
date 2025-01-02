@@ -1,4 +1,4 @@
-% pyenv
+% poetry
 
 # Initialize a new project with Poetry
 poetry init

@@ -1,0 +1,7 @@
+% git
+
+# stash non-appsettings changes
+git stash push -m "Stashing non-appsettings changes" -- $(git ls-files --modified | grep -v 'appsettings')
+
+# rebase with current date / hide commit date
+git rebase -i origin/$(git_current_branch) --exec 'git commit --amend --no-edit --date=now'

@@ -1,0 +1,22 @@
+% gh, github
+
+# run staging workflow, deploy current branch to staging
+gh workflow run staging-workflow.yml --ref $(current_branch)
+
+# list workflow staging runs
+gh run list --workflow=staging-workflow.yml
+
+# list workflow staging runs in progress
+gh run list --workflow=staging-workflow.yml --status=in_progress
+
+# watch workflow staging runs in progress
+watch -n 5 gh run list --workflow=staging-workflow.yml --status in_progress
+
+# create wip pr and add sandbox label
+gh pr create --title "WIP: Initial Feature Update" --body "WIP: Initial PR setup for testing in the sandbox environment. Detailed description and title updates will be added later. This PR is currently for testing purposes only." && gh pr edit --add-label "sandbox"
+
+# open pr in browser, ghopr
+gh pr view --web
+
+# create pr with title and body, ghcpr
+gh pr create --title "<title>" --body "<body>"

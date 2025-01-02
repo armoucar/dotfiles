@@ -1,0 +1,23 @@
+{
+  "namespaces": [
+    "namespace1",
+    "namespace2",
+    "namespace3"
+  ],
+  "pods": {
+    "namespace1": [
+      "pod1",
+      "pod2",
+      "pod3"
+    ],
+    "namespace2": [
+      "pod4",
+      "pod5",
+      "pod6"
+    ],
+    "namespace3": [
+      "pod7",
+      "pod8"
+    ]
+  }
+}
