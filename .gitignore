@@ -4,5 +4,6 @@ themes/example*
 bin/tmp
 bin
 private/*
+!private/.keep.zsh
 navi/_*
 tmp/
