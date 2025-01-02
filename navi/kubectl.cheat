@@ -1,0 +1,37 @@
+% kubernetes, kubectl
+
+; # Get contexts
+; kubectl config get-contexts
+
+# Set context
+kubectl config use-context <kube_ctx>
+
+# Get all pods
+kubectl get pods -n <kube_my_namespaces> 2> /dev/null
+
+# Watch pods, kwp
+watch -n 10 kubectl get pods -n <kube_my_namespaces> -l app.kubernetes.io/instance=<available_instances_for_namespace> 2> /dev/null
+
+# Get Logs, kl
+kubectl logs -f <kube_available_pods>  -n <kube_my_namespaces> 2> /dev/null
+
+# Exec / SSH, ke, kssh
+kubectl exec -it <kube_available_pods> -n <kube_my_namespaces> -- /bin/sh
+
+# Describe a pod, kdesc
+kubectl describe pod <kube_available_pods> -n <kube_my_namespaces>
+
+# Delete a pod, kdel
+kubectl delete pod <kube_available_pods> -n <kube_my_namespaces>
+
+# Edit deployment/pod, kedit
+EDITOR=vim kubectl edit deployment -n <kube_my_namespaces> <available_instances_for_namespace>
+
+# Watch pod events
+watch -n 10 "kubectl describe pod <kube_available_pods> -n <kube_my_namespaces> | awk '/Events:/,/^$/'"
+
+$ kube_file: echo '~/.oh-my-zsh/custom/navi/_kube.json'
+$ kube_ctx: kubectl config get-contexts --- --column 2 --header-lines 1 --delimiter '\s\s+'
+$ kube_my_namespaces: jq -r ".namespaces | join(\" \")" <kube_file> | tr ' ' '\n'
+$ available_instances_for_namespace: echo $kube_my_namespaces | (read var; jq -r ".pods.\"$var\" | join(\" \")" <kube_file>) | tr ' ' '\n'
+$ kube_available_pods: kubectl get pods -n <kube_my_namespaces> -l app.kubernetes.io/instance=<available_instances_for_namespace> 2> /dev/null --- --column 1 --header-lines 1 --delimiter '\s\s+'
