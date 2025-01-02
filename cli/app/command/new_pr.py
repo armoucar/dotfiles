@@ -1,5 +1,4 @@
 import click
-import logging
 import re
 import subprocess
 import sys
@@ -9,37 +8,130 @@ from pathlib import Path
 from openai import OpenAI
 
 
-class CustomFormatter(logging.Formatter):
-    green = "\x1b[32;20m"
-    light_blue = "\x1b[94;20m"
-    yellow = "\x1b[33;20m"
-    red = "\x1b[31;20m"
-    bold_red = "\x1b[31;1m"
-    reset = "\x1b[0m"
-    format = "%(asctime)s - %(message)s"
+@click.command()
+@click.option("--dry-run", is_flag=True, help="Dry run mode (don't create PR)")
+@click.option("--verbose", is_flag=True, help="Print git commands and their outputs")
+def new_pr(dry_run, verbose):
+    """Create a new PR with AI-generated title and description."""
+    current_branch, commit_logs, changes_content = _get_git_info(verbose)
 
-    FORMATS = {
-        logging.DEBUG: light_blue + format + reset,
-        logging.INFO: green + format + reset,
-        logging.WARNING: yellow + format + reset,
-        logging.ERROR: red + format + reset,
-        logging.CRITICAL: bold_red + format + reset,
-    }
+    context = f"""
+    Branch: {current_branch}
 
-    def format(self, record):
-        log_fmt = self.FORMATS.get(record.levelno)
-        formatter = logging.Formatter(log_fmt)
-        return formatter.format(record)
+    Commit Messages:
+    {commit_logs}
+
+    File Changes:
+    {''.join(changes_content)}
+    """
+
+    click.secho("Generating PR content...", fg="green")
+    title, body = _generate_pr_content(context)
+
+    click.secho(f"Generated PR Title: {title}", fg="yellow")
+    click.secho("Generated PR Body:", fg="yellow")
+    for line in body.split("\n"):
+        click.secho(line, fg="yellow")
+
+    if dry_run:
+        click.secho("Dry run mode enabled. Skipping PR creation.", fg="green")
+        return
+
+    if verbose:
+        click.secho('Running: gh pr create --title "{}" --body "{}"'.format(title, body), fg="blue")
+    subprocess.check_output(["gh", "pr", "create", "--title", title, "--body", body])
+    click.secho(f"PR created successfully with title: {title}", fg="green")
 
 
-logger = logging.getLogger("pr_script")
-logger.setLevel(logging.DEBUG)
+def _get_git_info(verbose=False):
+    """Get git branch and changes information."""
 
-handler = logging.StreamHandler()
-handler.setLevel(logging.DEBUG)
-handler.setFormatter(CustomFormatter())
+    current_branch = _get_branch_name(["git", "branch", "--show-current"], verbose)
 
-logger.addHandler(handler)
+    if verbose:
+        click.secho(f"Running: git log origin/{current_branch}..{current_branch} --pretty=format:%s%n%b", fg="blue")
+    commit_logs = (
+        subprocess.check_output(["git", "log", f"origin/{current_branch}..{current_branch}", "--pretty=format:%s%n%b"])
+        .decode()
+        .strip()
+    )
+    if verbose:
+        click.secho(f"Commit logs:\n{commit_logs}", fg="blue")
+
+    if verbose:
+        click.secho(f"Running: git diff origin/{current_branch}..{current_branch} --name-only", fg="blue")
+    changed_files = (
+        subprocess.check_output(["git", "diff", f"origin/{current_branch}..{current_branch}", "--name-only"])
+        .decode()
+        .strip()
+        .split("\n")
+    )
+    if verbose:
+        click.secho(f"Changed files:\n{chr(10).join(changed_files)}", fg="blue")
+    changed_files = [f for f in changed_files if not f.endswith(".yaml")]
+
+    changes_content = []
+    for file in changed_files:
+        if "lock" in file.lower():
+            continue
+
+        try:
+            if verbose:
+                click.secho(f"Running: git diff origin/{current_branch}..{current_branch} -- {file}", fg="blue")
+            file_diff = (
+                subprocess.check_output(["git", "diff", f"origin/{current_branch}..{current_branch}", "--", file])
+                .decode()
+                .strip()
+            )
+            if file_diff:
+                changes_content.append(f"Changes in {file}:\n{file_diff}\n")
+                if verbose:
+                    click.secho(f"Diff for {file}:\n{file_diff}", fg="blue")
+        except subprocess.CalledProcessError:
+            continue
+
+    return current_branch, commit_logs, changes_content
+
+
+def _generate_pr_content(context):
+    """Generate PR content using OpenAI."""
+    prompt = PR_PROMPT_TMPL.format(context=context)
+
+    tmp_file = Path(f"/tmp/pr_prompt_{uuid.uuid4()}.txt")
+    tmp_file.write_text(prompt)
+    click.secho(f"Wrote prompt to {tmp_file}", fg="green")
+
+    response = (
+        OpenAI()
+        .chat.completions.create(
+            model="gpt-4o",
+            messages=[{"role": "user", "content": prompt}],
+        )
+        .choices[0]
+        .message.content
+    )
+
+    title_match = re.search(r"TITLE:\s*(.*?)(?:\n|$)", response)
+    body_match = re.search(r"BODY:\s*(.*)", response, re.DOTALL)
+
+    if not title_match or not body_match:
+        click.secho("Failed to parse AI response", fg="red")
+        click.secho(f"Full response:\n{response}", fg="red")
+        click.secho(f"Title match: {title_match}", fg="red")
+        click.secho(f"Body match: {body_match}", fg="red")
+        sys.exit(1)
+
+    return title_match.group(1).strip(), body_match.group(1).strip()
+
+
+def _get_branch_name(args, verbose=False):
+    if verbose:
+        click.secho(f"Running: {' '.join(args)}", fg="blue")
+    output = subprocess.check_output(args).decode().strip()
+    if verbose:
+        click.secho(f"Output: {output}", fg="blue")
+    return output
+
 
 PR_PROMPT_TMPL = """
 I want you to act as a GitHub Pull Request Creator. Follow these rules:
@@ -94,106 +186,3 @@ Please generate a PR title and description following the format and style of the
 TITLE: A single line summarizing the main changes
 BODY: A few paragraphs describing the changes in detail, using markdown format
 """
-
-
-def get_git_info():
-    """Get git branch and changes information."""
-    current_branch = subprocess.check_output(["git", "branch", "--show-current"]).decode().strip()
-    default_branch = (
-        subprocess.check_output(["git", "symbolic-ref", "refs/remotes/origin/HEAD"]).decode().strip().split("/")[-1]
-    )
-
-    commit_logs = (
-        subprocess.check_output(["git", "log", f"{default_branch}..{current_branch}", "--pretty=format:%s%n%b"])
-        .decode()
-        .strip()
-    )
-
-    changed_files = (
-        subprocess.check_output(["git", "diff", f"{default_branch}..{current_branch}", "--name-only"])
-        .decode()
-        .strip()
-        .split("\n")
-    )
-    changed_files = [f for f in changed_files if not f.endswith(".yaml")]
-
-    changes_content = []
-    for file in changed_files:
-        if "lock" in file.lower():
-            continue
-
-        try:
-            file_diff = (
-                subprocess.check_output(["git", "diff", f"{default_branch}..{current_branch}", "--", file])
-                .decode()
-                .strip()
-            )
-            if file_diff:
-                changes_content.append(f"Changes in {file}:\n{file_diff}\n")
-        except subprocess.CalledProcessError:
-            continue
-
-    return current_branch, commit_logs, changes_content
-
-
-def generate_pr_content(context):
-    """Generate PR content using OpenAI."""
-    prompt = PR_PROMPT_TMPL.format(context=context)
-
-    tmp_file = Path(f"/tmp/pr_prompt_{uuid.uuid4()}.txt")
-    tmp_file.write_text(prompt)
-    logger.info(f"Wrote prompt to {tmp_file}")
-
-    response = (
-        OpenAI()
-        .chat.completions.create(
-            model="gpt-4o",
-            messages=[{"role": "user", "content": prompt}],
-        )
-        .choices[0]
-        .message.content
-    )
-
-    title_match = re.search(r"TITLE:\s*(.*?)(?:\n|$)", response)
-    body_match = re.search(r"BODY:\s*(.*)", response, re.DOTALL)
-
-    if not title_match or not body_match:
-        logger.error("Failed to parse AI response")
-        logger.error(f"Full response:\n{response}")
-        logger.error(f"Title match: {title_match}")
-        logger.error(f"Body match: {body_match}")
-        sys.exit(1)
-
-    return title_match.group(1).strip(), body_match.group(1).strip()
-
-
-@click.command()
-@click.option("--dry-run", is_flag=True, help="Dry run mode (don't create PR)")
-def new_pr(dry_run):
-    """Create a new PR with AI-generated title and description."""
-    current_branch, commit_logs, changes_content = get_git_info()
-
-    context = f"""
-    Branch: {current_branch}
-
-    Commit Messages:
-    {commit_logs}
-
-    File Changes:
-    {''.join(changes_content)}
-    """
-
-    logger.info("Generating PR content...")
-    title, body = generate_pr_content(context)
-
-    logger.warning(f"Generated PR Title: {title}")
-    logger.warning("Generated PR Body:")
-    for line in body.split("\n"):
-        logger.warning(line)
-
-    if dry_run:
-        logger.info("Dry run mode enabled. Skipping PR creation.")
-        return
-
-    subprocess.check_output(["gh", "pr", "create", "--title", title, "--body", body])
-    logger.info(f"PR created successfully with title: {title}")
