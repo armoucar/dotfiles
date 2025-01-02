@@ -24,6 +24,13 @@ function dotfiles-unpack() {
       echo "Successfully unpacked custom.zip to oh-my-zsh custom directory"
       # Clean up temp directory
       rm -rf "$temp_dir"
+
+      # Clone zsh-autosuggestions plugin
+      git clone \
+        https://github.com/zsh-users/zsh-autosuggestions \
+        ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-autosuggestions 2>/dev/null || {
+        echo "Note: zsh-autosuggestions plugin directory already exists, skipping clone..."
+      }
     else
       echo "Error: Failed to copy files to oh-my-zsh custom directory"
       rm -rf "$temp_dir"
