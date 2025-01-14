@@ -1,0 +1,6 @@
+% fzf
+
+# select multiple files and copy to clipboard
+fzf --multi \
+  | xargs -I{} sh -c 'echo "===== {} ====="; cat "{}"; echo "";' \
+  | pbcopy

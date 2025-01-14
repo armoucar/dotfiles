@@ -1,0 +1,25 @@
+% aws
+
+# List AWS profiles
+aws configure list-profiles
+
+# Set AWS profile
+export AWS_PROFILE=<aws_profiles>
+
+# Delete AWS profile
+aws configure delete-profile <aws_profiles>
+
+# Get current AWS identity
+aws sts get-caller-identity
+
+# List EC2 instances
+aws ec2 describe-instances --query 'Reservations[*].Instances[*].[InstanceId,State.Name,Tags[?Key==`Name`].Value|[0]]' --output table
+
+# List S3 buckets
+aws s3 ls
+
+# List contents of S3 bucket
+aws s3 ls s3://<s3_buckets>
+
+$ aws_profiles: aws configure list-profiles --- --column 1
+$ s3_buckets: aws s3 ls | awk '{print $3}'
