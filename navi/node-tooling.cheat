@@ -1,10 +1,10 @@
 % node, npm, jest
 
 # jest watch, jw
-./node_modules/.bin/jest --watch <spec_file>
+./node_modules/.bin/jest --detectOpenHandles --watch <spec_file>
 
 # jest watch with coverage, jwc
-./node_modules/.bin/jest --watch <spec_file> --coverage --collectCoverageFrom='["<file_to_test>"]'
+./node_modules/.bin/jest --detectOpenHandles --watch <spec_file> --coverage --collectCoverageFrom='["<file_to_test>"]'
 
 $ file_to_test: echo $spec_file | sed 's/\.spec//' | sed 's/^src/**/'
 
