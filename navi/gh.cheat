@@ -20,3 +20,12 @@ gh pr view --web
 
 # create pr with title and body, ghcpr
 gh pr create --title "<title>" --body "<body>"
+
+# switch gh user armoucar, ghsuser
+gh auth switch --user armoucar
+
+# switch gh user armoucar-neon
+gh auth switch --user armoucar-neon
+
+# show gh auth status, ghsauth
+gh auth status
