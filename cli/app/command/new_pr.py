@@ -34,11 +34,14 @@ def new_pr(dry_run, verbose):
         click.secho(line, fg="yellow")
 
     if dry_run:
-        click.secho("Dry run mode enabled. Skipping PR creation.", fg="green")
+        click.secho(
+            'Dry run mode enabled. Would run: gh pr create --title "{}" --body "{}"'.format(title, body), fg="green"
+        )
         return
 
     if verbose:
         click.secho('Running: gh pr create --title "{}" --body "{}"'.format(title, body), fg="blue")
+
     subprocess.check_output(["gh", "pr", "create", "--title", title, "--body", body])
     click.secho(f"PR created successfully with title: {title}", fg="green")
 
@@ -49,9 +52,9 @@ def _get_git_info(verbose=False):
     current_branch = _get_branch_name(["git", "branch", "--show-current"], verbose)
 
     if verbose:
-        click.secho(f"Running: git log origin/{current_branch}..{current_branch} --pretty=format:%s%n%b", fg="blue")
+        click.secho(f"Running: git log origin/main..{current_branch} --pretty=format:%s%n%b", fg="blue")
     commit_logs = (
-        subprocess.check_output(["git", "log", f"origin/{current_branch}..{current_branch}", "--pretty=format:%s%n%b"])
+        subprocess.check_output(["git", "log", f"origin/main..{current_branch}", "--pretty=format:%s%n%b"])
         .decode()
         .strip()
     )
@@ -59,9 +62,9 @@ def _get_git_info(verbose=False):
         click.secho(f"Commit logs:\n{commit_logs}", fg="blue")
 
     if verbose:
-        click.secho(f"Running: git diff origin/{current_branch}..{current_branch} --name-only", fg="blue")
+        click.secho(f"Running: git diff origin/main..{current_branch} --name-only", fg="blue")
     changed_files = (
-        subprocess.check_output(["git", "diff", f"origin/{current_branch}..{current_branch}", "--name-only"])
+        subprocess.check_output(["git", "diff", f"origin/main..{current_branch}", "--name-only"])
         .decode()
         .strip()
         .split("\n")
@@ -77,11 +80,9 @@ def _get_git_info(verbose=False):
 
         try:
             if verbose:
-                click.secho(f"Running: git diff origin/{current_branch}..{current_branch} -- {file}", fg="blue")
+                click.secho(f"Running: git diff origin/main..{current_branch} -- {file}", fg="blue")
             file_diff = (
-                subprocess.check_output(["git", "diff", f"origin/{current_branch}..{current_branch}", "--", file])
-                .decode()
-                .strip()
+                subprocess.check_output(["git", "diff", f"origin/main..{current_branch}", "--", file]).decode().strip()
             )
             if file_diff:
                 changes_content.append(f"Changes in {file}:\n{file_diff}\n")
@@ -104,7 +105,7 @@ def _generate_pr_content(context):
     response = (
         OpenAI()
         .chat.completions.create(
-            model="gpt-4o",
+            model="o3-mini-2025-01-31",
             messages=[{"role": "user", "content": prompt}],
         )
         .choices[0]
@@ -121,7 +122,15 @@ def _generate_pr_content(context):
         click.secho(f"Body match: {body_match}", fg="red")
         sys.exit(1)
 
-    return title_match.group(1).strip(), body_match.group(1).strip()
+    title = title_match.group(1).strip()
+    body = body_match.group(1).strip()
+
+    # Save title and body to tmp file
+    result_file = Path(f"/tmp/pr_content_{uuid.uuid4()}.txt")
+    result_file.write_text(f"TITLE:\n{title}\n\nBODY:\n{body}")
+    click.secho(f"Wrote PR content to {result_file}", fg="green")
+
+    return title, body
 
 
 def _get_branch_name(args, verbose=False):
@@ -134,13 +143,9 @@ def _get_branch_name(args, verbose=False):
 
 
 PR_PROMPT_TMPL = """
-I want you to act as a GitHub Pull Request Creator. Follow these rules:
-1. Make the output as concise as possible
-2. Use simple language and avoid fancy terms
-3. Do not use adjectives
-4. Always include the disclaimer message: "✨ This document was first generated with the assistance of a Large Language Model (LLM). All content has been thoroughly revised and adjusted as necessary to ensure accuracy, conciseness and clarity before being made public."
-
-Your role is to create a PR title and description based on the changes made. The description should explain what changes were made and why, focusing on the key modifications.
+<context_changes>
+{context}
+</context_changes>
 
 <output_examples>
 Example 1:
@@ -177,9 +182,14 @@ BODY:
 Required for security patches and new features.
 </output_examples>
 
-Here are the changes made in this PR:
+You are a GitHub Pull Request Creator. Follow these rules:
 
-{context}
+1. Make the description is detailed
+2. Use simple language and avoid fancy terms
+3. Do not use adjectives
+4. Always include the disclaimer message: "✨ This document was first generated with the assistance of a Large Language Model (LLM). All content has been thoroughly revised and adjusted as necessary to ensure accuracy, conciseness and clarity before being made public."
+
+Your role is to create a PR title and description based on the <context_changes>. The description should explain what changes were made, focusing on the key modifications.
 
 Please generate a PR title and description following the format and style of the examples above. Remember to include the disclaimer message at the start of the body:
 

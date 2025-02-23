@@ -1,7 +1,5 @@
 import click
 import subprocess
-import tempfile
-import os
 from typing import List, Tuple
 
 DEFAULT_REPOS = [
@@ -9,11 +7,11 @@ DEFAULT_REPOS = [
     "neon/neon.gugelmin-chat-front",
     "neon/neon.gugelmin-ingestion-pipeline-worker",
     "neon/neon.gugelmin",
-    "neon/neon.neo-bff",
+    "neon/neon.neo-cli",
 ]
 
 
-def get_prs_for_repo(repo: str) -> List[Tuple[str, ...]]:
+def get_prs_for_repo(repo: str, verbose: bool = False) -> List[Tuple[str, ...]]:
     """Get PRs for a specific repository using gh CLI."""
     cmd = [
         "gh",
@@ -29,6 +27,8 @@ def get_prs_for_repo(repo: str) -> List[Tuple[str, ...]]:
         ".[] | [.headRepository.name, .number, .title, .headRefName, .createdAt, .updatedAt, .url] | @tsv",
     ]
     try:
+        if verbose:
+            click.secho(f"Running: {' '.join(cmd)}", fg="blue")
         result = subprocess.run(cmd, capture_output=True, text=True, check=True)
         if not result.stdout:
             return []
@@ -40,7 +40,8 @@ def get_prs_for_repo(repo: str) -> List[Tuple[str, ...]]:
 
 @click.command(name="check-prs")
 @click.option("--repos", "-r", multiple=True, help="Repositories to check (format: owner/repo)")
-def check_prs(repos: Tuple[str, ...]):
+@click.option("--verbose", is_flag=True, help="Print commands being executed")
+def check_prs(repos: Tuple[str, ...], verbose: bool):
     """Check open pull requests across repositories."""
     repositories = list(repos) if repos else DEFAULT_REPOS
 
@@ -51,7 +52,7 @@ def check_prs(repos: Tuple[str, ...]):
     all_prs = []
     with click.progressbar(repositories, label="Fetching PRs") as repos_progress:
         for repo in repos_progress:
-            prs = get_prs_for_repo(repo)
+            prs = get_prs_for_repo(repo, verbose)
             all_prs.extend(prs)
 
     if not all_prs:
