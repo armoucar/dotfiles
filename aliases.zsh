@@ -29,3 +29,13 @@ function gopen() {
 function gopenac() {
   git remote -v | head -n 1 | awk -F "@" '{print $2}' | awk -F " " '{print $1}' | sed 's/:/\//g' | sed 's/.git/\/actions/g' | awk '{print "http://"$1}' | xargs open
 }
+
+vslaunch_sort_configurations_by_name() {
+  local file="$1"
+  jq '.configurations |= sort_by(.name)' "$file" > temp.json && mv temp.json "$file"
+}
+
+vslaunch_sort_inputs_by_id() {
+  local file="$1"
+  jq '.inputs |= sort_by(.id)' "$file" > temp.json && mv temp.json "$file"
+}

@@ -30,6 +30,9 @@ EDITOR=vim kubectl edit deployment -n <kube_my_namespaces> <available_instances_
 # Watch pod events
 watch -n 10 "kubectl describe pod <kube_available_pods> -n <kube_my_namespaces> | awk '/Events:/,/^$/'"
 
+# Port Forward, kpf
+kubectl port-forward -n <kube_my_namespaces> <kube_available_pods> 50052:50051
+
 $ kube_file: echo '~/.oh-my-zsh/custom/navi/_kube.json'
 $ kube_ctx: kubectl config get-contexts --- --column 2 --header-lines 1 --delimiter '\s\s+'
 $ kube_my_namespaces: jq -r ".namespaces | join(\" \")" <kube_file> | tr ' ' '\n'

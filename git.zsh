@@ -4,6 +4,10 @@ alias ggpt="git push origin --tags"
 
 alias gbrprune='git checkout -q main && git for-each-ref refs/heads/ "--format=%(refname:short)" | while read branch; do mergeBase=$(git merge-base main $branch) && [[ $(git cherry main $(git commit-tree $(git rev-parse "$branch^{tree}") -p $mergeBase -m _)) == "-"* ]] && git branch -D $branch; done'
 
+alias local-squash='git reset --soft "$(git merge-base $(git_main_branch) $(git_current_branch))" && git commit -m "--wip-- [skip ci]"'
+
+alias gdss="git diff --shortstat $(git_main_branch)..$(git_current_branch)"
+
 alias inctag="_increment_tag"
 
 # Function to automate git tagging

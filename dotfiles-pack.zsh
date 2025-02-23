@@ -3,7 +3,7 @@
 function dotfiles-pack() {
   timestamp=$(date +%Y%m%d_%H%M%S)
   base_dir="$HOME/.oh-my-zsh/custom"
-  folder="$base_dir/tmp/$timestamp"
+  folder="$base_dir/tmp/dotfiles-packs/$timestamp"
 
   mkdir -p "$base_dir/tmp"
   mkdir -p "$folder"
