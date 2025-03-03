@@ -1,0 +1,204 @@
+#!/usr/bin/env python3
+
+import argparse
+import subprocess
+import sys
+import time
+from collections import defaultdict
+
+
+def run_cmd(cmd, verbose=False):
+    if verbose:
+        print(f"Executing: {' '.join(cmd)}")
+
+    try:
+        return subprocess.check_output(cmd).decode("utf-8", errors="replace")
+    except subprocess.CalledProcessError as e:
+        print(f"Error executing command: {' '.join(cmd)}")
+        print(f"Error details: {e}")
+        sys.exit(1)
+
+
+def get_contributors_stats(since=None, verbose=False):
+    """Get contributors and their line changes for a specific time period."""
+    # Get author name and email for better identification
+    cmd = ["git", "--no-pager", "log", "--format=%an <%ae>", "--numstat"]
+    if since:
+        cmd.append(f"--since={since}")
+
+    output = run_cmd(cmd, verbose)
+
+    # Structure: {author: [lines_added, lines_removed, commit_count, {files}]}
+    contributors = defaultdict(lambda: [0, 0, 0, set()])
+    current_author = None
+
+    for line in output.splitlines():
+        if not line.strip():
+            continue
+
+        parts = line.split()
+        if parts and not parts[0].isdigit() and "<" in line and ">" in line:
+            current_author = line.strip()
+            # Increment commit count for this author
+            contributors[current_author][2] += 1
+        elif len(parts) >= 3 and current_author:  # This is a numstat line
+            try:
+                added = int(parts[0]) if parts[0] != "-" else 0
+                removed = int(parts[1]) if parts[1] != "-" else 0
+                file_path = " ".join(parts[2:])
+
+                contributors[current_author][0] += added
+                contributors[current_author][1] += removed
+                contributors[current_author][3].add(file_path)
+            except ValueError:
+                continue
+
+    # Calculate time period in days
+    period_days = None
+    if since:
+        # For specific time periods, calculate the actual number of days
+        if since == "7 days ago":
+            period_days = 7.0
+        elif since == "1 month ago":
+            period_days = 30.0
+        elif since == "6 months ago":
+            period_days = 182.5  # Approximately 6 months
+        elif since == "12 months ago":
+            period_days = 365.0
+        else:
+            # Try to parse the time period
+            try:
+                # Get the earliest commit timestamp in the period
+                cmd_period = ["git", "--no-pager", "log", "--since", since, "--format=%ct", "--reverse", "-1"]
+                earliest_in_period = int(run_cmd(cmd_period, verbose).strip())
+                current_time = int(time.time())
+                period_days = (current_time - earliest_in_period) / 86400.0
+            except:
+                period_days = None
+    else:
+        # For "All time", we'll set period_days to None to indicate we don't want to calculate commits/day
+        period_days = None
+
+    # Process the results
+    result = []
+    for author, (added, removed, commit_count, files) in contributors.items():
+        # Calculate commit frequency (commits per day)
+        if since and period_days and period_days > 0:
+            commit_freq = commit_count / period_days
+        else:
+            # For "All time" or if period calculation failed, don't calculate frequency
+            commit_freq = None
+
+        # Get display name (before the email)
+        display_name = author.split("<")[0].strip()
+
+        result.append(
+            (
+                author,  # Full author info for sorting
+                display_name,  # Display name for table
+                [added, removed, commit_count, len(files), commit_freq],
+            )
+        )
+
+    # Sort by total lines (added + removed) in descending order
+    sorted_contributors = sorted(result, key=lambda x: x[2][0] + x[2][1], reverse=True)  # Sort by total lines
+
+    return sorted_contributors
+
+
+def format_table(headers, rows):
+    """Format data as a nice ASCII table."""
+    # Calculate column widths
+    col_widths = [len(h) for h in headers]
+    for row in rows:
+        for i, cell in enumerate(row):
+            col_widths[i] = max(col_widths[i], len(str(cell)))
+
+    # Create separator line
+    separator = "+" + "+".join("-" * (width + 2) for width in col_widths) + "+"
+
+    # Create header
+    header = "|" + "|".join(f" {h:{col_widths[i]}} " for i, h in enumerate(headers)) + "|"
+
+    # Create rows
+    formatted_rows = []
+    for row in rows:
+        formatted_row = "|" + "|".join(f" {str(cell):{col_widths[i]}} " for i, cell in enumerate(row)) + "|"
+        formatted_rows.append(formatted_row)
+
+    # Combine all parts
+    table = [separator, header, separator, *formatted_rows, separator]
+
+    return "\n".join(table)
+
+
+def parse_arguments():
+    parser = argparse.ArgumentParser(description="Display git repository contributor statistics")
+    parser.add_argument("-v", "--verbose", action="store_true", help="Print git commands being executed")
+    return parser.parse_args()
+
+
+def main():
+    args = parse_arguments()
+
+    try:
+        # Check if git repository exists
+        run_cmd(["git", "rev-parse", "--is-inside-work-tree"], args.verbose)
+    except Exception:
+        print("Error: Not a git repository or git is not installed.")
+        sys.exit(1)
+
+    # Define time periods
+    time_periods = {
+        "Last 7 days": "7 days ago",
+        "Last month": "1 month ago",
+        "Last 6 months": "6 months ago",
+        "Last 12 months": "12 months ago",
+        "All time": None,
+    }
+
+    # Get top 5 contributors for each time period
+    results = {}
+    for period_name, since in time_periods.items():
+        contributors = get_contributors_stats(since, args.verbose)
+        results[period_name] = contributors[:5]  # Top 5 contributors
+
+    # Display results
+    print("\nGit Repository Contributor Statistics\n")
+
+    for period_name, contributors in results.items():
+        print(f"\n{period_name}:")
+
+        if not contributors:
+            print("  No contributions in this period.")
+            continue
+
+        # Prepare table data
+        headers = ["Contributor", "Lines Added", "Lines Removed", "Total Lines", "Commits", "Files", "Commits/Day"]
+        rows = []
+
+        for _, display_name, (added, removed, commit_count, file_count, commit_freq) in contributors:
+            # Format commit frequency - use "-" for All time or if None
+            if period_name == "All time" or commit_freq is None:
+                freq_display = "-"
+            else:
+                freq_display = f"{commit_freq:.2f}"
+
+            rows.append(
+                [
+                    display_name,
+                    f"+{added}",
+                    f"-{removed}",
+                    added + removed,
+                    commit_count,
+                    file_count,
+                    freq_display,
+                ]
+            )
+
+        # Print table
+        print(format_table(headers, rows))
+
+
+if __name__ == "__main__":
+    main()

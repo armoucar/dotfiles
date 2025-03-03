@@ -54,6 +54,12 @@ def list_cmd(show_content: bool, tag: Optional[str], type: Optional[str], comple
         # Get the title
         title = item["title"]
 
+        # Determine the state of the item
+        if item["type"] == "task":
+            state = "COMPLETED" if item.get("completed_at") is not None else "PENDING"
+        else:
+            state = "-"  # Notes don't have a state
+
         # Format content preview if available
         content_preview = ""
         if "content" in item and item["content"]:
@@ -64,10 +70,10 @@ def list_cmd(show_content: bool, tag: Optional[str], type: Optional[str], comple
                 content_preview = content
 
         # Add row to table data
-        table_data.append([created_date, item_type, title, content_preview])
+        table_data.append([created_date, item_type, state, title, content_preview])
 
     # Display the table
-    headers = ["Date", "Type", "Title", "Preview"]
+    headers = ["Date", "Type", "State", "Title", "Preview"]
     click.echo(tabulate(table_data, headers=headers, tablefmt="grid"))
 
     # Show full content if requested

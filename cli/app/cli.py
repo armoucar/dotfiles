@@ -19,6 +19,7 @@ from cli.app.command.notes import (
     complete,
     incomplete,
     search,
+    summary,
 )
 
 
@@ -58,6 +59,7 @@ notes.add_command(delete)
 notes.add_command(complete)
 notes.add_command(incomplete)
 notes.add_command(search)
+notes.add_command(summary)
 cli.add_command(notes)
 
 if __name__ == "__main__":

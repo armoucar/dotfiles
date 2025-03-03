@@ -240,25 +240,44 @@ def fzf_select_item(items: List[Dict], prompt: str = "Select an item:") -> Optio
 
 
 def edit_item_in_editor(item: Dict) -> bool:
-    """Open an item in the user's editor."""
-    editor = os.environ.get("EDITOR", "vim")
+    """Open an item in vim editor and track if changes were made."""
     item_type = item["type"]
     filename = item["filename"]
     filepath = os.path.join(get_path_for_type(item_type), filename)
 
     try:
-        # Run the editor directly on the file
-        subprocess.run([editor, filepath], check=True)
+        # Get file modification time before editing
+        mod_time_before = os.path.getmtime(filepath)
 
-        # Read the updated file
+        # Read the file content before editing
         with open(filepath, "r") as f:
-            updated_data = yaml.safe_load(f)
+            content_before = f.read()
 
-        # Update tags in args.json if needed
-        if "tags" in updated_data and updated_data["tags"]:
-            update_args_tags(updated_data["tags"])
+        # Always use vim as the editor
+        subprocess.run(["vim", filepath], check=True)
 
-        return True
+        # Check if the file was modified
+        mod_time_after = os.path.getmtime(filepath)
+
+        # Read the file content after editing
+        with open(filepath, "r") as f:
+            content_after = f.read()
+
+        # Check if content changed
+        if content_before != content_after:
+            # Update tags in args.json if needed
+            try:
+                updated_data = yaml.safe_load(content_after)
+                if "tags" in updated_data and updated_data["tags"]:
+                    update_args_tags(updated_data["tags"])
+            except Exception as e:
+                print(f"Warning: Could not update tags: {e}")
+
+            return True
+        else:
+            # No changes were made
+            return False
+
     except Exception as e:
         print(f"Error editing item: {e}")
         return False

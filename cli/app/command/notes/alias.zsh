@@ -29,6 +29,11 @@ alias notdf="dot notes delete --force"
 # Search command
 alias nots="dot notes search"
 
+# Summary commands
+alias notsm="dot notes summary"
+alias notsy="dot notes summary --days 1"
+alias notsw="dot notes summary --days 6"
+
 # Tags filtering
 notlta() {
   dot notes list --tag "$1"
@@ -37,7 +42,6 @@ notlta() {
 # Print a help message with all available aliases
 noth() {
   echo "Notes CLI aliases:"
-  echo "  notc    - Create a new item (note or task)"
   echo "  notcn   - Create a new note"
   echo "  notct   - Create a new task"
   echo "  notl    - List all items"
@@ -55,5 +59,8 @@ noth() {
   echo "  notd    - Delete an item (using fzf)"
   echo "  notdf   - Delete without confirmation"
   echo "  nots    - Search in notes content (requires argument: nots keyword)"
+  echo "  notsm   - Summarize notes and tasks (with default of 1 day)"
+  echo "  notsy   - Summarize yesterday's notes and tasks"
+  echo "  notsw   - Summarize last week's notes and tasks (last 6 days)"
   echo "  noth    - Show this help message"
 }

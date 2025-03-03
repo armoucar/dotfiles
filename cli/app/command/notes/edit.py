@@ -32,4 +32,4 @@ def edit(type: Optional[str], tag: Optional[str]):
     if success:
         click.echo(f"Successfully edited {selected_item['type']}: {selected_item['filename']}")
     else:
-        click.echo("Edit operation cancelled or failed.")
+        click.echo("Edit aborted: No changes were made.")

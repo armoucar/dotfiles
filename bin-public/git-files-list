@@ -1,0 +1,170 @@
+#!/usr/bin/env python3
+
+import subprocess
+from concurrent.futures import ThreadPoolExecutor
+from typing import Tuple, List
+import sys
+import argparse
+import time
+import os
+
+
+def run_git_command(args: List[str]) -> str:
+    """Run a git command and return stripped output."""
+    try:
+        return subprocess.check_output(args).decode().strip()
+    except subprocess.CalledProcessError:
+        return ""
+
+
+def show_progress(msg: str, current: int, total: int) -> None:
+    """Show progress bar."""
+    sys.stdout.write(f"\r{msg}: {current}/{total}")
+    sys.stdout.flush()
+
+
+def get_commit_timestamp(args: Tuple[str, int, int]) -> Tuple[int, str]:
+    """Get the Unix timestamp of last commit for a file."""
+    file, current, total = args
+    show_progress("Processing files", current, total)
+    output = run_git_command(["git", "log", "-1", "--format=%ct", file])
+    # Handle files with no commit history
+    try:
+        last_commit_epoch = int(output) if output else 0
+    except ValueError:
+        last_commit_epoch = 0
+    return (last_commit_epoch, file)
+
+
+def get_commit_count(args: Tuple[str, int, int]) -> Tuple[int, str]:
+    """Get the number of commits that touched a file."""
+    file, current, total = args
+    show_progress("Processing files", current, total)
+    output = run_git_command(["git", "rev-list", "--count", "HEAD", file])
+    # Handle files with no commit history
+    try:
+        commit_count = int(output) if output else 0
+    except ValueError:
+        commit_count = 0
+    return (commit_count, file)
+
+
+def get_formatted_timestamp(args: Tuple[Tuple[int, str], int, int]) -> str:
+    """Get formatted timestamp string for a file."""
+    epoch_and_file, current, total = args
+    epoch, file = epoch_and_file
+    show_progress("Formatting timestamps", current, total)
+    if epoch == 0:
+        # For files with no commit history
+        return f"[No commit history]: {file}"
+
+    timestamp = run_git_command(["git", "log", "-1", "--format=%cd", "--date=format:[%Y-%m-%d %H:%M:%S]", file])
+    return f"{timestamp if timestamp else '[No date]'}: {file}"
+
+
+def get_formatted_count(args: Tuple[Tuple[int, str], int, int]) -> str:
+    """Get formatted commit count string for a file."""
+    count_and_file, current, total = args
+    count, file = count_and_file
+    show_progress("Formatting output", current, total)
+    return f"[{count} commits]: {file}"
+
+
+def process_files_in_parallel(executor: ThreadPoolExecutor, func, items, total: int):
+    """Process files in parallel using the given function."""
+    return list(executor.map(func, [(item, i + 1, total) for i, item in enumerate(items)]))
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="List git repository files sorted by modification time or edit count."
+    )
+    parser.add_argument(
+        "--sort",
+        choices=["time", "edits"],
+        default="time",
+        help="Sort by last modified time (default) or number of edits",
+    )
+    parser.add_argument(
+        "--limit",
+        type=int,
+        default=50,
+        help="Number of files to show (default: 50)",
+    )
+    parser.add_argument(
+        "--ext",
+        type=str,
+        help="File extension to filter (optional)",
+    )
+    args = parser.parse_args()
+
+    # Get list of files with specified extension from current directory
+    current_dir = os.path.relpath(os.getcwd())
+    # Get all files first
+    files = run_git_command(["git", "ls-files", current_dir]).split("\n")
+    files = [f for f in files if f.strip()]  # Remove empty entries
+
+    # Filter by extension if specified
+    if args.ext:
+        ext = args.ext if args.ext.startswith(".") else f".{args.ext}"
+        files = [f for f in files if f.endswith(ext)]
+
+    total_files = len(files)
+
+    if total_files == 0:
+        print(f"No files found{f' with extension {args.ext}' if args.ext else ''}.")
+        return
+
+    # Process files and format output
+    with ThreadPoolExecutor() as executor:
+        # Get and sort file data
+        start_time = time.time()
+        file_data = process_files_in_parallel(
+            executor, get_commit_timestamp if args.sort == "time" else get_commit_count, files, total_files
+        )
+        processing_time = time.time() - start_time
+        print(f"\nProcessing files took {processing_time:.2f} seconds")
+
+        file_data.sort(reverse=True)
+        file_data = file_data[: args.limit]  # Take top N based on limit parameter
+
+        # Format output
+        start_time = time.time()
+        formatter = get_formatted_timestamp if args.sort == "time" else get_formatted_count
+        formatted_output = process_files_in_parallel(executor, formatter, file_data, len(file_data))
+        formatting_time = time.time() - start_time
+        print(f"\nFormatting output took {formatting_time:.2f} seconds")
+
+    for output in formatted_output:
+        print(output)
+
+
+if __name__ == "__main__":
+    """
+    git-files-list: List git repository files sorted by last modified time or frequency of edits
+
+    This script lists files in a git repository, sorted either by last modified time
+    or by number of commits. It uses parallel processing for improved performance
+    when handling large repositories.
+
+    Usage:
+        git-files-list [--sort {time,edits}] [--limit N] [--ext EXT]
+
+    Options:
+        --sort time   Sort files by last modified time (default)
+        --sort edits  Sort files by number of commits/edits
+        --limit N     Number of files to show (default: 50)
+        --ext EXT     File extension to filter (optional)
+
+    Examples:
+        # List 50 most recently modified .ipynb files
+        git-files-list --ext ipynb
+
+        # List 20 most frequently edited .py files
+        git-files-list --sort edits --limit 20 --ext py
+
+        # List 50 most recently modified files (any extension)
+        git-files-list
+    """
+
+    main()
