@@ -1,0 +1,129 @@
+#!/usr/bin/osascript
+
+set startTime to current date
+log "Script execution started at: " & startTime
+
+log "Checking if Google Chrome is running."
+tell application "System Events"
+    set isChromeRunning to exists (processes where name is "Google Chrome")
+    log "Google Chrome running status: " & isChromeRunning
+    set isCursorRunning to exists (processes where name is "Cursor")
+    log "Cursor running status: " & isCursorRunning
+    set isiTermRunning to exists (processes where name is "iTerm2")
+    log "iTerm running status: " & isiTermRunning
+end tell
+
+if isChromeRunning then
+    log "Google Chrome is running. Closing all windows."
+    tell application "Google Chrome"
+        close every window
+        delay 0.2
+        if (count of windows) is 0 then
+            log "All Google Chrome windows closed."
+        else
+            log "Failed to close all Google Chrome windows."
+        end if
+    end tell
+end if
+
+if isCursorRunning then
+    log "Cursor is running. Activating Cursor application."
+    tell application "Cursor" to activate
+    tell application "System Events"
+        tell application process "Cursor"
+            repeat with w in windows
+                try
+                    log "Attempting to close a window in Cursor."
+                    keystroke "w" using {command down, shift down}
+                    log "Window closed in Cursor."
+                on error errMsg
+                    log "Error closing window in Cursor: " & errMsg
+                end try
+                delay 0.5
+            end repeat
+        end tell
+    end tell
+    log "All windows in Cursor processed."
+end if
+
+if isiTermRunning then
+    log "iTerm is running. Closing all windows except the current one."
+    tell application "iTerm2"
+        set frontWindowID to id of current window
+        set windowList to windows
+        repeat with w in windowList
+            if id of w is not frontWindowID then
+                try
+                    close w
+                    log "Closed an iTerm window."
+                on error errMsg
+                    log "Error closing iTerm window: " & errMsg
+                end try
+            end if
+        end repeat
+    end tell
+    log "iTerm windows closed except the current one."
+end if
+
+
+set appList to {"DBeaver", ¬
+                "MongoDB Compass", ¬
+                "Postman", ¬
+                "Insomnia", ¬
+                "TextEdit", ¬
+                "Google Chrome", ¬
+                "Slack", ¬
+                "Cursor", ¬
+                "Spotify", ¬
+                "Docker", ¬
+                "Preview", ¬
+                "QuickTime Player", ¬
+                "Visual Studio Code", ¬
+                "Another Redis Desktop Manager"}
+
+on isProcessRunning(processName)
+    try
+        do shell script "pgrep -f " & quoted form of processName
+        return true
+    on error
+        return false
+    end try
+end isProcessRunning
+
+repeat with appName in appList
+    set appNameText to appName as text
+    if isProcessRunning(appNameText) then
+        log appNameText & " is running. Attempting to quit."
+        display notification "Checking if " & appNameText & " is running." with title "App Quitter"
+        tell application appNameText to quit
+
+        -- Wait until the app quits or timeout after 5 seconds
+        set quitTime to current date
+        repeat
+            delay 0.5
+            if not isProcessRunning(appNameText) then exit repeat
+            if (current date) - quitTime > 5 then exit repeat
+        end repeat
+
+        if isProcessRunning(appNameText) then
+            log appNameText & " did not quit. Forcing quit."
+            display notification appNameText & " did not quit. Forcing quit." with title "App Quitter"
+            try
+                do shell script "pkill -f " & quoted form of appNameText
+            on error errMsg
+                log "Error during quitting " & appNameText & ": " & errMsg
+                display notification errMsg with title "Error during quitting " & appNameText
+            end try
+        else
+            log appNameText & " has quit successfully."
+            display notification appNameText & " has quit successfully." with title "App Quitter"
+        end if
+    else
+        log appNameText & " is not running."
+    end if
+end repeat
+
+set endTime to current date
+set elapsedTime to endTime - startTime
+log "Script execution ended at: " & endTime
+log "Total execution time: " & elapsedTime & " seconds"

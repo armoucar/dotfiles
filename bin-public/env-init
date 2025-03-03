@@ -1,0 +1,426 @@
+#!/usr/bin/osascript
+
+-- Global window position variables updated for 3 screens
+global firstScreenFull
+global secondScreenFull
+global thirdScreenFull
+
+global firstScreenFirstHalf
+global firstScreenSecondHalf
+global secondScreenFirstHalf
+global secondScreenSecondHalf
+global thirdScreenFirstHalf
+global thirdScreenSecondHalf
+
+global firstScreenBigLeft
+global firstScreenSmallLeft
+
+-- Screen 1 Full Screen (TextEdit Window 1): x = 0, y = 38, width = 1728, height = 1079
+set firstScreenFull to {0, 38, 1728, 1079}
+
+-- Screen 2 Full Screen (TextEdit Window 2): x = 1728, y = 37, width = 1920, height = 1080
+set secondScreenFull to {1728, 37, 1920, 1080}
+
+-- Screen 3 Full Screen (TextEdit Window 3): x = 3648, y = 37, width = 1920, height = 1080
+set thirdScreenFull to {3648, 37, 1920, 1080}
+
+-- For Screen 1, split the full area into two halves:
+set firstScreenFirstHalf to {0, 38, 864, 1079}
+set firstScreenSecondHalf to {864, 38, 864, 1079}
+
+-- For Screen 2, splitting the full area in half:
+set secondScreenFirstHalf to {1728, 37, 960, 1080}
+set secondScreenSecondHalf to {2688, 37, 960, 1080}
+
+-- For Screen 3, splitting the full area in half:
+set thirdScreenFirstHalf to {3648, 37, 960, 1080}
+set thirdScreenSecondHalf to {4608, 37, 960, 1080}
+
+-- For Screen 1 big and small left sections (using an 80/20 split):
+set firstScreenBigLeft to {0, 38, 1382, 1079}  -- roughly 80% of 1728 is 1382
+set firstScreenSmallLeft to {1382, 38, 346, 1079} -- remainder: 1728 - 1382 = 346
+
+-- Define desktop codes
+global desktop1
+global desktop2
+global desktop3
+global desktop4
+global desktop5
+global desktop6
+global desktop7
+global desktop8
+global desktop9
+global desktop10
+
+set desktop1 to 18
+set desktop2 to 19
+set desktop3 to 20
+set desktop4 to 21
+set desktop5 to 23
+set desktop6 to 22
+set desktop7 to 26
+set desktop8 to 28
+set desktop9 to 25
+set desktop10 to 29
+
+-- Global variable to control first-time Chrome activation
+property isFirstChromeLaunch : true
+
+-- Function to switch to a specific desktop
+on switchDesktop(desktopNumber)
+    tell application "System Events"
+        log "Switching to desktop number: " & desktopNumber
+        key code desktopNumber using control down
+    end tell
+
+    delay 0.3
+
+    log "Switched to desktop number: " & desktopNumber
+end switchDesktop
+
+-- Function to wait for an application's window to appear
+on waitForWindow(appName)
+    tell application "System Events"
+        log "Waiting for window of application: " & appName
+        repeat until (exists window 1 of application process appName)
+            delay 0.1
+        end repeat
+
+        log "Window found for application: " & appName
+    end tell
+end waitForWindow
+
+-- Function to set the position and size of an application's window
+on setWindowPosition(appName, positionToOpen)
+    tell application "System Events"
+        log "Setting window position for application: " & appName
+
+        tell application process appName
+            log "Setting position to: {" & item 1 of positionToOpen & ", " & item 2 of positionToOpen & "}"
+            set position of window 1 to {item 1 of positionToOpen, item 2 of positionToOpen}
+
+            log "Setting size to: {" & item 3 of positionToOpen & ", " & item 4 of positionToOpen & "}"
+            set size of window 1 to {item 3 of positionToOpen, item 4 of positionToOpen}
+        end tell
+
+        log "Finished setting window position for application: " & appName
+    end tell
+end setWindowPosition
+
+-- Function to open an application and set its position
+on openAppWithPosition(appName, appPath, positionToOpen)
+    log "Opening application: " & appName & " from path: " & appPath
+    do shell script "open -a " & quoted form of appPath
+    delay 0.5
+
+    log "Waiting for window of application: " & appName
+    waitForWindow(appName)
+
+    log "Setting window position for application: " & appName
+    setWindowPosition(appName, positionToOpen)
+
+    delay 0.3
+    log "Finished opening and positioning application: " & appName
+end openAppWithPosition
+
+-- Function to open an application with a file and set its position
+on openAppWithFileAndPosition(appName, appPath, filePath, positionToOpen)
+    log "Opening application: " & appName & " from path: " & appPath & " with file: " & filePath
+    do shell script "open -a " & quoted form of appPath & " " & quoted form of filePath
+    delay 0.5
+
+    log "Waiting for window of application: " & appName
+    waitForWindow(appName)
+
+    log "Setting window position for application: " & appName
+    setWindowPosition(appName, positionToOpen)
+
+    delay 0.3
+    log "Finished opening and positioning application: " & appName
+end openAppWithFileAndPosition
+
+-- Function to open Google Chrome with options and set its position
+on openChromeWindow(windowName, positionToOpen, profile)
+    log "Starting to open Chrome window with name: " & windowName & ", position: " & positionToOpen & ", profile: " & profile
+    set chromePath to "/Applications/Google\\ Chrome.app/Contents/MacOS/Google\\ Chrome"
+    set profileOption to "--profile-directory=\"" & profile & "\""
+    set newWindowFlag to "--new-window"
+
+    if isFirstChromeLaunch then
+        -- Activate Chrome for the first time
+        log "Activating Chrome for the first time"
+        tell application "Google Chrome" to activate
+        set isFirstChromeLaunch to false
+    else
+        -- Open Chrome detached to avoid hanging
+        log "Executing shell script to open Chrome"
+        do shell script chromePath & " " & profileOption & " " & newWindowFlag & " >/dev/null 2>&1 &"
+    end if
+
+    delay 0.3
+
+    -- Wait for Chrome window to appear
+    log "Waiting for Chrome window to appear"
+    waitForWindow("Google Chrome")
+    log "Setting position for Chrome window"
+    setWindowPosition("Google Chrome", positionToOpen)
+
+    -- Name the Chrome window
+    log "Typing search query in Chrome"
+    tell application "System Events"
+        keystroke "n" using {control down, shift down}
+        delay 0.3
+        keystroke windowName
+        delay 0.3
+        key code 36 -- Enter key
+    end tell
+
+    delay 0.3
+    log "Finished opening Chrome window with name: " & windowName
+end openChromeWindow
+
+-- Function to open Google Chrome with URL, options, and set its position
+on openChromeWindowWithURL(windowName, positionToOpen, profile, urlToOpen)
+    log "Preparing to open Chrome window with URL: " & urlToOpen & ", position: " & positionToOpen & ", profile: " & profile
+    set chromePath to "/Applications/Google\\ Chrome.app/Contents/MacOS/Google\\ Chrome"
+    set profileOption to "--profile-directory=\"" & profile & "\""
+    set newWindowFlag to "--new-window"
+
+    -- Open Chrome with the specified URL
+    log "Executing shell script to open Chrome with URL"
+    do shell script chromePath & " " & profileOption & " " & newWindowFlag & " \"" & urlToOpen & "\" >/dev/null 2>&1 &"
+    delay 0.5
+
+    -- Wait for Chrome window and set position
+    log "Waiting for Chrome window to appear"
+    waitForWindow("Google Chrome")
+    log "Setting position for Chrome window"
+    setWindowPosition("Google Chrome", positionToOpen)
+
+    -- Name the Chrome window
+    log "Typing search query in Chrome"
+    tell application "System Events"
+        keystroke "n" using {control down, shift down}
+        delay 0.3
+        keystroke windowName
+        delay 0.3
+        key code 36 -- Enter key
+    end tell
+
+    log "Finished opening Chrome window with URL: " & urlToOpen
+end openChromeWindowWithURL
+
+-- Function to open Chrome app with URL and set position
+on openChromeAppWithURL(urlToOpen, positionToOpen, profile)
+    log "Preparing to open Chrome app with URL: " & urlToOpen & ", position: " & positionToOpen & ", profile: " & profile
+    set chromePath to "/Applications/Google\\ Chrome.app/Contents/MacOS/Google\\ Chrome"
+    set appUrl to "--app=\"" & urlToOpen & "\""
+    set profileOption to "--profile-directory=\"" & profile & "\""
+    set newWindowFlag to "--new-window"
+
+    -- Open Chrome detached to avoid hanging
+    log "Executing shell script to open Chrome app with URL"
+    do shell script chromePath & " " & appUrl & " " & profileOption & " " & newWindowFlag & " >/dev/null 2>&1 &"
+    delay 0.3
+
+    -- Wait for Chrome window to appear
+    log "Waiting for Chrome window to appear"
+    waitForWindow("Google Chrome")
+
+    log "Setting position for Chrome window"
+    setWindowPosition("Google Chrome", positionToOpen)
+
+    delay 0.3
+    log "Finished opening Chrome app with URL: " & urlToOpen
+end openChromeAppWithURL
+
+-- Function to open Cursor with a new window and set its position
+on openCursorWithNewWindow(positionToOpen)
+    log "Opening Cursor with a new window"
+    do shell script "cursor --new-window &"
+    delay 1
+
+    log "Waiting for Cursor window to appear"
+    waitForWindow("Cursor")
+
+    log "Setting position and size of Cursor window"
+    setWindowPosition("Cursor", positionToOpen)
+    delay 0.3
+
+    log "Cursor window opened and positioned successfully"
+end openCursorWithNewWindow
+
+-- Function to open a new iTerm window with default profile and set its position
+on openItermWithPosition(positionToOpen)
+    log "Opening iTerm2 with a new window"
+    tell application "iTerm2"
+        create window with default profile
+        activate
+    end tell
+
+    log "iTerm2 window created and activated"
+    delay 0.3
+
+    log "Waiting for iTerm2 window to appear"
+    waitForWindow("iTerm2")
+
+    log "Setting position and size of iTerm2 window"
+    setWindowPosition("iTerm2", positionToOpen)
+    delay 0.3
+
+    log "iTerm2 window opened and positioned successfully"
+end openItermWithPosition
+
+-- Function to open Google Meet through its binary detached and set its position
+on openGoogleMeetWithPosition(positionToOpen)
+    log "Setting path for Google Meet application"
+    set meetPath to "/Users/U003877/Applications/Chrome\\ Apps.localized/Google\\ Meet.app/Contents/MacOS/app_mode_loader >/dev/null 2>&1 &"
+
+    log "Executing shell script to open Google Meet"
+    do shell script meetPath
+    delay 0.5
+
+    log "Waiting for Google Meet window to appear"
+    waitForWindow("app_mode_loader")
+
+    log "Setting position for Google Meet window"
+    setWindowPosition("app_mode_loader", positionToOpen)
+    delay 0.3
+
+    log "Google Meet window opened and positioned successfully"
+end openGoogleMeetWithPosition
+
+-- Function to initialize Desktop 1
+on initDesktop1()
+    switchDesktop(desktop1)
+    openCursorWithNewWindow(firstScreenFull)
+    openChromeWindow("Dev", secondScreenFull, "Default")
+    -- Placeholder: Add Screen 3 apps here if needed (using thirdScreenFull or subdivisions)
+end initDesktop1
+
+-- Function to initialize Desktop 2
+on initDesktop2()
+    switchDesktop(desktop2)
+    openCursorWithNewWindow(firstScreenFull)
+    openChromeWindow("Dev Research", secondScreenFull, "Default")
+    -- Placeholder: Add Screen 3 apps here if needed
+end initDesktop2
+
+-- Function to initialize Desktop 3
+on initDesktop3()
+    switchDesktop(desktop3)
+    openItermWithPosition(firstScreenFull)
+    openChromeWindowWithURL("Monitoring Research", secondScreenFull, "Default", "about:blank")
+    -- Placeholder: Add Screen 3 apps here if needed
+end initDesktop3
+
+-- Function to initialize Desktop 4
+on initDesktop4()
+    switchDesktop(desktop4)
+    openChromeAppWithURL("https://chat.openai.com/", firstScreenFirstHalf, "Profile 1")
+    openChromeAppWithURL("https://chat.openai.com/", firstScreenSecondHalf, "Profile 1")
+    -- openChromeWindowWithURL("GPT Research", secondScreenFull, "Default", "about:blank")
+    -- Placeholder: Add Screen 3 apps here if needed
+end initDesktop4
+
+-- Function to initialize Desktop 5
+on initDesktop5()
+    switchDesktop(desktop5)
+    openAppWithPosition("DBeaver", "/Applications/DBeaver.app", firstScreenFull)
+    openAppWithPosition("MongoDB Compass", "/Applications/MongoDB Compass.app", secondScreenFull)
+    -- Placeholder: Add Screen 3 apps here if needed
+end initDesktop5
+
+-- Function to initialize Desktop 6
+on initDesktop6()
+    switchDesktop(desktop6)
+    -- openAppWithPosition("Postman", "/Applications/Postman.app", firstScreenFull)
+    openAppWithPosition("Insomnia", "/Applications/Insomnia.app", secondScreenFull)
+    -- Placeholder: Add Screen 3 apps here if needed
+end initDesktop6
+
+-- Function to initialize Desktop 7
+on initDesktop7()
+    switchDesktop(desktop7)
+    openAppWithPosition("Slack", "/Applications/Slack.app", firstScreenBigLeft)
+    openAppWithFileAndPosition("TextEdit", "/System/Applications/TextEdit.app", "/Users/U003877/Documents/Draft.txt", firstScreenSmallLeft)
+    openChromeWindowWithURL("Slack Colab", secondScreenFull, "Default", "https://mail.google.com")
+    -- Placeholder: Add Screen 3 apps here if needed
+end initDesktop7
+
+-- Function to initialize Desktop 8
+on initDesktop8()
+    switchDesktop(desktop8)
+    openGoogleMeetWithPosition(firstScreenBigLeft)
+    -- openAppWithFileAndPosition("TextEdit", "/Applications/TextEdit.app", "/Users/U003877/Documents/Meet.txt", firstScreenSmallLeft)
+    openChromeWindowWithURL("Meet Colab", secondScreenFull, "Default", "https://calendar.google.com")
+    -- Placeholder: Add Screen 3 apps here if needed
+end initDesktop8
+
+-- Function to initialize Desktop 9
+on initDesktop9()
+    switchDesktop(desktop9)
+    openAppWithPosition("Docker Desktop", "/Applications/Docker.app", secondScreenFull)
+    -- Placeholder: Add Screen 3 apps here if needed
+end initDesktop9
+
+-- Function to initialize Desktop 10
+on initDesktop10()
+    switchDesktop(desktop10)
+    openAppWithPosition("Spotify", "/Applications/Spotify.app", thirdScreenFull)
+    -- Placeholder: Add Screen 3 apps here if needed
+end initDesktop10
+
+-- Main initialization function
+on init()
+    log("Initializing Desktop 1")
+    initDesktop1()
+    log("Desktop 1 initialized")
+
+    log("Initializing Desktop 2")
+    initDesktop2()
+    log("Desktop 2 initialized")
+
+    log("Initializing Desktop 3")
+    initDesktop3()
+    log("Desktop 3 initialized")
+
+    log("Initializing Desktop 4")
+    initDesktop4()
+    log("Desktop 4 initialized")
+
+    log("Initializing Desktop 5")
+    initDesktop5()
+    log("Desktop 5 initialized")
+
+    log("Initializing Desktop 6")
+    initDesktop6()
+    log("Desktop 6 initialized")
+
+    log("Initializing Desktop 7")
+    initDesktop7()
+    log("Desktop 7 initialized")
+
+    log("Initializing Desktop 8")
+    initDesktop8()
+    log("Desktop 8 initialized")
+
+    log("Initializing Desktop 9")
+    initDesktop9()
+    log("Desktop 9 initialized")
+
+    log("Initializing Desktop 10")
+    initDesktop10()
+    log("Desktop 10 initialized")
+
+    switchDesktop(desktop1)
+end init
+
+-- Start the initialization
+init()
+
+on test()
+    -- initDesktop1()
+end test
+
+-- test()

@@ -1,0 +1,62 @@
+#!/usr/bin/osascript
+
+-- List of apps to check for open windows
+set appList to {"DBeaver", ¬
+                "MongoDB Compass", ¬
+                "Postman", ¬
+                "Insomnia", ¬
+                "TextEdit", ¬
+                "Google Chrome", ¬
+                "Slack", ¬
+                "Cursor", ¬
+                "Spotify", ¬
+                "Docker", ¬
+                "Preview", ¬
+                "QuickTime Player", ¬
+                "Visual Studio Code", ¬
+                "Another Redis Desktop Manager"}
+
+-- Prompt the user to select an application from the list
+set chosenApp to choose from list appList with prompt "Select an app to view window coordinates:" default items {"Google Chrome"}
+if chosenApp is false then
+    return -- Exit if no selection was made
+end if
+
+-- Check for open windows and print coordinates
+set chosenApp to item 1 of chosenApp
+tell application "System Events"
+    set appProcesses to application processes where name is chosenApp
+    if appProcesses is {} then
+        display dialog "The application \"" & chosenApp & "\" is not running or has no open windows."
+        return
+    end if
+
+    -- Retrieve and print window coordinates
+    set windowData to ""
+    repeat with appProcess in appProcesses
+        set winCount to count windows of appProcess
+        if winCount is 0 then
+            display dialog "The application \"" & chosenApp & "\" has no open windows."
+            return
+        end if
+
+        repeat with i from 1 to winCount
+            set win to window i of appProcess
+            set winPosition to position of win
+            set winSize to size of win
+            set x to item 1 of winPosition
+            set y to item 2 of winPosition
+            set width to item 1 of winSize
+            set height to item 2 of winSize
+
+            set windowData to windowData & "Window " & i & " of " & chosenApp & ": x=" & x & ", y=" & y & ", width=" & width & ", height=" & height & return
+        end repeat
+    end repeat
+end tell
+
+-- Display the window coordinates in a dialog
+if windowData is not "" then
+    display dialog windowData buttons {"OK"} default button "OK"
+else
+    display dialog "No window data found for " & chosenApp
+end if

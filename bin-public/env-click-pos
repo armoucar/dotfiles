@@ -1,0 +1,44 @@
+#!/usr/bin/osascript
+
+use framework "Foundation"
+use framework "AppKit"
+use scripting additions
+
+-- Prompt user to click on the screen
+display dialog "Click OK and then click anywhere on the screen."
+
+-- Wait for mouse button down
+repeat
+    set pressedButtons to current application's NSEvent's pressedMouseButtons() as integer
+    if pressedButtons is not 0 then exit repeat
+    delay 0.01
+end repeat
+
+-- Get mouse position at mouse down
+set mousePoint to current application's NSEvent's mouseLocation()
+set xPos to mousePoint's x as integer
+set yPos to mousePoint's y as integer
+
+-- -- Wait for mouse button up
+repeat
+    set pressedButtons to current application's NSEvent's pressedMouseButtons() as integer
+    if pressedButtons = 0 then exit repeat
+    delay 0.01
+end repeat
+
+-- Get screen dimensions to adjust y-coordinate
+tell application "Finder"
+    set screenBounds to bounds of window of desktop
+
+    set screenWidth to item 3 of screenBounds
+    set screenHeight to item 4 of screenBounds
+end tell
+
+-- Adjust y-coordinate (origin at bottom-left)
+set adjustedYPos to screenHeight - yPos
+
+-- Display the coordinates and screen dimensions
+set clickMessage to "Mouse clicked at: x=" & xPos & ", y=" & adjustedYPos
+set screenMessage to "Screen dimensions: " & screenWidth & "x" & screenHeight
+
+display dialog clickMessage & return & screenMessage
