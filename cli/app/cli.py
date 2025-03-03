@@ -1,10 +1,25 @@
 import click
 
-from cli.app.command import check_prs
-from cli.app.command import new_pr
-from cli.app.command import work_stats
-from cli.app.command import xls_files
-from cli.app.command.alfred import check_auth, release, sync_local
+from cli.app.command.check_prs import check_prs
+from cli.app.command.new_pr import new_pr
+from cli.app.command.work_stats import work_stats
+from cli.app.command.xls_files import xls_files
+
+from cli.app.command.alfred import (
+    check_auth,
+    release,
+    sync_local,
+)
+
+from cli.app.command.notes import (
+    create,
+    list_cmd,
+    edit,
+    delete,
+    complete,
+    incomplete,
+    search,
+)
 
 
 @click.group()
@@ -15,7 +30,7 @@ def cli():
 
 @click.group()
 def notes():
-    """Commands for managing notes."""
+    """Commands for managing notes and tasks."""
     pass
 
 
@@ -25,15 +40,25 @@ def alfred():
     pass
 
 
-cli.add_command(check_prs.check_prs)
-cli.add_command(new_pr.new_pr)
-cli.add_command(work_stats.work_stats)
-cli.add_command(xls_files.xls_files)
+cli.add_command(check_prs)
+cli.add_command(new_pr)
+cli.add_command(work_stats)
+cli.add_command(xls_files)
 
-alfred.add_command(check_auth.check_auth)
-alfred.add_command(release.release)
-alfred.add_command(sync_local.sync_local)
+alfred.add_command(check_auth)
+alfred.add_command(release)
+alfred.add_command(sync_local)
 cli.add_command(alfred)
+
+# Add notes commands
+notes.add_command(create)
+notes.add_command(list_cmd, name="list")
+notes.add_command(edit)
+notes.add_command(delete)
+notes.add_command(complete)
+notes.add_command(incomplete)
+notes.add_command(search)
+cli.add_command(notes)
 
 if __name__ == "__main__":
     cli()

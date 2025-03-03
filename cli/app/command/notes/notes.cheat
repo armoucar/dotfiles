@@ -1,0 +1,56 @@
+% notes, dot
+
+# create new item
+dot notes create <notes_types> --title "<title>" --content "<content>"
+
+# create new item with tags
+dot notes create <notes_types> --title "<title>" --content "<content>" --tags <notes_tags>
+
+# list all items (newest first)
+dot notes list
+
+# list with content
+dot notes list --show-content
+
+# list with specific tag
+dot notes list --tag <tag>
+
+# list specific type (note or task)
+dot notes list --type <type>
+
+# list only completed tasks
+dot notes list --type task --completed
+
+# list only pending tasks
+dot notes list --type task --pending
+
+# edit an item (uses fzf to select)
+dot notes edit
+
+# edit items of a specific type
+dot notes edit --type <type>
+
+# edit items with a specific tag
+dot notes edit --tag <tag>
+
+# mark a task as completed (uses fzf to select from incomplete tasks)
+dot notes complete
+
+# mark a task as incomplete (uses fzf to select from completed tasks)
+dot notes incomplete
+
+# delete an item (uses fzf to select)
+dot notes delete
+
+# delete without confirmation
+dot notes delete --force
+
+# search for text in notes and tasks
+dot notes search "<query>"
+
+# search for text, showing only content lines
+dot notes search "<query>" --content-only
+
+$ notes_args: echo '~/.oh-my-zsh/custom/notes/args.json'
+$ notes_types: jq -r ".types | join(\" \")" <notes_args> | tr ' ' '\n'
+$ notes_tags: jq -r ".tags | join(\" \")" <notes_args> | tr ' ' '\n'

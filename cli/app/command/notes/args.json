@@ -1,0 +1,16 @@
+{
+  "types": [
+    "note",
+    "task"
+  ],
+  "tags": [
+    "work",
+    "personal",
+    "important",
+    "urgent",
+    "idea",
+    "meeting",
+    "project",
+    "reminder"
+  ]
+}
