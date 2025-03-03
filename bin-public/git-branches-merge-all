@@ -1,0 +1,295 @@
+#!/usr/bin/env python3
+import subprocess
+import sys
+import os
+from datetime import datetime
+
+
+def get_default_branch():
+    """Determine the default branch (e.g., main or master)."""
+    try:
+        # Try to get the branch that origin/HEAD points to
+        output = (
+            subprocess.check_output(["git", "symbolic-ref", "refs/remotes/origin/HEAD"], stderr=subprocess.DEVNULL)
+            .decode()
+            .strip()
+        )
+        # Output is something like "refs/remotes/origin/main"
+        return output.split("/")[-1]
+    except subprocess.CalledProcessError:
+        # Try to guess the default branch
+        for default in ["main", "master", "develop", "dev"]:
+            try:
+                subprocess.check_output(
+                    ["git", "show-ref", "--verify", "--quiet", f"refs/remotes/origin/{default}"],
+                    stderr=subprocess.DEVNULL,
+                )
+                return default
+            except subprocess.CalledProcessError:
+                continue
+        return "main"  # fallback default branch
+
+
+def get_current_branch():
+    """Get the name of the current branch."""
+    try:
+        return (
+            subprocess.check_output(["git", "rev-parse", "--abbrev-ref", "HEAD"], stderr=subprocess.DEVNULL)
+            .decode()
+            .strip()
+        )
+    except subprocess.CalledProcessError:
+        return ""
+
+
+def get_local_branches_with_remotes(remote="origin"):
+    """Return a list of local branches with their remote tracking branches."""
+    try:
+        output = (
+            subprocess.check_output(
+                ["git", "for-each-ref", "--format=%(refname:short) %(upstream:short)", "refs/heads/"],
+                stderr=subprocess.DEVNULL,
+            )
+            .decode()
+            .strip()
+        )
+
+        branches = []
+        for line in output.splitlines():
+            parts = line.split()
+            local_branch = parts[0]
+            remote_branch = parts[1] if len(parts) > 1 else None
+
+            # Only include branches that have a remote tracking branch
+            if remote_branch and remote_branch.startswith(f"{remote}/"):
+                branches.append((local_branch, remote_branch))
+
+        return branches
+    except subprocess.CalledProcessError:
+        return []
+
+
+def fetch_all():
+    """Fetch all branches from all remotes."""
+    print("Fetching all branches from all remotes...")
+    try:
+        subprocess.run(["git", "fetch", "--all"], check=True)
+        return True
+    except subprocess.CalledProcessError as e:
+        print(f"Error fetching: {e}")
+        return False
+
+
+def can_merge_branch(local_branch, remote_branch):
+    """Check if a remote branch can be merged into its local counterpart without conflicts."""
+    try:
+        # Use git merge-tree to check for conflicts
+        # This doesn't actually perform the merge, just checks if it would work
+        base = (
+            subprocess.check_output(["git", "merge-base", local_branch, remote_branch], stderr=subprocess.DEVNULL)
+            .decode()
+            .strip()
+        )
+
+        output = subprocess.check_output(
+            ["git", "merge-tree", base, local_branch, remote_branch], stderr=subprocess.DEVNULL
+        ).decode()
+
+        # If the output contains "<<<<<<< " or "=======" or ">>>>>>> ", there are conflicts
+        return not ("<<<<<<< " in output or "=======" in output or ">>>>>>> " in output)
+    except subprocess.CalledProcessError:
+        return False
+
+
+def get_ahead_behind_count(local_branch, remote_branch):
+    """Return the number of commits local_branch is ahead and behind remote_branch."""
+    try:
+        output = (
+            subprocess.check_output(
+                ["git", "rev-list", "--left-right", "--count", f"{remote_branch}...{local_branch}"],
+                stderr=subprocess.DEVNULL,
+            )
+            .decode()
+            .strip()
+        )
+        # Output is of the form "X Y" where X is behind count and Y is ahead count
+        parts = output.split()
+        if len(parts) == 2:
+            return int(parts[0]), int(parts[1])  # behind, ahead
+        else:
+            return 0, 0
+    except subprocess.CalledProcessError:
+        return 0, 0
+
+
+def merge_remote_into_local(local_branch, remote_branch):
+    """Merge a remote branch into its local counterpart."""
+    try:
+        # First, check if there are any changes to merge
+        behind, ahead = get_ahead_behind_count(local_branch, remote_branch)
+
+        if behind == 0:
+            print(f"Branch {local_branch} is already up to date with {remote_branch}. No merge needed.")
+            return True, "up-to-date"
+
+        # Save the current branch
+        original_branch = get_current_branch()
+
+        # Checkout to the local branch
+        print(f"Checking out to {local_branch}...")
+        subprocess.run(["git", "checkout", local_branch], check=True)
+
+        print(f"Attempting to merge {remote_branch} into {local_branch}...")
+
+        # Create a backup of the current state
+        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+        backup_branch = f"backup-{local_branch}-{timestamp}"
+        subprocess.run(["git", "branch", backup_branch], check=True)
+        print(f"Created backup branch: {backup_branch}")
+
+        # Perform the merge
+        result = subprocess.run(
+            ["git", "merge", "--no-edit", remote_branch],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            check=False,
+        )
+
+        if result.returncode == 0:
+            print(f"Successfully merged {remote_branch} into {local_branch}")
+
+            # Return to the original branch if different
+            if original_branch != local_branch:
+                subprocess.run(["git", "checkout", original_branch], check=True)
+
+            return True, "merged"
+        else:
+            print(f"Failed to merge {remote_branch} into {local_branch}: {result.stderr}")
+            # Abort the merge if it failed
+            subprocess.run(["git", "merge", "--abort"], check=False)
+
+            # Return to the original branch if different
+            if original_branch != local_branch:
+                subprocess.run(["git", "checkout", original_branch], check=True)
+
+            return False, "failed"
+    except Exception as e:
+        print(f"Error during merge: {e}")
+        # Try to abort the merge in case of any error
+        try:
+            subprocess.run(["git", "merge", "--abort"], check=False)
+        except:
+            pass
+
+        # Try to return to the original branch
+        try:
+            original_branch = get_current_branch()
+            if original_branch != local_branch:
+                subprocess.run(["git", "checkout", original_branch], check=True)
+        except:
+            pass
+
+        return False, "error"
+
+
+def main():
+    # Check if we're in a git repository
+    try:
+        subprocess.check_output(["git", "rev-parse", "--is-inside-work-tree"], stderr=subprocess.DEVNULL)
+    except subprocess.CalledProcessError:
+        print("Error: Not in a git repository")
+        sys.exit(1)
+
+    # Get remote name, default to origin
+    remote = "origin"
+    if len(sys.argv) > 1:
+        remote = sys.argv[1]
+
+    # Remember the current branch to return to it at the end
+    original_branch = get_current_branch()
+    default_branch = get_default_branch()
+
+    print(f"Current branch: {original_branch}")
+    print(f"Default branch: {default_branch}")
+    print(f"Using remote: {remote}")
+
+    # Fetch all branches
+    if not fetch_all():
+        print("Failed to fetch branches. Exiting.")
+        sys.exit(1)
+
+    # Get all local branches with remote tracking branches
+    branches_with_remotes = get_local_branches_with_remotes(remote)
+
+    if not branches_with_remotes:
+        print("No local branches with remote tracking branches found.")
+        sys.exit(0)
+
+    print(f"Found {len(branches_with_remotes)} branches with remote tracking branches.")
+
+    # Track results
+    up_to_date = []
+    successful_merges = []
+    failed_merges = []
+    skipped_merges = []
+
+    # Process each branch
+    for local_branch, remote_branch in branches_with_remotes:
+        print(f"\nProcessing branch: {local_branch} (tracking {remote_branch})")
+
+        # Check if the branch can be merged without conflicts
+        if can_merge_branch(local_branch, remote_branch):
+            # Try to merge the remote branch into the local branch
+            success, status = merge_remote_into_local(local_branch, remote_branch)
+
+            if status == "up-to-date":
+                up_to_date.append(local_branch)
+            elif status == "merged":
+                successful_merges.append(local_branch)
+            else:
+                failed_merges.append(local_branch)
+        else:
+            print(f"Branch {local_branch} has conflicts with {remote_branch}. Skipping.")
+            skipped_merges.append(local_branch)
+
+    # Make sure we're back on the original branch
+    if get_current_branch() != original_branch:
+        print(f"\nReturning to original branch: {original_branch}")
+        subprocess.run(["git", "checkout", original_branch], check=True)
+
+    # Print summary
+    print("\n=== Merge Summary ===")
+
+    if up_to_date:
+        print(f"\n{len(up_to_date)} branches already up to date:")
+        for branch in up_to_date:
+            print(f"  - {branch}")
+
+    if successful_merges:
+        print(f"\n{len(successful_merges)} branches successfully merged with their remotes:")
+        for branch in successful_merges:
+            print(f"  - {branch}")
+
+    if skipped_merges:
+        print(f"\n{len(skipped_merges)} branches skipped due to potential conflicts:")
+        for branch in skipped_merges:
+            print(f"  - {branch}")
+
+    if failed_merges:
+        print(f"\n{len(failed_merges)} branches failed to merge:")
+        for branch in failed_merges:
+            print(f"  - {branch}")
+
+    # Checkout to default branch if requested
+    if "--checkout-default" in sys.argv:
+        if get_current_branch() != default_branch:
+            print(f"\nChecking out to default branch: {default_branch}")
+            subprocess.run(["git", "checkout", default_branch], check=True)
+
+    print(f"\nCurrent branch: {get_current_branch()}")
+    print("Done!")
+
+
+if __name__ == "__main__":
+    main()

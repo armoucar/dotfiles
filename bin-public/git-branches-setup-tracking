@@ -1,0 +1,136 @@
+#!/usr/bin/env python3
+import subprocess
+import sys
+import os
+
+
+def get_local_branches():
+    """Return a list of local branches."""
+    try:
+        output = subprocess.check_output(
+            ["git", "for-each-ref", "--format=%(refname:short)", "refs/heads/"],
+            stderr=subprocess.DEVNULL,
+        ).decode().strip()
+        return [branch for branch in output.splitlines() if branch]
+    except subprocess.CalledProcessError:
+        return []
+
+
+def get_remote_branches(remote="origin"):
+    """Return a list of remote branches without the remote/ prefix."""
+    try:
+        output = subprocess.check_output(
+            ["git", "for-each-ref", "--format=%(refname:short)", f"refs/remotes/{remote}/"],
+            stderr=subprocess.DEVNULL,
+        ).decode().strip()
+        # Remove the remote/ prefix
+        return [branch.replace(f"{remote}/", "") for branch in output.splitlines() if branch and not branch.endswith("/HEAD")]
+    except subprocess.CalledProcessError:
+        return []
+
+
+def get_branch_upstream(branch):
+    """Get the upstream branch for a local branch if it exists."""
+    try:
+        output = subprocess.check_output(
+            ["git", "for-each-ref", "--format=%(upstream:short)", f"refs/heads/{branch}"],
+            stderr=subprocess.DEVNULL,
+        ).decode().strip()
+        return output
+    except subprocess.CalledProcessError:
+        return ""
+
+
+def setup_tracking(branch, remote="origin"):
+    """Set up tracking for a branch with its remote counterpart."""
+    remote_branch = f"{remote}/{branch}"
+
+    # Check if remote branch exists
+    try:
+        subprocess.check_output(
+            ["git", "show-ref", "--verify", "--quiet", f"refs/remotes/{remote_branch}"],
+            stderr=subprocess.DEVNULL,
+        )
+    except subprocess.CalledProcessError:
+        return False, f"Remote branch {remote_branch} does not exist"
+
+    # Set up tracking
+    try:
+        subprocess.check_output(
+            ["git", "branch", "--set-upstream-to", remote_branch, branch],
+            stderr=subprocess.PIPE,
+        )
+        return True, f"Set up tracking for {branch} -> {remote_branch}"
+    except subprocess.CalledProcessError as e:
+        error = e.stderr.decode().strip() if e.stderr else "Unknown error"
+        if "is already set up to track" in error:
+            return False, f"Branch {branch} is already tracking {remote_branch}"
+        return False, f"Error setting up tracking for {branch}: {error}"
+
+
+def main():
+    # Check if we're in a git repository
+    try:
+        subprocess.check_output(["git", "rev-parse", "--is-inside-work-tree"], stderr=subprocess.DEVNULL)
+    except subprocess.CalledProcessError:
+        print("Error: Not in a git repository")
+        sys.exit(1)
+
+    # Get remote name, default to origin
+    remote = "origin"
+    if len(sys.argv) > 1:
+        remote = sys.argv[1]
+
+    local_branches = get_local_branches()
+    remote_branches = get_remote_branches(remote)
+
+    if not local_branches:
+        print("No local branches found")
+        sys.exit(0)
+
+    if not remote_branches:
+        print(f"No remote branches found for remote '{remote}'")
+        sys.exit(0)
+
+    print(f"Setting up tracking for local branches with remote '{remote}'...\n")
+
+    # Track branches with matching names
+    results = []
+    for branch in local_branches:
+        # Skip if branch already has upstream
+        upstream = get_branch_upstream(branch)
+        if upstream:
+            results.append((False, f"Branch {branch} is already tracking {upstream}"))
+            continue
+
+        # Check if branch exists on remote
+        if branch in remote_branches:
+            success, message = setup_tracking(branch, remote)
+            results.append((success, message))
+
+    # Print results
+    success_count = sum(1 for success, _ in results if success)
+    already_tracking = sum(1 for success, message in results if not success and "is already tracking" in message)
+    error_count = len(results) - success_count - already_tracking
+
+    for success, message in results:
+        status = "✓" if success else "i" if "is already tracking" in message else "✗"
+        print(f"[{status}] {message}")
+
+    print(f"\nSummary: {len(local_branches)} local branches processed")
+    print(f"  {success_count} tracking relationships established")
+    print(f"  {already_tracking} branches already tracking")
+    print(f"  {error_count} errors")
+
+    # Suggest manual command for branches that couldn't be auto-tracked
+    untracked = [branch for branch in local_branches if branch not in remote_branches and not get_branch_upstream(branch)]
+    if untracked:
+        print("\nThe following branches don't have matching remote branches:")
+        for branch in untracked:
+            print(f"  {branch}")
+        print("\nTo manually set up tracking for these branches, use:")
+        print("  git branch --set-upstream-to=<remote>/<branch> <branch>")
+
+
+if __name__ == "__main__":
+    main()

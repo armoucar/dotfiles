@@ -1,0 +1,224 @@
+#!/usr/bin/env python3
+import json
+import os
+import sys
+import tomllib
+import urllib.request
+import urllib.error
+import re
+from argparse import ArgumentParser
+
+
+def parse_version(version_str):
+    """
+    Parse a version string into a tuple of components for comparison.
+    Handles common version formats like:
+    - 1.2.3
+    - 1.2.3a1
+    - 1.2.3.post1
+    - 1.2.3.dev1
+    - etc.
+    """
+    # Remove any leading 'v' or '=' characters
+    version_str = version_str.lstrip('v=')
+
+    # Handle version strings with build/local parts (separated by '+')
+    if '+' in version_str:
+        version_str = version_str.split('+')[0]
+
+    # Split the version string into parts
+    # First, separate the release part from pre-release/post-release/dev parts
+    match = re.match(r'^(\d+(?:\.\d+)*)(?:[-._]?([a-zA-Z]+[0-9]*))?(?:[-._]?(?:(post|dev)([0-9]*)))?$', version_str)
+    if not match:
+        return (0,)  # Return a default for unparseable versions
+
+    release_part, pre_part, phase, phase_num = match.groups()
+
+    # Convert release part to tuple of integers
+    release_tuple = tuple(int(x) for x in release_part.split('.'))
+
+    # Handle pre-release part (alpha/beta/rc)
+    pre_value = 0
+    if pre_part:
+        if pre_part.startswith('a') or pre_part.startswith('alpha'):
+            pre_value = -3
+        elif pre_part.startswith('b') or pre_part.startswith('beta'):
+            pre_value = -2
+        elif pre_part.startswith('rc') or pre_part.startswith('c'):
+            pre_value = -1
+
+        # Extract the number part
+        pre_num = re.search(r'\d+$', pre_part)
+        pre_num = int(pre_num.group()) if pre_num else 0
+    else:
+        pre_num = 0
+
+    # Handle post/dev release
+    phase_value = 0
+    if phase:
+        if phase == 'dev':
+            phase_value = -4
+        elif phase == 'post':
+            phase_value = 1
+
+        phase_num = int(phase_num) if phase_num else 0
+    else:
+        phase_num = 0
+
+    # Combine all parts into a single comparable tuple
+    return release_tuple + (pre_value, pre_num, phase_value, phase_num)
+
+
+def compare_versions(version1, version2):
+    """
+    Compare two version strings.
+    Returns:
+    - negative if version1 < version2
+    - zero if version1 == version2
+    - positive if version1 > version2
+    """
+    v1_tuple = parse_version(version1)
+    v2_tuple = parse_version(version2)
+
+    # Compare the tuples
+    if v1_tuple < v2_tuple:
+        return -1
+    elif v1_tuple > v2_tuple:
+        return 1
+    else:
+        return 0
+
+
+def load_pipfile(path="Pipfile"):
+    """Load and parse the Pipfile (TOML format) from the given path."""
+    if not os.path.exists(path):
+        print(f"Pipfile not found at {path}.")
+        sys.exit(1)
+    with open(path, "rb") as f:
+        try:
+            return tomllib.load(f)
+        except Exception as e:
+            print(f"Error parsing Pipfile: {e}")
+            sys.exit(1)
+
+
+def load_pipfile_lock(path="Pipfile.lock"):
+    """Load and parse the Pipfile.lock (JSON format) from the given path."""
+    if not os.path.exists(path):
+        print(f"Pipfile.lock not found at {path}.")
+        sys.exit(1)
+    with open(path, "r", encoding="utf-8") as f:
+        try:
+            return json.load(f)
+        except Exception as e:
+            print(f"Error parsing Pipfile.lock: {e}")
+            sys.exit(1)
+
+
+def get_installed_version(pipfile_lock, package_name, section):
+    """
+    Retrieve the installed version for a package from Pipfile.lock.
+    'section' should be "default" (for [packages]) or "develop" (for [dev-packages]).
+    """
+    try:
+        ver = pipfile_lock[section][package_name]["version"]
+        # Remove the "==" prefix if present.
+        return ver[2:] if ver.startswith("==") else ver
+    except KeyError:
+        return "N/A"
+
+
+def get_constraint(pipfile, package_name, section):
+    """
+    Retrieve the version constraint for a package from the Pipfile.
+    'section' should be "packages" or "dev-packages".
+    """
+    try:
+        spec = pipfile[section][package_name]
+        if isinstance(spec, dict):
+            return spec.get("version", "N/A")
+        return spec
+    except KeyError:
+        return "N/A"
+
+
+def get_latest_version(package_name):
+    """
+    Query the PyPI JSON API to get the latest available version of a package.
+    Returns the version as a string or "Error" if something goes wrong.
+    """
+    url = f"https://pypi.org/pypi/{package_name}/json"
+    try:
+        request = urllib.request.Request(url)
+        request.add_header('User-Agent', 'pipenv-outdated/1.0')
+
+        with urllib.request.urlopen(request, timeout=5) as response:
+            if response.status == 200:
+                data = json.loads(response.read().decode('utf-8'))
+                return data.get("info", {}).get("version", "unknown")
+            else:
+                return "Error"
+    except (urllib.error.URLError, urllib.error.HTTPError, json.JSONDecodeError, Exception) as e:
+        return "Error"
+
+
+def main():
+    parser = ArgumentParser(description="Check for outdated dependencies in Pipfile")
+    parser.add_argument("--updates-only", action="store_true", help="Show only packages with updates available")
+    args = parser.parse_args()
+
+    pipfile = load_pipfile()
+    pipfile_lock = load_pipfile_lock()
+
+    table = []
+    headers = ["Package", "Type", "Installed", "Constraint", "Latest", "Status"]
+
+    # Process regular ([packages]) dependencies.
+    for pkg in pipfile.get("packages", {}):
+        installed_ver = get_installed_version(pipfile_lock, pkg, "default")
+        constraint = get_constraint(pipfile, pkg, "packages")
+        latest_ver = get_latest_version(pkg)
+        if installed_ver == "N/A" or latest_ver == "Error":
+            stat = "Unknown"
+        else:
+            try:
+                has_update = compare_versions(installed_ver, latest_ver) < 0
+                stat = "Update available" if has_update else "Up-to-date"
+                if args.updates_only and not has_update:
+                    continue
+            except Exception:
+                stat = "Comparison error"
+        table.append([pkg, "Default", installed_ver, constraint, latest_ver, stat])
+
+    # Process development ([dev-packages]) dependencies.
+    for pkg in pipfile.get("dev-packages", {}):
+        installed_ver = get_installed_version(pipfile_lock, pkg, "develop")
+        constraint = get_constraint(pipfile, pkg, "dev-packages")
+        latest_ver = get_latest_version(pkg)
+        if installed_ver == "N/A" or latest_ver == "Error":
+            stat = "Unknown"
+        else:
+            try:
+                has_update = compare_versions(installed_ver, latest_ver) < 0
+                stat = "Update available" if has_update else "Up-to-date"
+                if args.updates_only and not has_update:
+                    continue
+            except Exception:
+                stat = "Comparison error"
+        table.append([pkg, "Dev", installed_ver, constraint, latest_ver, stat])
+
+    if not table:
+        print("All packages are up to date!")
+        return
+
+    # Print the table in a simple text format
+    col_widths = [max(len(str(row[i])) for row in table + [headers]) for i in range(len(headers))]
+    fmt = " | ".join("{:<" + str(w) + "}" for w in col_widths)
+    print(fmt.format(*headers))
+    print("-" * (sum(col_widths) + 3 * (len(headers) - 1)))
+    for row in table:
+        print(fmt.format(*row))
+
+
+if __name__ == "__main__":
+    main()

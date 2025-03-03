@@ -9,6 +9,7 @@ alias local-squash='git reset --soft "$(git merge-base $(git_main_branch) $(git_
 alias gdss="git diff --shortstat $(git_main_branch)..$(git_current_branch)"
 
 alias inctag="_increment_tag"
+alias gk='\gitk --all --branches 2> >(grep -v "IMKClient\|IMKInputSession" >&2) &!'
 
 # Function to automate git tagging
 _increment_tag() {

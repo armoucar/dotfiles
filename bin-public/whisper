@@ -1,0 +1,125 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+"""
+Script to capture audio from the microphone and transcribe it using OpenAI's Whisper API.
+Usage: python3 whisper.py
+Press Ctrl+C to stop recording.
+"""
+
+import os
+import tempfile
+import wave
+import sys
+import pyaudio
+import openai
+from dotenv import load_dotenv
+
+# Load environment variables (OPENAI_API_KEY)
+load_dotenv()
+
+# Configure OpenAI API with the API key
+openai.api_key = os.getenv("OPENAI_API_KEY")
+if not openai.api_key:
+    print("ERROR: The OPENAI_API_KEY environment variable is not set.")
+    print("Set it using: export OPENAI_API_KEY='your-api-key'")
+    sys.exit(1)
+
+
+def record_audio(duration_seconds=None):
+    """
+    Records audio from the microphone and saves it to a temporary file.
+    If duration_seconds is None, records until Ctrl+C is pressed.
+    """
+    # Audio settings
+    FORMAT = pyaudio.paInt16
+    CHANNELS = 1
+    SAMPLE_RATE = 44100
+    CHUNK_SIZE = 1024
+
+    # Initialize PyAudio
+    p = pyaudio.PyAudio()
+
+    # Create temporary file to save the audio
+    temp_file = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
+    file_name = temp_file.name
+    temp_file.close()
+
+    # Open stream for recording
+    stream = p.open(format=FORMAT, channels=CHANNELS, rate=SAMPLE_RATE, input=True, frames_per_buffer=CHUNK_SIZE)
+
+    print("Recording... (Press Ctrl+C to stop)")
+
+    frames = []
+
+    try:
+        # If duration is specified, record for that time
+        if duration_seconds:
+            for _ in range(0, int(SAMPLE_RATE / CHUNK_SIZE * duration_seconds)):
+                data = stream.read(CHUNK_SIZE)
+                frames.append(data)
+                sys.stdout.write(".")
+                sys.stdout.flush()
+        # Otherwise, record until Ctrl+C
+        else:
+            while True:
+                data = stream.read(CHUNK_SIZE)
+                frames.append(data)
+                # Every second, show a dot to indicate recording is in progress
+                if len(frames) % (SAMPLE_RATE // CHUNK_SIZE) == 0:
+                    sys.stdout.write(".")
+                    sys.stdout.flush()
+    except KeyboardInterrupt:
+        print("\nRecording finished.")
+    finally:
+        # Stop and close the stream
+        stream.stop_stream()
+        stream.close()
+        p.terminate()
+
+        # Save the recorded audio as WAV
+        wf = wave.open(file_name, "wb")
+        wf.setnchannels(CHANNELS)
+        wf.setsampwidth(p.get_sample_size(FORMAT))
+        wf.setframerate(SAMPLE_RATE)
+        wf.writeframes(b"".join(frames))
+        wf.close()
+
+    return file_name
+
+
+def transcribe_with_whisper(audio_file):
+    """
+    Sends the audio file to OpenAI's Whisper API and returns the transcription.
+    """
+    print("\nSending audio for transcription...")
+
+    try:
+        with open(audio_file, "rb") as audio_file:
+            transcription = openai.audio.transcriptions.create(model="whisper-1", file=audio_file)
+
+        return transcription.text
+    except Exception as e:
+        print(f"Error transcribing the audio: {e}")
+        return None
+
+
+def main():
+    print("=== Voice transcription using OpenAI Whisper ===")
+
+    # Record audio
+    audio_file = record_audio()
+
+    # Transcribe the audio
+    text = transcribe_with_whisper(audio_file)
+
+    if text:
+        print("\n=== Transcription ===")
+        print(text)
+
+    # Clean up the temporary file
+    os.unlink(audio_file)
+
+
+if __name__ == "__main__":
+    main()

@@ -1,10 +1,10 @@
 import click
 
-from app.command import check_prs
-from app.command import new_pr
-from app.command import work_stats
-from app.command import xls_files
-from app.command.alfred import check_auth, release, sync_local
+from cli.app.command import check_prs
+from cli.app.command import new_pr
+from cli.app.command import work_stats
+from cli.app.command import xls_files
+from cli.app.command.alfred import check_auth, release, sync_local
 
 
 @click.group()

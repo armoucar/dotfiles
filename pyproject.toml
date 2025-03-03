@@ -3,16 +3,18 @@ name = "cli"
 version = "0.1.0"
 description = ""
 authors = ["Arthur Moura Carvalho <armoucar@gmail.com>"]
-readme = "README.md"
-packages = [{ include = "app" }]
+readme = "cli/README.md"
+packages = [{ include = "cli/app" }]
 
 [tool.poetry.dependencies]
 python = "^3.12"
 click = "^8.1.8"
-openai = "^1.58.1"
+openai = "^1.65.2"
+pyaudio = "^0.2.14"
+python-dotenv = "^1.0.1"
 
 [tool.poetry.scripts]
-dot = "app.cli:cli"
+dot = "cli.app.cli:cli"
 
 
 [build-system]

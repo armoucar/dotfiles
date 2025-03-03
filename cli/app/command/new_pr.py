@@ -11,11 +11,12 @@ from openai import OpenAI
 @click.command()
 @click.option("--dry-run", is_flag=True, help="Dry run mode (don't create PR)")
 @click.option("--verbose", is_flag=True, help="Print git commands and their outputs")
-def new_pr(dry_run, verbose):
+@click.option("--context", help="Additional context to include in the PR description generation")
+def new_pr(dry_run, verbose, context):
     """Create a new PR with AI-generated title and description."""
     current_branch, commit_logs, changes_content = _get_git_info(verbose)
 
-    context = f"""
+    git_context = f"""
     Branch: {current_branch}
 
     Commit Messages:
@@ -25,8 +26,19 @@ def new_pr(dry_run, verbose):
     {''.join(changes_content)}
     """
 
+    # Include additional context if provided
+    if context:
+        full_context = f"""
+    {git_context}
+
+    Developer Message that contextualizes the changes:
+    {context}
+    """
+    else:
+        full_context = git_context
+
     click.secho("Generating PR content...", fg="green")
-    title, body = _generate_pr_content(context)
+    title, body = _generate_pr_content(full_context)
 
     click.secho(f"Generated PR Title: {title}", fg="yellow")
     click.secho("Generated PR Body:", fg="yellow")

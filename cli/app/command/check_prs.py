@@ -22,9 +22,9 @@ def get_prs_for_repo(repo: str, verbose: bool = False) -> List[Tuple[str, ...]]:
         "--state=open",
         "--draft=false",
         "--json",
-        "headRepository,number,title,headRefName,createdAt,updatedAt,url",
+        "headRepository,number,title,createdAt,updatedAt,url",
         "--jq",
-        ".[] | [.headRepository.name, .number, .title, .headRefName, .createdAt, .updatedAt, .url] | @tsv",
+        ".[] | [.headRepository.name, .number, .title, .createdAt, .updatedAt, .url] | @tsv",
     ]
     try:
         if verbose:
@@ -38,6 +38,13 @@ def get_prs_for_repo(repo: str, verbose: bool = False) -> List[Tuple[str, ...]]:
         return []
 
 
+def truncate_text(text: str, max_length: int) -> str:
+    """Truncate text to specified length and add ellipsis if needed."""
+    if len(text) <= max_length:
+        return text
+    return text[:max_length - 3] + "..."
+
+
 @click.command(name="check-prs")
 @click.option("--repos", "-r", multiple=True, help="Repositories to check (format: owner/repo)")
 @click.option("--verbose", is_flag=True, help="Print commands being executed")
@@ -46,14 +53,20 @@ def check_prs(repos: Tuple[str, ...], verbose: bool):
     repositories = list(repos) if repos else DEFAULT_REPOS
 
     # Header for the output
-    headers = ["Repository", "PR Number", "Title", "Branch", "Created At", "Updated At", "URL"]
+    headers = ["Repository", "PR Number", "Title", "Created At", "Updated At", "URL"]
 
     # Collect all PRs
     all_prs = []
     with click.progressbar(repositories, label="Fetching PRs") as repos_progress:
         for repo in repos_progress:
             prs = get_prs_for_repo(repo, verbose)
-            all_prs.extend(prs)
+            # Process PRs to truncate repository and title
+            processed_prs = []
+            for pr in prs:
+                repo_name = truncate_text(pr[0], 20)
+                title = truncate_text(pr[2], 20)
+                processed_prs.append((repo_name, pr[1], title, pr[3], pr[4], pr[5]))
+            all_prs.extend(processed_prs)
 
     if not all_prs:
         click.echo("No open pull requests found.")

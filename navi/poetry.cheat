@@ -29,3 +29,6 @@ poetry show
 
 # Start a shell within the virtual environment
 poetry shell
+
+# Show outdated packages
+poetry show --outdated --top-level

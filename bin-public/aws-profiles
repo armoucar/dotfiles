@@ -1,0 +1,16 @@
+#!/usr/bin/env python3
+import os
+import configparser
+
+config_path = os.path.expanduser("~/.aws/config")
+config = configparser.ConfigParser()
+config.read(config_path)
+
+print(f"{'Profile':<35} {'SSO Session':<15} {'Account ID':<15}")
+print("-" * 70)
+for section in config.sections():
+    if section.startswith("profile "):
+        profile_name = section.split("profile ")[1]
+        sso_session = config[section].get("sso_session", "N/A")
+        sso_account_id = config[section].get("sso_account_id", "N/A")
+        print(f"{profile_name:<35} {sso_session:<15} {sso_account_id:<15}")
