@@ -1,0 +1,595 @@
+#!/usr/bin/env python3
+
+import os
+import subprocess
+import time
+import logging
+import datetime
+import argparse
+import concurrent.futures
+from subprocess import PIPE, STDOUT
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logger = logging.getLogger(__name__)
+
+# Base path for AppleScript files
+OSASCRIPT_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), "osascript")
+
+# Screen position configurations
+# These are defined in the global_variables.applescript file but referenced here for clarity
+FIRST_SCREEN_FULL = [0, 38, 1728, 1079]
+SECOND_SCREEN_FULL = [1728, 37, 1920, 1080]
+THIRD_SCREEN_FULL = [3648, 37, 1920, 1080]
+
+FIRST_SCREEN_FIRST_HALF = [0, 38, 864, 1079]
+FIRST_SCREEN_SECOND_HALF = [864, 38, 864, 1079]
+SECOND_SCREEN_FIRST_HALF = [1728, 37, 960, 1080]
+SECOND_SCREEN_SECOND_HALF = [2688, 37, 960, 1080]
+THIRD_SCREEN_FIRST_HALF = [3648, 37, 960, 1080]
+THIRD_SCREEN_SECOND_HALF = [4608, 37, 960, 1080]
+
+FIRST_SCREEN_BIG_LEFT = [0, 38, 1382, 1079]
+FIRST_SCREEN_SMALL_LEFT = [1382, 38, 346, 1079]
+
+# Desktop key codes
+DESKTOP_1 = 18
+DESKTOP_2 = 19
+DESKTOP_3 = 20
+DESKTOP_4 = 21
+DESKTOP_5 = 23
+DESKTOP_6 = 22
+DESKTOP_7 = 26
+DESKTOP_8 = 28
+DESKTOP_9 = 25
+DESKTOP_10 = 29
+
+# Track if Chrome has been launched already
+is_first_chrome_launch = True
+
+# List of applications to quit during shutdown
+APP_LIST = [
+    "DBeaver",
+    "MongoDB Compass",
+    "Postman",
+    "Insomnia",
+    "TextEdit",
+    "Google Chrome",
+    "Slack",
+    "Cursor",
+    "Spotify",
+    "Docker",
+    "Preview",
+    "QuickTime Player",
+    "Visual Studio Code",
+    "Another Redis Desktop Manager",
+]
+
+
+def parse_arguments():
+    """Parse command line arguments"""
+    parser = argparse.ArgumentParser(description="Initialize or shutdown desktop environments")
+    parser.add_argument(
+        "--desktops",
+        type=str,
+        default="1,2,3,4,5,6,7,8,9,10",
+        help='Comma-separated list of desktop numbers to initialize (e.g., "1,3,5")',
+    )
+    parser.add_argument("--chrome", action="store_true", help="Initialize only Chrome and Chrome windows")
+    parser.add_argument("--shut", action="store_true", help="Shutdown environment instead of initializing")
+    return parser.parse_args()
+
+
+def show_notification(title, message):
+    """Show a macOS notification"""
+    script = f"""
+    display notification "{message}" with title "{title}"
+    """
+    try:
+        subprocess.run(["osascript", "-e", script], text=True, capture_output=True, check=True)
+    except subprocess.CalledProcessError as e:
+        logger.error(f"Failed to show notification: {e}")
+
+
+def run_applescript(script_name, *args):
+    """
+    Run an AppleScript file with the given arguments.
+
+    Args:
+        script_name: Name of the script file (without .applescript extension)
+        args: Arguments to pass to the script
+
+    Returns:
+        The output of the script execution
+    """
+    script_path = os.path.join(OSASCRIPT_DIR, f"{script_name}.applescript")
+    cmd = ["osascript", script_path]
+
+    # Add arguments if provided
+    for arg in args:
+        if isinstance(arg, list):
+            # Convert lists to AppleScript lists format - handle specifically for position arrays
+            # Format as a simple comma-separated string representation
+            applescript_list = "{" + ", ".join(str(item) for item in arg) + "}"
+            cmd.append(applescript_list)
+        else:
+            cmd.append(str(arg))
+
+    logger.info(f"Running AppleScript: {script_name} with args: {args}")
+
+    try:
+        result = subprocess.run(cmd, text=True, capture_output=True, check=True)
+        if result.stdout.strip():
+            logger.info(f"Script output: {result.stdout.strip()}")
+        return result.stdout.strip()
+    except subprocess.CalledProcessError as e:
+        logger.error(f"Error running script {script_name}: {e}")
+        logger.error(f"Error output: {e.stderr}")
+        raise
+
+
+def run_applescript_snippet(script):
+    """Run an AppleScript snippet and return its output"""
+    try:
+        result = subprocess.run(["osascript", "-e", script], text=True, capture_output=True, check=True)
+        return result.stdout.strip()
+    except subprocess.CalledProcessError as e:
+        logger.error(f"Error running AppleScript: {e}")
+        logger.error(f"Error output: {e.stderr}")
+        return None
+
+
+# =================== INITIALIZATION FUNCTIONS =====================
+
+
+def switch_desktop(desktop_number):
+    """Switch to the specified desktop"""
+    logger.info(f"Switching to desktop number: {desktop_number}")
+    run_applescript("switch_desktop", desktop_number)
+    time.sleep(0.3)
+    logger.info(f"Switched to desktop number: {desktop_number}")
+
+
+def open_app_with_position(app_name, app_path, position):
+    """Open an application and set its window position"""
+    logger.info(f"Opening application: {app_name} from path: {app_path}")
+    # First, launch the app using standard open command
+    subprocess.run(["open", "-a", app_path], check=True)
+    time.sleep(0.5)
+
+    # Add retry logic with timeout
+    max_retries = 2
+    retry_count = 0
+    success = False
+
+    while not success and retry_count <= max_retries:
+        try:
+            if retry_count > 0:
+                retry_message = f"Retry attempt {retry_count}/{max_retries} for positioning {app_name}"
+                logger.warning(retry_message)
+                show_notification(f"Retrying {app_name}", retry_message)
+                time.sleep(1)  # Wait before retry
+
+            # Then set its position with the AppleScript with timeout
+            logger.info(f"Setting position for {app_name} (attempt {retry_count+1}/{max_retries+1})")
+            script_path = os.path.join(OSASCRIPT_DIR, f"open_app_with_position.applescript")
+            cmd = ["osascript", script_path, app_name, "{" + ", ".join(str(item) for item in position) + "}"]
+
+            # Run with timeout
+            result = subprocess.run(cmd, text=True, capture_output=True, check=True, timeout=7)  # 7 second timeout
+
+            if result.stdout.strip():
+                logger.info(f"Script output: {result.stdout.strip()}")
+
+            success = True
+            logger.info(f"Successfully positioned {app_name} on attempt {retry_count+1}")
+
+        except subprocess.TimeoutExpired:
+            logger.error(f"Timeout while positioning {app_name} (attempt {retry_count+1})")
+            retry_count += 1
+        except subprocess.CalledProcessError as e:
+            logger.error(f"Error running positioning script for {app_name}: {e}")
+            logger.error(f"Error output: {e.stderr}")
+            retry_count += 1
+        except Exception as e:
+            logger.error(f"Unexpected error positioning {app_name}: {e}")
+            retry_count += 1
+
+    if not success:
+        error_message = f"Failed to position {app_name} after {max_retries+1} attempts"
+        logger.error(error_message)
+        show_notification(f"Positioning Failed: {app_name}", error_message)
+
+    time.sleep(0.3)
+    logger.info(f"Finished opening and positioning application: {app_name}")
+
+
+def open_app_with_file_and_position(app_name, app_path, file_path, position):
+    """Open an application with a file and set its window position"""
+    logger.info(f"Opening application: {app_name} from path: {app_path} with file: {file_path}")
+    # First, launch the app with the file using standard open command
+    subprocess.run(["open", "-a", app_path, file_path], check=True)
+    time.sleep(0.5)
+
+    # Then set its position with the AppleScript
+    run_applescript("set_window_position", app_name, position)
+    time.sleep(0.3)
+    logger.info(f"Finished opening and positioning application: {app_name}")
+
+
+def open_chrome_window(window_name, position, profile):
+    """Open a Chrome window with the specified name and position"""
+    global is_first_chrome_launch
+    logger.info(f"Opening Chrome window with name: {window_name}, position: {position}, profile: {profile}")
+    run_applescript(
+        "open_chrome_window", window_name, position, profile, "true" if is_first_chrome_launch else "false"
+    )
+    is_first_chrome_launch = False
+    time.sleep(0.3)
+    logger.info(f"Finished opening Chrome window with name: {window_name}")
+
+
+def open_chrome_window_with_url(window_name, position, profile, url):
+    """Open a Chrome window with the specified URL, name, and position"""
+    logger.info(f"Opening Chrome window with URL: {url}, position: {position}, profile: {profile}")
+    run_applescript("open_chrome_window_with_url", window_name, position, profile, url)
+    time.sleep(0.3)
+    logger.info(f"Finished opening Chrome window with URL: {url}")
+
+
+def open_chrome_app_with_url(url, position, profile):
+    """Open a Chrome app with the specified URL and position"""
+    logger.info(f"Opening Chrome app with URL: {url}, position: {position}, profile: {profile}")
+    run_applescript("open_chrome_app_with_url", url, position, profile)
+    time.sleep(0.3)
+    logger.info(f"Finished opening Chrome app with URL: {url}")
+
+
+def open_cursor_with_new_window(position):
+    """Open Cursor with a new window and set its position"""
+    logger.info("Opening Cursor with a new window")
+    run_applescript("open_cursor_with_new_window", position)
+    time.sleep(0.3)
+    logger.info("Cursor window opened and positioned successfully")
+
+
+def open_iterm_with_position(position):
+    """Open a new iTerm window with default profile and set its position"""
+    logger.info("Opening iTerm2 with a new window")
+    run_applescript("open_iterm_with_position", position)
+    time.sleep(0.3)
+    logger.info("iTerm2 window opened and positioned successfully")
+
+
+def open_google_meet_with_position(position):
+    """Open Google Meet and set its position"""
+    logger.info("Opening Google Meet")
+    run_applescript("open_google_meet_with_position", position)
+    time.sleep(0.3)
+    logger.info("Google Meet window opened and positioned successfully")
+
+
+# Desktop initialization functions
+def init_desktop_1(chrome_only=False):
+    """Initialize Desktop 1 with applications"""
+    switch_desktop(DESKTOP_1)
+    if not chrome_only:
+        open_cursor_with_new_window(FIRST_SCREEN_FULL)
+    open_chrome_window("Dev", SECOND_SCREEN_FULL, "Default")
+    # Add Screen 3 apps here if needed
+
+
+def init_desktop_2(chrome_only=False):
+    """Initialize Desktop 2 with applications"""
+    switch_desktop(DESKTOP_2)
+    if not chrome_only:
+        open_cursor_with_new_window(FIRST_SCREEN_FULL)
+    open_chrome_window("Dev Research", SECOND_SCREEN_FULL, "Default")
+    # Add Screen 3 apps here if needed
+
+
+def init_desktop_3(chrome_only=False):
+    """Initialize Desktop 3 with applications"""
+    switch_desktop(DESKTOP_3)
+    if not chrome_only:
+        open_iterm_with_position(FIRST_SCREEN_FULL)
+    open_chrome_window_with_url("Monitoring Research", SECOND_SCREEN_FULL, "Default", "about:blank")
+    # Add Screen 3 apps here if needed
+
+
+def init_desktop_4(chrome_only=False):
+    """Initialize Desktop 4 with applications"""
+    switch_desktop(DESKTOP_4)
+    open_chrome_app_with_url("https://chat.openai.com/", FIRST_SCREEN_FIRST_HALF, "Profile 1")
+    open_chrome_app_with_url("https://chat.openai.com/", FIRST_SCREEN_SECOND_HALF, "Profile 1")
+    # open_chrome_window_with_url("GPT Research", SECOND_SCREEN_FULL, "Default", "about:blank")
+    # Add Screen 3 apps here if needed
+
+
+def init_desktop_5(chrome_only=False):
+    """Initialize Desktop 5 with applications"""
+    switch_desktop(DESKTOP_5)
+    if chrome_only:
+        return  # No Chrome apps on Desktop 5
+    open_app_with_position("DBeaver", "/Applications/DBeaver.app", FIRST_SCREEN_FULL)
+    open_app_with_position("MongoDB Compass", "/Applications/MongoDB Compass.app", SECOND_SCREEN_FULL)
+    # Add Screen 3 apps here if needed
+
+
+def init_desktop_6(chrome_only=False):
+    """Initialize Desktop 6 with applications"""
+    switch_desktop(DESKTOP_6)
+    if chrome_only:
+        return  # No Chrome apps on Desktop 6
+    # open_app_with_position("Postman", "/Applications/Postman.app", FIRST_SCREEN_FULL)
+    open_app_with_position("Insomnia", "/Applications/Insomnia.app", SECOND_SCREEN_FULL)
+    # Add Screen 3 apps here if needed
+
+
+def init_desktop_7(chrome_only=False):
+    """Initialize Desktop 7 with applications"""
+    switch_desktop(DESKTOP_7)
+    if not chrome_only:
+        open_app_with_position("Slack", "/Applications/Slack.app", FIRST_SCREEN_BIG_LEFT)
+        open_app_with_file_and_position(
+            "TextEdit",
+            "/System/Applications/TextEdit.app",
+            "/Users/U003877/Documents/Draft.txt",
+            FIRST_SCREEN_SMALL_LEFT,
+        )
+    open_chrome_window_with_url("Slack Colab", SECOND_SCREEN_FULL, "Default", "https://mail.google.com")
+    # Add Screen 3 apps here if needed
+
+
+def init_desktop_8(chrome_only=False):
+    """Initialize Desktop 8 with applications"""
+    switch_desktop(DESKTOP_8)
+    if not chrome_only:
+        open_google_meet_with_position(FIRST_SCREEN_BIG_LEFT)
+        # open_app_with_file_and_position("TextEdit", "/Applications/TextEdit.app", "/Users/U003877/Documents/Meet.txt", FIRST_SCREEN_SMALL_LEFT)
+    open_chrome_window_with_url("Meet Colab", SECOND_SCREEN_FULL, "Default", "https://calendar.google.com")
+    # Add Screen 3 apps here if needed
+
+
+def init_desktop_9(chrome_only=False):
+    """Initialize Desktop 9 with applications"""
+    switch_desktop(DESKTOP_9)
+    if chrome_only:
+        return  # No Chrome apps on Desktop 9
+    open_app_with_position("Docker Desktop", "/Applications/Docker.app", SECOND_SCREEN_FULL)
+    # Add Screen 3 apps here if needed
+
+
+def init_desktop_10(chrome_only=False):
+    """Initialize Desktop 10 with applications"""
+    switch_desktop(DESKTOP_10)
+    if chrome_only:
+        return  # No Chrome apps on Desktop 10
+    open_app_with_position("Spotify", "/Applications/Spotify.app", THIRD_SCREEN_FULL)
+    # Add Screen 3 apps here if needed
+
+
+def initialize_environment(args):
+    """Initialize the desktop environment"""
+    logger.info("Starting environment initialization")
+
+    # Parse desktop numbers
+    desktop_numbers = [int(d.strip()) for d in args.desktops.split(",") if d.strip().isdigit()]
+    logger.info(f"Will initialize desktops: {desktop_numbers}")
+
+    # Chrome-only flag
+    chrome_only = args.chrome
+    if chrome_only:
+        logger.info("Chrome-only mode: will initialize only Chrome and Chrome windows")
+
+    # Ensure osascript directory exists
+    os.makedirs(OSASCRIPT_DIR, exist_ok=True)
+
+    # Desktop initialization functions
+    desktop_init_functions = {
+        1: init_desktop_1,
+        2: init_desktop_2,
+        3: init_desktop_3,
+        4: init_desktop_4,
+        5: init_desktop_5,
+        6: init_desktop_6,
+        7: init_desktop_7,
+        8: init_desktop_8,
+        9: init_desktop_9,
+        10: init_desktop_10,
+    }
+
+    # Initialize specified desktops
+    for desktop_num in desktop_numbers:
+        if desktop_num in desktop_init_functions:
+            logger.info(f"Initializing Desktop {desktop_num}")
+            desktop_init_functions[desktop_num](chrome_only)
+            logger.info(f"Desktop {desktop_num} initialized")
+        else:
+            logger.warning(f"Desktop {desktop_num} is not supported. Skipping.")
+
+    # Switch to the first desktop in the list or desktop 1 if none specified
+    switch_desktop(desktop_numbers[0] if desktop_numbers else DESKTOP_1)
+    logger.info("Environment initialization completed successfully")
+
+    # Show success notification
+    show_notification("Environment Initialized", "Desktop environment setup completed successfully")
+
+
+# =================== SHUTDOWN FUNCTIONS =====================
+
+
+def is_process_running(process_name):
+    """Check if a process is running using pgrep"""
+    try:
+        result = subprocess.run(["pgrep", "-f", process_name], text=True, stdout=PIPE, stderr=STDOUT)
+        return result.returncode == 0
+    except Exception as e:
+        logger.error(f"Error checking if process {process_name} is running: {e}")
+        return False
+
+
+def close_chrome_windows():
+    """Close all Chrome windows"""
+    if is_process_running("Google Chrome"):
+        logger.info("Google Chrome is running. Closing all windows.")
+        script = """
+        tell application "Google Chrome"
+            close every window
+            delay 0.2
+            if (count of windows) is 0 then
+                return "All Google Chrome windows closed."
+            else
+                return "Failed to close all Google Chrome windows."
+            end if
+        end tell
+        """
+        result = run_applescript_snippet(script)
+        logger.info(result)
+
+
+def close_cursor_windows():
+    """Close all Cursor windows using key commands"""
+    if is_process_running("Cursor"):
+        logger.info("Cursor is running. Activating Cursor application.")
+        script = """
+        tell application "Cursor" to activate
+        tell application "System Events"
+            tell application process "Cursor"
+                repeat with w in windows
+                    try
+                        keystroke "w" using {command down, shift down}
+                        delay 0.5
+                    on error errMsg
+                        return "Error closing window in Cursor: " & errMsg
+                    end try
+                end repeat
+            end tell
+        end tell
+        return "All windows in Cursor processed."
+        """
+        result = run_applescript_snippet(script)
+        logger.info(result)
+
+
+def close_iterm_windows():
+    """Close all iTerm windows except the current one"""
+    if is_process_running("iTerm2"):
+        logger.info("iTerm is running. Closing all windows except the current one.")
+        script = """
+        tell application "iTerm2"
+            set frontWindowID to id of current window
+            set windowList to windows
+            repeat with w in windowList
+                if id of w is not frontWindowID then
+                    try
+                        close w
+                    on error errMsg
+                        return "Error closing iTerm window: " & errMsg
+                    end try
+                end if
+            end repeat
+        end tell
+        return "iTerm windows closed except the current one."
+        """
+        result = run_applescript_snippet(script)
+        logger.info(result)
+
+
+def quit_application(app_name):
+    """Force quit an application immediately without waiting"""
+    if is_process_running(app_name):
+        logger.info(f"Force quitting {app_name}")
+        try:
+            # Try to force quit immediately
+            subprocess.run(["pkill", "-9", "-f", app_name], check=False)
+            logger.info(f"Force quit {app_name} successful")
+            return True
+        except Exception as e:
+            error_msg = f"Error during force quitting {app_name}: {e}"
+            logger.error(error_msg)
+            return False
+    else:
+        logger.info(f"{app_name} is not running")
+        return True
+
+
+def shutdown_environment(args):
+    """Shutdown the desktop environment in parallel"""
+    logger.info("Starting environment shutdown")
+
+    # First, close all windows in parallel
+    logger.info("Closing all application windows in parallel")
+    window_close_functions = [close_chrome_windows, close_cursor_windows, close_iterm_windows]
+
+    # Use ThreadPoolExecutor to run window closing in parallel
+    with concurrent.futures.ThreadPoolExecutor(max_workers=len(window_close_functions)) as executor:
+        window_futures = {executor.submit(func): func.__name__ for func in window_close_functions}
+        for future in concurrent.futures.as_completed(window_futures):
+            func_name = window_futures[future]
+            try:
+                future.result()
+                logger.info(f"Completed {func_name}")
+            except Exception as e:
+                logger.error(f"Error in {func_name}: {e}")
+
+    logger.info("All window closing operations completed")
+
+    # Give a short delay before quitting apps to allow window closing to finish
+    time.sleep(0.5)
+
+    # Now, quit all applications in parallel
+    logger.info("Quitting all applications in parallel")
+
+    # Use ThreadPoolExecutor to quit apps in parallel
+    with concurrent.futures.ThreadPoolExecutor(max_workers=min(10, len(APP_LIST))) as executor:
+        quit_futures = {executor.submit(quit_application, app): app for app in APP_LIST}
+        for future in concurrent.futures.as_completed(quit_futures):
+            app_name = quit_futures[future]
+            try:
+                success = future.result()
+                if success:
+                    logger.info(f"Successfully quit {app_name}")
+                else:
+                    logger.warning(f"Failed to quit {app_name}")
+            except Exception as e:
+                logger.error(f"Error quitting {app_name}: {e}")
+
+    logger.info("Environment shutdown completed successfully")
+
+    # Show success notification
+    show_notification("Environment Shutdown", "Desktop environment shutdown completed successfully")
+
+
+def main():
+    """Main function to either initialize or shutdown the environment"""
+    args = parse_arguments()
+
+    try:
+        # Record start time
+        start_time = datetime.datetime.now()
+        logger.info(f"Script execution started at: {start_time}")
+
+        # Determine whether to initialize or shutdown
+        if args.shut:
+            shutdown_environment(args)
+        else:
+            initialize_environment(args)
+
+        # Log end time and elapsed time
+        end_time = datetime.datetime.now()
+        elapsed_time = end_time - start_time
+        logger.info(f"Script execution ended at: {end_time}")
+        logger.info(f"Total execution time: {elapsed_time}")
+
+    except Exception as e:
+        error_message = f"Error during {'shutdown' if args.shut else 'initialization'}: {e}"
+        logger.error(error_message)
+
+        # Show failure notification
+        show_notification(f"Environment {'Shutdown' if args.shut else 'Initialization'} Failed", f"Error: {str(e)}")
+        raise
+
+
+if __name__ == "__main__":
+    main()

@@ -7,7 +7,7 @@ from cli.app.command.notes.utils import list_items
 
 
 @click.command()
-@click.option("--show-content", "-c", is_flag=True, help="Show item content in listing")
+@click.option("--show-content", "-c", is_flag=True, help="Show full item content in listing")
 @click.option("--tag", "-t", help="Filter items by tag")
 @click.option("--type", type=click.Choice(["note", "task"]), help="Filter by item type")
 @click.option("--completed", is_flag=True, help="Show only completed tasks")
@@ -51,16 +51,13 @@ def list_cmd(show_content: bool, tag: Optional[str], type: Optional[str], comple
         # Format the item type
         item_type = item["type"].upper()
 
-        # Get the title
-        title = item["title"]
-
         # Determine the state of the item
         if item["type"] == "task":
             state = "COMPLETED" if item.get("completed_at") is not None else "PENDING"
         else:
             state = "-"  # Notes don't have a state
 
-        # Format content preview if available
+        # Format content preview
         content_preview = ""
         if "content" in item and item["content"]:
             content = item["content"].replace("\n", " ").strip()
@@ -70,10 +67,10 @@ def list_cmd(show_content: bool, tag: Optional[str], type: Optional[str], comple
                 content_preview = content
 
         # Add row to table data
-        table_data.append([created_date, item_type, state, title, content_preview])
+        table_data.append([created_date, item_type, state, content_preview])
 
     # Display the table
-    headers = ["Date", "Type", "State", "Title", "Preview"]
+    headers = ["Date", "Type", "State", "Content Preview"]
     click.echo(tabulate(table_data, headers=headers, tablefmt="grid"))
 
     # Show full content if requested
@@ -81,6 +78,6 @@ def list_cmd(show_content: bool, tag: Optional[str], type: Optional[str], comple
         click.echo("\nFull Content:")
         for item in items:
             if "content" in item and item["content"]:
-                click.echo(f"\n[{item['title']}]")
+                click.echo(f"\n[{item['type'].upper()}]")
                 click.echo(f"{item['content']}")
                 click.echo("---")

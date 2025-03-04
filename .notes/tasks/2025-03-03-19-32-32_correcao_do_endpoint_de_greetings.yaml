@@ -1,0 +1,6 @@
+completed_at: null
+content: correcao do endpoint de greetings dos geeks, estava quebrado ha algum tempo
+  depois que atualizei a versao de llama index do projeto
+created_at: '2025-03-03T19:32:32.226562'
+tags: []
+updated_at: '2025-03-03T19:32:32.226565'

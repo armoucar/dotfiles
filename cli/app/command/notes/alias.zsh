@@ -2,8 +2,8 @@
 # Add this to your .zshrc: source ~/.oh-my-zsh/custom/cli/app/command/notes/alias.zsh
 
 # Create commands
-alias notcn="dot notes create note -t"
-alias notct="dot notes create task -t"
+alias notcn="dot notes create note -c"
+alias notct="dot notes create task -c"
 
 # List commands
 alias notl="dot notes list"

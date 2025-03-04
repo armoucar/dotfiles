@@ -11,7 +11,7 @@ A CLI tool for managing notes and tasks that stores data in YAML files.
 - Filter items by type and tags
 - Interactive selection using fzf
 - Store all data as YAML files that can be committed to git
-- Filenames include timestamps (yyyy-MM-dd-HH-mm-ss format)
+- Filenames include timestamps and the first few words of content
 - Shell aliases for quick access to commands
 
 ## Usage
@@ -20,13 +20,13 @@ A CLI tool for managing notes and tasks that stores data in YAML files.
 
 ```bash
 # Create a note
-dot notes create note --title "Meeting Notes" --content "Points discussed in the meeting"
+dot notes create note --content "Points discussed in the meeting with marketing team"
 
 # Create a task
-dot notes create task --title "Finish Report" --content "Complete the quarterly report"
+dot notes create task --content "Complete the quarterly report by Friday"
 
 # Add tags to any item type
-dot notes create note --title "Work Meeting" --content "Discussion notes" --tags work --tags important
+dot notes create note --content "Discussion notes about product roadmap" --tags work --tags important
 ```
 
 ### Listing Items
@@ -134,9 +134,9 @@ All items are stored as YAML files in the following locations:
 - Notes: `~/.oh-my-zsh/custom/notes/notes/`
 - Tasks: `~/.oh-my-zsh/custom/notes/tasks/`
 
-Each file is named with a timestamp followed by the title (e.g., `2023-04-15-14-30-22_meeting_notes.yaml`).
+Each file is named with a timestamp followed by the first few words of content (e.g., `2023-04-15-14-30-22_points_discussed_in_meeting.yaml`).
 
-Each file contains metadata like creation date, tags, and content. For tasks, completion status and completion date are also tracked.
+Each file contains metadata like creation date, content, tags, and timestamps. For tasks, completion status and completion date are also tracked.
 
 The directory structure is git-friendly, allowing you to version control your notes.
 

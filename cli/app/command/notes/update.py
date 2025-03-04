@@ -10,11 +10,10 @@ def update():
 
 @update.command()
 @click.argument("filename")
-@click.option("--title", "-t", help="New title for the note")
 @click.option("--content", "-c", help="New content for the note")
 @click.option("--add-tags", "-a", multiple=True, help="Add tags to the note")
 @click.option("--remove-tags", "-r", multiple=True, help="Remove tags from the note")
-def note(filename: str, title: Optional[str], content: Optional[str],
+def note(filename: str, content: Optional[str],
          add_tags: List[str], remove_tags: List[str]):
     """Update an existing note."""
     try:
@@ -23,8 +22,6 @@ def note(filename: str, title: Optional[str], content: Optional[str],
 
         # Build update dictionary
         updates = {}
-        if title:
-            updates["title"] = title
         if content:
             updates["content"] = content
 
@@ -50,11 +47,10 @@ def note(filename: str, title: Optional[str], content: Optional[str],
 
 @update.command()
 @click.argument("filename")
-@click.option("--title", "-t", help="New title for the task")
 @click.option("--content", "-c", help="New content for the task")
 @click.option("--add-tags", "-a", multiple=True, help="Add tags to the task")
 @click.option("--remove-tags", "-r", multiple=True, help="Remove tags from the task")
-def task(filename: str, title: Optional[str], content: Optional[str],
+def task(filename: str, content: Optional[str],
          add_tags: List[str], remove_tags: List[str]):
     """Update an existing task."""
     try:
@@ -63,8 +59,6 @@ def task(filename: str, title: Optional[str], content: Optional[str],
 
         # Build update dictionary
         updates = {}
-        if title:
-            updates["title"] = title
         if content:
             updates["content"] = content
 
@@ -90,11 +84,10 @@ def task(filename: str, title: Optional[str], content: Optional[str],
 
 @update.command()
 @click.argument("filename")
-@click.option("--title", "-t", help="New title for the memory")
 @click.option("--content", "-c", help="New content for the memory")
 @click.option("--add-tags", "-a", multiple=True, help="Add tags to the memory")
 @click.option("--remove-tags", "-r", multiple=True, help="Remove tags from the memory")
-def memory(filename: str, title: Optional[str], content: Optional[str],
+def memory(filename: str, content: Optional[str],
            add_tags: List[str], remove_tags: List[str]):
     """Update an existing memory."""
     try:
@@ -103,8 +96,6 @@ def memory(filename: str, title: Optional[str], content: Optional[str],
 
         # Build update dictionary
         updates = {}
-        if title:
-            updates["title"] = title
         if content:
             updates["content"] = content
 

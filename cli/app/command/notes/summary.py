@@ -99,13 +99,17 @@ def _prepare_content(completed_tasks: List[Dict], recent_pending_tasks: List[Dic
             created_at = datetime.fromisoformat(task["created_at"]).strftime("%Y-%m-%d %H:%M")
             completed_at = datetime.fromisoformat(task["completed_at"]).strftime("%Y-%m-%d %H:%M")
 
-            title = task["title"]
             # Handle None values for content
             task_content = task.get("content", "") or ""
             task_content = task_content.strip()
             tags = ", ".join(task.get("tags", []) or [])
 
-            task_text = f"- Tarefa: {title} (Criada: {created_at}, Concluída: {completed_at})"
+            # Use content preview as display text (first line or first 50 chars)
+            content_preview = task_content.split('\n')[0][:50]
+            if len(task_content.split('\n')[0]) > 50:
+                content_preview += "..."
+
+            task_text = f"- Tarefa: {content_preview} (Criada: {created_at}, Concluída: {completed_at})"
             if tags:
                 task_text += f" [Tags: {tags}]"
             if task_content:
@@ -122,12 +126,16 @@ def _prepare_content(completed_tasks: List[Dict], recent_pending_tasks: List[Dic
         for task in recent_pending_tasks:
             created_at = datetime.fromisoformat(task["created_at"]).strftime("%Y-%m-%d %H:%M")
 
-            title = task["title"]
             task_content = task.get("content", "") or ""
             task_content = task_content.strip()
             tags = ", ".join(task.get("tags", []) or [])
 
-            task_text = f"- Tarefa: {title} (Criada: {created_at})"
+            # Use content preview as display text
+            content_preview = task_content.split('\n')[0][:50]
+            if len(task_content.split('\n')[0]) > 50:
+                content_preview += "..."
+
+            task_text = f"- Tarefa: {content_preview} (Criada: {created_at})"
             if tags:
                 task_text += f" [Tags: {tags}]"
             if task_content:
@@ -143,12 +151,16 @@ def _prepare_content(completed_tasks: List[Dict], recent_pending_tasks: List[Dic
         for task in older_pending_tasks:
             created_at = datetime.fromisoformat(task["created_at"]).strftime("%Y-%m-%d %H:%M")
 
-            title = task["title"]
             task_content = task.get("content", "") or ""
             task_content = task_content.strip()
             tags = ", ".join(task.get("tags", []) or [])
 
-            task_text = f"- Tarefa: {title} (Criada: {created_at})"
+            # Use content preview as display text
+            content_preview = task_content.split('\n')[0][:50]
+            if len(task_content.split('\n')[0]) > 50:
+                content_preview += "..."
+
+            task_text = f"- Tarefa: {content_preview} (Criada: {created_at})"
             if tags:
                 task_text += f" [Tags: {tags}]"
             if task_content:
@@ -160,16 +172,20 @@ def _prepare_content(completed_tasks: List[Dict], recent_pending_tasks: List[Dic
 
     # 3. Section for recent notes
     if recent_notes:
-        content_parts.append("\n## ANOTAÇÕES RECENTES:")
+        content_parts.append("\n## NOTAS RECENTES:")
         for note in recent_notes:
             created_at = datetime.fromisoformat(note["created_at"]).strftime("%Y-%m-%d %H:%M")
 
-            title = note["title"]
             note_content = note.get("content", "") or ""
             note_content = note_content.strip()
             tags = ", ".join(note.get("tags", []) or [])
 
-            note_text = f"- Anotação: {title} (Criada: {created_at})"
+            # Use content preview as display text
+            content_preview = note_content.split('\n')[0][:50]
+            if len(note_content.split('\n')[0]) > 50:
+                content_preview += "..."
+
+            note_text = f"- Nota: {content_preview} (Criada: {created_at})"
             if tags:
                 note_text += f" [Tags: {tags}]"
             if note_content:
@@ -183,44 +199,50 @@ def _prepare_content(completed_tasks: List[Dict], recent_pending_tasks: List[Dic
 
 
 def _generate_summary(content: str, days: int) -> str:
-    """Generate a summary using OpenAI."""
-    # Handle empty content
-    if not content.strip():
-        return "Não há conteúdo disponível para resumir."
-
-    prompt = f"""
-    A seguir estão minhas anotações e tarefas dos últimos {days} dia(s), organizadas em seções.
-    Por favor, forneça um resumo conciso das principais atividades, progresso e informações importantes.
-
-    Organize o resumo em seções claramente definidas:
-    1. O que foi realizado (tarefas concluídas)
-    2. O que está pendente, dividido em:
-       a) Tarefas recentes pendentes
-       b) Tarefas antigas que ainda estão pendentes
-    3. Anotações importantes
-
-    Agrupe itens relacionados e destaque os pontos mais significativos.
-    O resumo deve ser escrito em português do Brasil, usando linguagem clara e direta.
-    Mantenha o formato simples e facilmente escaneável.
-
-    Conteúdo para resumir:
-    {content}
-    """
-
+    """Generate a summary using OpenAI's API."""
     try:
         client = OpenAI()
-        response = (
-            client
-            .chat.completions.create(
-                model="o3-mini-2025-01-31",
-                messages=[{"role": "user", "content": prompt}],
-            )
-            .choices[0]
-            .message.content
+
+        time_period = "do dia de ontem" if days == 1 else f"dos últimos {days} dias"
+
+        # Crafting a clear system message
+        system_message = """
+        Você é um assistente especializado em resumir notas e tarefas.
+        Seu trabalho é criar um resumo conciso, claro e bem organizado de notas e tarefas.
+        """
+
+        # Crafting a clear user prompt with instructions
+        user_prompt = f"""
+        # Resumo {time_period}
+
+        Por favor, analise as seguintes notas e tarefas e crie um resumo executivo que:
+
+        1. Destaque as principais atividades concluídas
+        2. Identifique as principais tarefas pendentes que precisam de atenção
+        3. Destaque os temas principais nas notas recentes
+        4. Identifique quaisquer padrões ou tendências notáveis
+        5. Sugira áreas que possam precisar de mais foco ou atenção
+
+        Apresente o resumo em formato Markdown, incluindo seções claras e listas para facilitar a leitura.
+        Foque no conteúdo e não apenas nos títulos.
+
+        Aqui estão os dados:
+
+        {content}
+        """
+
+        # Making the API call
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": system_message},
+                {"role": "user", "content": user_prompt}
+            ],
+            temperature=0.7,
+            max_tokens=1500
         )
-        return response
+
+        return response.choices[0].message.content
+
     except Exception as e:
-        error_msg = f"Erro ao gerar resumo com OpenAI: {str(e)}"
-        # Provide a fallback by returning the raw content with a header
-        fallback = f"{error_msg}\n\nConteúdo original:\n\n{content}"
-        return fallback
+        return f"Error generating summary: {str(e)}"

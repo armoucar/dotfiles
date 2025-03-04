@@ -1,10 +1,10 @@
 % notes, dot
 
 # create new item
-dot notes create <notes_types> --title "<title>" --content "<content>"
+dot notes create <notes_types> --content "<content>"
 
 # create new item with tags
-dot notes create <notes_types> --title "<title>" --content "<content>" --tags <notes_tags>
+dot notes create <notes_types> --content "<content>" --tags <notes_tags>
 
 # list all items (newest first)
 dot notes list

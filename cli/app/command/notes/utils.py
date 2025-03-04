@@ -32,30 +32,33 @@ def get_path_for_type(item_type: NoteType) -> str:
         raise ValueError(f"Unknown item type: {item_type}")
 
 
-def generate_filename(title: str) -> str:
-    """Generate a filename with timestamp and title."""
+def generate_filename(content: str) -> str:
+    """Generate a filename with timestamp and the first few words from content."""
     # Get current timestamp in yyyy-MM-dd-HH-mm-ss format
     timestamp = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
 
-    # Process title: replace spaces with underscores and remove special characters
-    safe_title = "".join(c if c.isalnum() or c == " " else "_" for c in title)
-    safe_title = safe_title.replace(" ", "_").lower()
+    # Process content: get first few words (max 5) and prepare for filename
+    content_words = content.split()[:5] if content else ["untitled"]
+    content_preview = " ".join(content_words)
 
-    # Combine timestamp and title
-    return f"{timestamp}_{safe_title}.yaml"
+    # Create safe filename
+    safe_content = "".join(c if c.isalnum() or c == " " else "_" for c in content_preview)
+    safe_content = safe_content.replace(" ", "_").lower()
+
+    # Combine timestamp and content preview
+    return f"{timestamp}_{safe_content}.yaml"
 
 
-def save_item(item_type: NoteType, title: str, content: str, tags: Optional[List[str]] = None) -> str:
+def save_item(item_type: NoteType, content: str, tags: Optional[List[str]] = None) -> str:
     """Save a new item to the filesystem."""
     ensure_directories_exist()
 
     directory = get_path_for_type(item_type)
-    filename = generate_filename(title)
+    filename = generate_filename(content)
     filepath = os.path.join(directory, filename)
 
     # Create the item data structure
     item_data = {
-        "title": title,
         "content": content,
         "created_at": datetime.now().isoformat(),
         "updated_at": datetime.now().isoformat(),
@@ -185,19 +188,24 @@ def _format_item_for_display(item: Dict) -> str:
     """Format an item for display in fzf."""
     created = datetime.fromisoformat(item["created_at"]).strftime("%Y-%m-%d %H:%M")
 
-    # Start with type and title
-    result = f"[{item['type'].upper()}] {item['title']} [Created: {created}]"
+    # Get content preview for display
+    content_preview = item.get("content", "").split("\n")[0][:50]
+    if len(item.get("content", "").split("\n")[0]) > 50:
+        content_preview += "..."
+
+    # Start with type and content preview
+    result = f"[{item['type'].upper()}] {content_preview} [Created: {created}]"
 
     # Add tags if any
     if item.get("tags"):
         result += f" Tags: {', '.join(item['tags'])}"
 
     # Add task-specific info
-    if "completed" in item:
-        status = "✓" if item["completed"] else "○"
+    if item["type"] == "task":
+        status = "✓" if item.get("completed_at") is not None else "○"
         result = f"{status} {result}"
 
-        if item["completed"] and item["completed_at"]:
+        if item.get("completed_at"):
             completed = datetime.fromisoformat(item["completed_at"]).strftime("%Y-%m-%d %H:%M")
             result += f" [Completed: {completed}]"
 

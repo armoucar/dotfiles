@@ -1,0 +1,5 @@
+completed_at: '2025-03-03T19:28:03.031768'
+content: fix phoenix telemetry current span not being returned in the gugelmin endpoint
+created_at: '2025-03-03T19:27:34.785659'
+tags: []
+updated_at: '2025-03-03T19:28:03.033548'
