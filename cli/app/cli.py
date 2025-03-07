@@ -22,6 +22,12 @@ from cli.app.command.notes import (
     summary,
 )
 
+from cli.app.telemetry import initialize_telemetry
+
+
+# Initialize OpenTelemetry for OpenAI instrumentation
+initialize_telemetry()
+
 
 @click.group()
 def cli():

@@ -28,10 +28,10 @@ def summary(days: int, verbose: bool):
         all_items = list_items()
 
         # Categories for our summary
-        completed_tasks = []    # Tasks completed within the timeframe
+        completed_tasks = []  # Tasks completed within the timeframe
         recent_pending_tasks = []  # Recently created pending tasks
-        older_pending_tasks = []   # Older pending tasks still incomplete
-        recent_notes = []          # Notes created within the timeframe
+        older_pending_tasks = []  # Older pending tasks still incomplete
+        recent_notes = []  # Notes created within the timeframe
 
         for item in all_items:
             try:
@@ -84,11 +84,16 @@ def summary(days: int, verbose: bool):
         click.echo(f"Erro ao gerar resumo: {str(e)}")
         if verbose:
             import traceback
+
             click.echo(traceback.format_exc())
 
 
-def _prepare_content(completed_tasks: List[Dict], recent_pending_tasks: List[Dict],
-                     older_pending_tasks: List[Dict], recent_notes: List[Dict]) -> str:
+def _prepare_content(
+    completed_tasks: List[Dict],
+    recent_pending_tasks: List[Dict],
+    older_pending_tasks: List[Dict],
+    recent_notes: List[Dict],
+) -> str:
     """Prepare the content for the OpenAI prompt with clear sections."""
     content_parts = []
 
@@ -105,8 +110,8 @@ def _prepare_content(completed_tasks: List[Dict], recent_pending_tasks: List[Dic
             tags = ", ".join(task.get("tags", []) or [])
 
             # Use content preview as display text (first line or first 50 chars)
-            content_preview = task_content.split('\n')[0][:50]
-            if len(task_content.split('\n')[0]) > 50:
+            content_preview = task_content.split("\n")[0][:50]
+            if len(task_content.split("\n")[0]) > 50:
                 content_preview += "..."
 
             task_text = f"- Tarefa: {content_preview} (Criada: {created_at}, Concluída: {completed_at})"
@@ -131,8 +136,8 @@ def _prepare_content(completed_tasks: List[Dict], recent_pending_tasks: List[Dic
             tags = ", ".join(task.get("tags", []) or [])
 
             # Use content preview as display text
-            content_preview = task_content.split('\n')[0][:50]
-            if len(task_content.split('\n')[0]) > 50:
+            content_preview = task_content.split("\n")[0][:50]
+            if len(task_content.split("\n")[0]) > 50:
                 content_preview += "..."
 
             task_text = f"- Tarefa: {content_preview} (Criada: {created_at})"
@@ -156,8 +161,8 @@ def _prepare_content(completed_tasks: List[Dict], recent_pending_tasks: List[Dic
             tags = ", ".join(task.get("tags", []) or [])
 
             # Use content preview as display text
-            content_preview = task_content.split('\n')[0][:50]
-            if len(task_content.split('\n')[0]) > 50:
+            content_preview = task_content.split("\n")[0][:50]
+            if len(task_content.split("\n")[0]) > 50:
                 content_preview += "..."
 
             task_text = f"- Tarefa: {content_preview} (Criada: {created_at})"
@@ -181,8 +186,8 @@ def _prepare_content(completed_tasks: List[Dict], recent_pending_tasks: List[Dic
             tags = ", ".join(note.get("tags", []) or [])
 
             # Use content preview as display text
-            content_preview = note_content.split('\n')[0][:50]
-            if len(note_content.split('\n')[0]) > 50:
+            content_preview = note_content.split("\n")[0][:50]
+            if len(note_content.split("\n")[0]) > 50:
                 content_preview += "..."
 
             note_text = f"- Nota: {content_preview} (Criada: {created_at})"
@@ -228,18 +233,17 @@ def _generate_summary(content: str, days: int) -> str:
 
         Aqui estão os dados:
 
+        <notas_e_tarefas>
         {content}
+        </notas_e_tarefas>
         """
 
         # Making the API call
         response = client.chat.completions.create(
             model="gpt-4o",
-            messages=[
-                {"role": "system", "content": system_message},
-                {"role": "user", "content": user_prompt}
-            ],
+            messages=[{"role": "system", "content": system_message}, {"role": "user", "content": user_prompt}],
             temperature=0.7,
-            max_tokens=1500
+            max_tokens=1500,
         )
 
         return response.choices[0].message.content

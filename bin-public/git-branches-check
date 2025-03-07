@@ -142,6 +142,34 @@ def branch_exists_on_remote(branch_name, remote="origin"):
         return False
 
 
+def check_if_branch_was_merged_remotely(branch_name, remote="origin"):
+    """Check if a branch was merged remotely even if it's now deleted."""
+    # Try to get the merge commit by looking at the commit messages
+    default_remote = get_default_remote_branch()
+
+    try:
+        # This gets all commits on the default branch with "Merge" in their message
+        output = subprocess.check_output(
+            ["git", "log", "--merges", "--grep", f"Merge.*{branch_name}", f"origin/{default_remote}"],
+            stderr=subprocess.DEVNULL
+        ).decode().strip()
+
+        if output:
+            return True
+
+        # If GitHub CLI is available, try to check if the branch had a PR that was merged
+        try:
+            pr_status = get_pr_status(branch_name, remote)
+            if pr_status == "PR Merged":
+                return True
+        except Exception:
+            pass
+
+        return False
+    except subprocess.CalledProcessError:
+        return False
+
+
 def get_ahead_behind_count(branch, upstream):
     """Return the number of commits 'branch' is ahead and behind its upstream."""
     try:
@@ -335,6 +363,37 @@ def get_pr_status(branch_name, remote="origin"):
                                 pr_status = f"PR {state}"
                 except subprocess.CalledProcessError:
                     pass
+
+                # If no PR found, check for merged PRs
+                if pr_status == "No PR":
+                    try:
+                        output = (
+                            subprocess.check_output(
+                                [
+                                    "gh",
+                                    "pr",
+                                    "list",
+                                    "--head",
+                                    branch_name,
+                                    "--state",
+                                    "merged",
+                                    "--json",
+                                    "state",
+                                    "--repo",
+                                    f"{owner}/{repo}",
+                                ],
+                                stderr=subprocess.DEVNULL,
+                            )
+                            .decode()
+                            .strip()
+                        )
+
+                        if output:
+                            prs = json.loads(output)
+                            if prs:
+                                pr_status = "PR Merged"
+                    except subprocess.CalledProcessError:
+                        pass
             except subprocess.CalledProcessError:
                 # gh CLI not available
                 pass
@@ -351,6 +410,13 @@ def main():
     except subprocess.CalledProcessError:
         print("Error: Not in a git repository")
         sys.exit(1)
+
+    # Always fetch the latest info from remote
+    print("Fetching latest information from remote...")
+    try:
+        subprocess.check_output(["git", "fetch", "--all"], stderr=subprocess.DEVNULL)
+    except subprocess.CalledProcessError:
+        print("Warning: Failed to fetch from remote")
 
     # Get remote name, default to origin
     remote = "origin"
@@ -388,6 +454,8 @@ def main():
         # Check if branch is merged
         if branch in merged_branches:
             status.append("MERGED")
+        elif check_if_branch_was_merged_remotely(branch, remote):
+            status.append("MERGED on GitHub")
 
         # Get branch age
         branch_age = get_branch_age_days(commit_date)
@@ -409,7 +477,15 @@ def main():
                     status.append("In sync (untracked)")
                 branch_type = "Local+Remote"
             else:
-                status.append("Never pushed")
+                # Before saying "Never pushed", check if it was merged remotely
+                is_merged_remotely = check_if_branch_was_merged_remotely(branch, remote)
+                pr_status = get_pr_status(branch, remote)
+
+                if is_merged_remotely or pr_status == "PR Merged":
+                    status.append("Merged remotely, deleted on remote")
+                    branch_type = "Local+Merged"
+                else:
+                    status.append("Never pushed")
         else:
             if remote_branch_exists(upstream):
                 behind, ahead = get_ahead_behind_count(branch, upstream)
@@ -421,7 +497,15 @@ def main():
                     status.append("In sync")
                 branch_type = "Local+Remote"
             else:
-                status.append("Remote missing")
+                # Before saying "Remote missing", check if it was merged remotely
+                is_merged_remotely = check_if_branch_was_merged_remotely(branch, remote)
+                pr_status = get_pr_status(branch, remote)
+
+                if is_merged_remotely or pr_status == "PR Merged":
+                    status.append("Merged remotely, deleted on remote")
+                    branch_type = "Local+Merged"
+                else:
+                    status.append("Remote missing")
 
         # Format the commit date
         formatted_date = format_date(commit_date)
@@ -435,6 +519,8 @@ def main():
         # Add recommendation
         recommendation = ""
         if "MERGED" in status and not is_current:
+            recommendation = "Can be deleted"
+        elif "Merged remotely" in status_str and not is_current:
             recommendation = "Can be deleted"
         elif "ABANDONED" in status and not is_current:
             recommendation = "Consider updating or deleting"
@@ -553,7 +639,7 @@ def main():
 
         for branch, details in branch_details.items():
             if details["age"] > days_threshold and branch != default_remote and not details["is_current"]:
-                if details["type"] in ["Local", "Local+Remote"]:
+                if details["type"] in ["Local", "Local+Remote", "Local+Merged"]:
                     branches_to_delete["local"].append(branch)
                 if details["exists_on_remote"] or details["type"] == "Remote-only":
                     branches_to_delete["remote"].append(branch)
@@ -590,8 +676,8 @@ def main():
     if "--help" in sys.argv:
         print("\nUsage: git-check-branches [remote] [options]")
         print("\nOptions:")
-        print("  --show-default    Show the default branch (main/master) in the results")
-        print("  --help            Show this help message")
+        print("  --show-default   Show the default branch (main/master) in the results")
+        print("  --help           Show this help message")
 
 
 if __name__ == "__main__":

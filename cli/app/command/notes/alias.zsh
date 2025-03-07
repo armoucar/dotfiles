@@ -2,8 +2,23 @@
 # Add this to your .zshrc: source ~/.oh-my-zsh/custom/cli/app/command/notes/alias.zsh
 
 # Create commands
-alias notcn="dot notes create note -c"
-alias notct="dot notes create task -c"
+# Create note function - uses -c flag if argument is provided
+notcn() {
+  if [[ -n "$1" ]]; then
+    dot notes create note -c "$1"
+  else
+    dot notes create note
+  fi
+}
+
+# Create task function - uses -c flag if argument is provided
+notct() {
+  if [[ -n "$1" ]]; then
+    dot notes create task -c "$1"
+  else
+    dot notes create task
+  fi
+}
 
 # List commands
 alias notl="dot notes list"

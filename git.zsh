@@ -4,9 +4,11 @@ alias ggpt="git push origin --tags"
 
 alias gbrprune='git checkout -q main && git for-each-ref refs/heads/ "--format=%(refname:short)" | while read branch; do mergeBase=$(git merge-base main $branch) && [[ $(git cherry main $(git commit-tree $(git rev-parse "$branch^{tree}") -p $mergeBase -m _)) == "-"* ]] && git branch -D $branch; done'
 
-alias local-squash='git reset --soft "$(git merge-base $(git_main_branch) $(git_current_branch))" && git commit -m "--wip-- [skip ci]"'
+alias glocal-squash='git reset --soft "$(git merge-base $(git_main_branch) $(git_current_branch))" && git commit -m "--wip-- [skip ci]"'
 
 alias gdss="git diff --shortstat $(git_main_branch)..$(git_current_branch)"
+
+alias gwips='git rm $(git ls-files --deleted) 2> /dev/null; git commit --no-verify --no-gpg-sign --message "--wip-- [skip ci]"'
 
 alias inctag="_increment_tag"
 alias gk='\gitk --all --branches 2> >(grep -v "IMKClient\|IMKInputSession" >&2) &!'
