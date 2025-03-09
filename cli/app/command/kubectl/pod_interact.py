@@ -3,6 +3,7 @@
 import click
 import os
 import subprocess
+import tempfile
 from typing import Literal
 
 
@@ -60,23 +61,35 @@ def pod_interact(namespace: str, instance: str, mode: Literal["log", "exec"], si
     # Operation mode-specific command
     if mode == "log":
         click.echo(f"Opening logs for pods with instance {instance} in namespace {namespace}...")
-        cmd_template = f'kubectl logs -f {{pod}} -n {namespace} --since={since} | jq -Rc \'fromjson? // . | if type == "object" and has("@timestamp") then {{timestamp: .["@timestamp"], level: .["log.level"], message: .message}} else . end\''
+        cmd_template = 'kubectl logs -f {pod} -n {namespace} --since={since} | jq -Rc \'fromjson? // . | if type == "object" and has("@timestamp") then {{timestamp: .["@timestamp"], level: .["log.level"], message: .message}} else . end\''
     else:  # mode == "exec"
         click.echo(f"Executing '{command}' in pods with instance {instance} in namespace {namespace}...")
-        cmd_template = f"kubectl exec -it {{pod}} -n {namespace} -- {command}"
+        cmd_template = "kubectl exec -it {pod} -n {namespace} -- {command}"
+
+    # Create temporary directory for scripts
+    temp_dir = tempfile.mkdtemp(prefix="kubectl_pod_interact_")
 
     # Open each pod interaction in a new iTerm2 pane
     first = True
     for pod in pod_names:
         pod_name = pod.split("/")[-1]
-        cmd = cmd_template.format(pod=pod_name)
+        cmd = cmd_template.format(pod=pod_name, namespace=namespace, since=since, command=command)
+
+        # Create a temporary shell script
+        script_path = os.path.join(temp_dir, f"{pod_name}_command.sh")
+        with open(script_path, "w") as f:
+            f.write("#!/bin/bash\n")
+            f.write(cmd)
+
+        # Make the script executable
+        os.chmod(script_path, 0o755)
 
         # Create Apple Script command based on whether this is the first pane or not
         if first:
             script = f"""
             tell application "iTerm2"
                 tell current session of current window
-                    write text "{cmd}"
+                    write text "{script_path}"
                     tell application "System Events" to tell application process "iTerm2" to keystroke "-" using {{command down}}
                 end tell
             end tell
@@ -88,7 +101,7 @@ def pod_interact(namespace: str, instance: str, mode: Literal["log", "exec"], si
                 tell current session of current window
                     set newSession to split horizontally with default profile
                     select newSession
-                    write text "{cmd}"
+                    write text "{script_path}"
                     tell application "System Events" to tell application process "iTerm2" to keystroke "-" using {{command down}}
                 end tell
             end tell
@@ -96,9 +109,9 @@ def pod_interact(namespace: str, instance: str, mode: Literal["log", "exec"], si
 
         # Execute the AppleScript
         try:
-            subprocess.run(["osascript", "-e", script], check=True)
-        except subprocess.CalledProcessError:
-            click.echo(f"Error opening interaction for pod {pod_name}")
+            subprocess.run(["osascript", "-e", script], capture_output=True, text=True, check=True)
+        except subprocess.CalledProcessError as e:
+            click.echo(f"Error opening interaction for pod {pod_name}: {e.stderr}")
 
     # Maximize the window
     maximize_script = """
@@ -113,4 +126,4 @@ def pod_interact(namespace: str, instance: str, mode: Literal["log", "exec"], si
     try:
         subprocess.run(["osascript", "-e", maximize_script], check=True)
     except subprocess.CalledProcessError:
-        pass
+        pass  # Ignore errors with maximizing
