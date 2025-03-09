@@ -15,6 +15,9 @@ watch -n 5 gh run list --workflow=staging-workflow.yml --status in_progress
 # create wip pr and add sandbox label
 gh pr create --title "WIP: Initial Feature Update" --body "WIP: Initial PR setup for testing in the sandbox environment. Detailed description and title updates will be added later. This PR is currently for testing purposes only." && gh pr edit --add-label "sandbox"
 
+# open repo in browser
+gh repo view --web
+
 # open pr in browser, ghopr
 gh pr view --web
 

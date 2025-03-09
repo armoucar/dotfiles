@@ -1,15 +1,28 @@
 #!/usr/bin/env python3
 import subprocess
 from datetime import datetime, timedelta
-import os
 import sys
 import re
 import json
+import os
+from textwrap import shorten
+
+# Set to True for debugging output
+DEBUG = False
 
 try:
     from tabulate import tabulate
+    TABULATE_AVAILABLE = True
 except ImportError:
-    tabulate = None
+    TABULATE_AVAILABLE = False
+    print("Warning: tabulate package not found. Using basic table formatting.")
+    print("Install with: pip install tabulate\n")
+
+
+def debug_print(*args, **kwargs):
+    """Print debug information if DEBUG is True."""
+    if DEBUG:
+        print("DEBUG:", *args, **kwargs)
 
 
 def get_default_remote_branch():
@@ -159,8 +172,8 @@ def check_if_branch_was_merged_remotely(branch_name, remote="origin"):
 
         # If GitHub CLI is available, try to check if the branch had a PR that was merged
         try:
-            pr_status = get_pr_status(branch_name, remote)
-            if pr_status == "PR Merged":
+            pr_info = get_pr_info(branch_name, remote)
+            if pr_info.get("state") == "MERGED":
                 return True
         except Exception:
             pass
@@ -293,135 +306,286 @@ def get_remote_url(remote="origin"):
         return ""
 
 
-def get_pr_status(branch_name, remote="origin"):
-    """Check if a branch has a PR and its status."""
-    # Default status
-    pr_status = "No PR"
-
-    # Get remote URL to determine the hosting service (GitHub, GitLab, etc.)
-    remote_url = get_remote_url(remote)
-
-    if not remote_url:
-        return pr_status
-
-    # Try to determine if it's GitHub
-    if "github.com" in remote_url:
-        try:
-            # Extract owner and repo from GitHub URL
-            # Format can be git@github.com:owner/repo.git or https://github.com/owner/repo.git
-            if remote_url.startswith("git@"):
-                match = re.search(r"git@github\.com:([^/]+)/([^.]+)\.git", remote_url)
-                if match:
-                    owner, repo = match.groups()
-            else:
-                match = re.search(r"github\.com/([^/]+)/([^.]+)(\.git)?", remote_url)
-                if match:
-                    owner, repo = match.groups()[0:2]
-
-            if not match:
-                return pr_status
-
-            # Use GitHub CLI if available
-            try:
-                # Check if gh CLI is installed
-                subprocess.check_output(["gh", "--version"], stderr=subprocess.DEVNULL)
-
-                # Use gh CLI to get PR status
-                try:
-                    # Try to get PR associated with the branch
-                    output = (
-                        subprocess.check_output(
-                            [
-                                "gh",
-                                "pr",
-                                "list",
-                                "--head",
-                                branch_name,
-                                "--json",
-                                "state",
-                                "--repo",
-                                f"{owner}/{repo}",
-                            ],
-                            stderr=subprocess.DEVNULL,
-                        )
-                        .decode()
-                        .strip()
-                    )
-
-                    if output:
-                        prs = json.loads(output)
-                        if prs:
-                            # Get the state of the first PR
-                            state = prs[0].get("state", "").upper()
-                            if state == "OPEN":
-                                pr_status = "PR Open"
-                            elif state == "MERGED":
-                                pr_status = "PR Merged"
-                            elif state == "CLOSED":
-                                pr_status = "PR Closed"
-                            else:
-                                pr_status = f"PR {state}"
-                except subprocess.CalledProcessError:
-                    pass
-
-                # If no PR found, check for merged PRs
-                if pr_status == "No PR":
-                    try:
-                        output = (
-                            subprocess.check_output(
-                                [
-                                    "gh",
-                                    "pr",
-                                    "list",
-                                    "--head",
-                                    branch_name,
-                                    "--state",
-                                    "merged",
-                                    "--json",
-                                    "state",
-                                    "--repo",
-                                    f"{owner}/{repo}",
-                                ],
-                                stderr=subprocess.DEVNULL,
-                            )
-                            .decode()
-                            .strip()
-                        )
-
-                        if output:
-                            prs = json.loads(output)
-                            if prs:
-                                pr_status = "PR Merged"
-                    except subprocess.CalledProcessError:
-                        pass
-            except subprocess.CalledProcessError:
-                # gh CLI not available
-                pass
-        except Exception:
-            pass
-
-    return pr_status
-
-
-def main():
-    # Check if we're in a git repository
+def is_github_cli_available():
+    """Check if GitHub CLI is available."""
     try:
-        subprocess.check_output(["git", "rev-parse", "--is-inside-work-tree"], stderr=subprocess.DEVNULL)
-    except subprocess.CalledProcessError:
-        print("Error: Not in a git repository")
-        sys.exit(1)
+        subprocess.check_output(["gh", "--version"], stderr=subprocess.DEVNULL)
+        return True
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return False
 
+
+def extract_repo_info(remote_url):
+    """Extract owner and repo from GitHub URL."""
+    owner, repo = None, None
+
+    if "github.com" in remote_url:
+        if remote_url.startswith("git@"):
+            match = re.search(r"git@github\.com:([^/]+)/([^.]+)(\.git)?", remote_url)
+            if match:
+                owner, repo = match.groups()[0:2]
+        else:
+            match = re.search(r"github\.com/([^/]+)/([^.]+)(\.git)?", remote_url)
+            if match:
+                owner, repo = match.groups()[0:2]
+
+    # Sanitize repo name by removing .git if present
+    if repo and repo.endswith(".git"):
+        repo = repo[:-4]
+
+    debug_print(f"Extracted repo info: owner={owner}, repo={repo} from URL: {remote_url}")
+    return owner, repo
+
+
+def get_current_repo_info():
+    """Get current repository info using gh CLI."""
+    if not is_github_cli_available():
+        return None, None
+
+    try:
+        # Try to get repo info from gh CLI directly
+        output = subprocess.check_output(["gh", "repo", "view", "--json", "owner,name"], stderr=subprocess.DEVNULL).decode().strip()
+        if output:
+            data = json.loads(output)
+            owner = data.get("owner", {}).get("login")
+            repo = data.get("name")
+            debug_print(f"Got repo info from gh CLI: owner={owner}, repo={repo}")
+            return owner, repo
+    except (subprocess.CalledProcessError, json.JSONDecodeError) as e:
+        debug_print(f"Error getting repo info from gh CLI: {e}")
+        pass
+
+    # Fall back to git remote URL
+    remote_url = get_remote_url("origin")
+    return extract_repo_info(remote_url)
+
+
+def get_pr_info(branch_name, remote="origin"):
+    """Get comprehensive information about PRs associated with a branch."""
+    pr_info = {
+        "state": "NO_PR",   # NO_PR, OPEN, CLOSED, MERGED, DRAFT
+        "title": "",
+        "number": "",
+        "url": "",
+        "created_at": "",
+        "updated_at": "",
+        "labels": [],
+        "assignees": [],
+        "comments": 0
+    }
+
+    # Check if GitHub CLI is available
+    if not is_github_cli_available():
+        debug_print("GitHub CLI not available")
+        return pr_info
+
+    # Get owner and repo information
+    owner, repo = get_current_repo_info()
+
+    if not owner or not repo:
+        debug_print(f"Could not determine owner/repo for branch: {branch_name}")
+        return pr_info
+
+    debug_print(f"Fetching PR info for branch: {branch_name} in {owner}/{repo}")
+
+    # Get PR details using GitHub CLI
+    try:
+        # Fields to fetch from GitHub API
+        fields = [
+            "state", "title", "number", "url", "createdAt", "updatedAt",
+            "labels", "assignees", "comments", "isDraft", "headRefName"
+        ]
+
+        # Try all PRs first (both open and closed)
+        cmd = [
+            "gh", "pr", "list",
+            "--json", ",".join(fields),
+            "--repo", f"{owner}/{repo}",
+            "--limit", "100"  # Increase limit to find more PRs
+        ]
+
+        debug_print(f"Running command: {' '.join(cmd)}")
+        output = subprocess.check_output(cmd, stderr=subprocess.DEVNULL).decode().strip()
+
+        # Parse all PRs
+        all_prs = json.loads(output) if output else []
+        debug_print(f"Found {len(all_prs)} PRs in total")
+
+        # Find PRs that match this branch
+        matching_prs = []
+        for pr in all_prs:
+            head_branch = pr.get("headRefName", "")
+            debug_print(f"Comparing PR branch '{head_branch}' with '{branch_name}'")
+            if head_branch == branch_name:
+                matching_prs.append(pr)
+
+        if not matching_prs:
+            debug_print(f"No matching PRs found for branch: {branch_name}")
+            return pr_info
+
+        # Use the most recent PR if multiple exist
+        matching_prs.sort(key=lambda x: x.get("updatedAt", ""), reverse=True)
+        pr = matching_prs[0]
+
+        # Process PR state
+        if pr.get("isDraft", False):
+            pr_info["state"] = "DRAFT"
+        else:
+            state = pr.get("state", "").upper()
+            pr_info["state"] = state
+
+        # Extract other PR details
+        pr_info["title"] = pr.get("title", "")
+        pr_info["number"] = f"#{pr.get('number', '')}"
+        pr_info["url"] = pr.get("url", "")
+
+        # Format dates
+        if "createdAt" in pr:
+            created_date = datetime.fromisoformat(pr["createdAt"].replace("Z", "+00:00"))
+            pr_info["created_at"] = created_date.strftime("%Y-%m-%d")
+
+        if "updatedAt" in pr:
+            updated_date = datetime.fromisoformat(pr["updatedAt"].replace("Z", "+00:00"))
+            pr_info["updated_at"] = updated_date.strftime("%Y-%m-%d")
+
+        # Extract labels and assignees
+        pr_info["labels"] = [label.get("name", "") for label in pr.get("labels", [])]
+        pr_info["assignees"] = [user.get("login", "") for user in pr.get("assignees", [])]
+
+        # Count comments
+        pr_info["comments"] = len(pr.get("comments", []))
+
+        debug_print(f"Found PR for branch {branch_name}: {pr_info['state']} - {pr_info['title']} {pr_info['number']}")
+
+    except (subprocess.CalledProcessError, json.JSONDecodeError) as e:
+        debug_print(f"Error fetching PR info: {e}")
+    except Exception as e:
+        debug_print(f"Unexpected error in get_pr_info: {e}")
+
+    return pr_info
+
+
+def get_cleanup_recommendation(branch_info, pr_info, is_default_branch=False):
+    """Generate a cleanup recommendation based on branch and PR status."""
+    if is_default_branch:
+        return ""  # No recommendation for default branch
+
+    status = branch_info.get("status", [])
+    status_str = ", ".join(status)
+    branch_type = branch_info.get("type", "")
+    is_current = branch_info.get("is_current", False)
+    pr_state = pr_info.get("state", "NO_PR")
+
+    # Don't recommend deleting the current branch
+    if is_current:
+        if "behind" in status_str:
+            return "Update from remote"
+        elif "ahead" in status_str:
+            return "Push changes"
+        return ""
+
+    # Clear deletion candidates
+    if "MERGED" in status_str or pr_state == "MERGED":
+        if "Local" in branch_type and "Remote" in branch_type:
+            return "Delete locally and remotely"
+        elif "Local" in branch_type:
+            return "Delete locally"
+        elif "Remote" in branch_type:
+            return "Delete remotely"
+
+    # Abandoned branches
+    if "ABANDONED" in status_str:
+        if pr_state == "OPEN":
+            return "Update or close PR"
+        elif pr_state == "NO_PR":
+            return "Continue work or delete"
+        else:
+            return "Consider deleting"
+
+    # Branches with sync issues
+    if "behind" in status_str and "ahead" in status_str:
+        return "Needs merge/rebase"
+    elif "behind" in status_str:
+        return "Pull changes"
+    elif "ahead" in status_str:
+        return "Push changes"
+
+    # PR state based recommendations
+    if pr_state == "OPEN" and "stale" in [label.lower() for label in pr_info.get("labels", [])]:
+        return "Update PR (labeled as stale)"
+    elif pr_state == "DRAFT":
+        return "Finish and publish PR"
+    elif pr_state == "CLOSED" and "MERGED" not in status_str:
+        return "PR closed but not merged - cleanup branch"
+
+    # Other cases
+    if "Never pushed" in status_str:
+        return "Push to remote"
+    elif "untracked" in status_str:
+        return "Set up tracking"
+    elif "Remote missing" in status_str:
+        return "Push to recreate remote or delete locally"
+
+    return ""
+
+
+def format_table_row(branch_info, pr_info, max_lengths):
+    """Format a row for the output table with appropriate column widths."""
+    row = []
+
+    # Branch name (with indicator for current branch)
+    branch_name = branch_info.get("name", "")
+    if branch_info.get("is_current", False):
+        branch_name = f"* {branch_name}"
+    else:
+        branch_name = f"  {branch_name}"
+    row.append(branch_name[:max_lengths.get("branch", 30)])
+
+    # Branch type
+    row.append(branch_info.get("type", "")[:max_lengths.get("type", 15)])
+
+    # Branch status
+    status_str = ", ".join(branch_info.get("status", []))
+    row.append(status_str[:max_lengths.get("status", 25)])
+
+    # Last commit date (abbreviated)
+    last_commit = branch_info.get("last_commit", "")
+    if "(" in last_commit:
+        # Just show the time ago part
+        last_commit = last_commit.split("(")[1].rstrip(")")
+    row.append(last_commit[:max_lengths.get("last_commit", 15)])
+
+    # PR status and details
+    pr_state = pr_info.get("state", "NO_PR")
+    row.append(pr_state[:max_lengths.get("pr_state", 10)])
+
+    pr_title = pr_info.get("title", "")
+    if pr_title:
+        pr_title = shorten(pr_title, max_lengths.get("pr_title", 30), placeholder="...")
+    row.append(pr_title)
+
+    row.append(pr_info.get("number", "")[:max_lengths.get("pr_number", 8)])
+
+    # Labels (abbreviated)
+    labels = ", ".join(pr_info.get("labels", []))
+    if labels:
+        labels = shorten(labels, max_lengths.get("labels", 20), placeholder="...")
+    row.append(labels)
+
+    # Recommendation
+    row.append(branch_info.get("recommendation", "")[:max_lengths.get("recommendation", 30)])
+
+    return row
+
+
+def get_all_branches_info(remote="origin", include_default=False, days_threshold=90):
+    """Gather comprehensive information about all branches and PRs."""
     # Always fetch the latest info from remote
     print("Fetching latest information from remote...")
     try:
         subprocess.check_output(["git", "fetch", "--all"], stderr=subprocess.DEVNULL)
     except subprocess.CalledProcessError:
         print("Warning: Failed to fetch from remote")
-
-    # Get remote name, default to origin
-    remote = "origin"
-    if len(sys.argv) > 1 and not sys.argv[1].startswith("--"):
-        remote = sys.argv[1]
 
     default_remote = get_default_remote_branch()
     merged_branches = get_merged_branches(default_remote)
@@ -433,36 +597,37 @@ def main():
     # Get list of local branch names for comparison
     local_branch_names = [branch[0] for branch in local_branches]
 
-    results = []
-    branch_details = {}  # Store branch details for later use
+    branches_info = []
 
     # Process local branches
     for branch, upstream, commit_date, author, commit_msg in local_branches:
         # Skip the default branch if requested
-        if branch == default_remote and "--show-default" not in sys.argv:
+        if branch == default_remote and not include_default:
             continue
 
-        # Determine branch status
-        status = []
-        branch_type = "Local"
-
-        # Check if branch is current
-        is_current = branch == current_branch
-        if is_current:
-            status.append("CURRENT")
+        # Initialize branch info
+        branch_info = {
+            "name": branch,
+            "type": "Local",
+            "status": [],
+            "last_commit": format_date(commit_date),
+            "author": author,
+            "last_commit_msg": commit_msg,
+            "age_days": get_branch_age_days(commit_date),
+            "is_current": branch == current_branch,
+            "is_default": branch == default_remote,
+            "upstream": upstream
+        }
 
         # Check if branch is merged
         if branch in merged_branches:
-            status.append("MERGED")
+            branch_info["status"].append("MERGED")
         elif check_if_branch_was_merged_remotely(branch, remote):
-            status.append("MERGED on GitHub")
-
-        # Get branch age
-        branch_age = get_branch_age_days(commit_date)
+            branch_info["status"].append("MERGED on GitHub")
 
         # Check if branch is abandoned
-        if is_branch_abandoned(commit_date):
-            status.append("ABANDONED")
+        if is_branch_abandoned(commit_date, days_threshold):
+            branch_info["status"].append("ABANDONED")
 
         # Check tracking status
         if not upstream:
@@ -470,214 +635,274 @@ def main():
             if branch_exists_on_remote(branch, remote):
                 behind, ahead = compare_with_remote(branch, remote)
                 if ahead > 0:
-                    status.append(f"{ahead} ahead (untracked)")
+                    branch_info["status"].append(f"{ahead} ahead (untracked)")
                 elif behind > 0:
-                    status.append(f"{behind} behind (untracked)")
+                    branch_info["status"].append(f"{behind} behind (untracked)")
                 else:
-                    status.append("In sync (untracked)")
-                branch_type = "Local+Remote"
+                    branch_info["status"].append("In sync (untracked)")
+                branch_info["type"] = "Local+Remote"
             else:
-                # Before saying "Never pushed", check if it was merged remotely
+                # Check if it was merged remotely
                 is_merged_remotely = check_if_branch_was_merged_remotely(branch, remote)
-                pr_status = get_pr_status(branch, remote)
 
-                if is_merged_remotely or pr_status == "PR Merged":
-                    status.append("Merged remotely, deleted on remote")
-                    branch_type = "Local+Merged"
+                if is_merged_remotely:
+                    branch_info["status"].append("Merged remotely, deleted on remote")
+                    branch_info["type"] = "Local+Merged"
                 else:
-                    status.append("Never pushed")
+                    branch_info["status"].append("Never pushed")
         else:
             if remote_branch_exists(upstream):
                 behind, ahead = get_ahead_behind_count(branch, upstream)
                 if ahead > 0:
-                    status.append(f"{ahead} ahead")
+                    branch_info["status"].append(f"{ahead} ahead")
                 if behind > 0:
-                    status.append(f"{behind} behind")
+                    branch_info["status"].append(f"{behind} behind")
                 if ahead == 0 and behind == 0:
-                    status.append("In sync")
-                branch_type = "Local+Remote"
+                    branch_info["status"].append("In sync")
+                branch_info["type"] = "Local+Remote"
             else:
-                # Before saying "Remote missing", check if it was merged remotely
+                # Check if it was merged remotely
                 is_merged_remotely = check_if_branch_was_merged_remotely(branch, remote)
-                pr_status = get_pr_status(branch, remote)
 
-                if is_merged_remotely or pr_status == "PR Merged":
-                    status.append("Merged remotely, deleted on remote")
-                    branch_type = "Local+Merged"
+                if is_merged_remotely:
+                    branch_info["status"].append("Merged remotely, deleted on remote")
+                    branch_info["type"] = "Local+Merged"
                 else:
-                    status.append("Remote missing")
+                    branch_info["status"].append("Remote missing")
 
-        # Format the commit date
-        formatted_date = format_date(commit_date)
+        # Get PR info
+        pr_info = get_pr_info(branch, remote)
 
-        # Get PR status
-        pr_status = get_pr_status(branch, remote)
+        # Get cleanup recommendation
+        recommendation = get_cleanup_recommendation(branch_info, pr_info, branch == default_remote)
+        branch_info["recommendation"] = recommendation
 
-        # Join status items
-        status_str = ", ".join(status)
-
-        # Add recommendation
-        recommendation = ""
-        if "MERGED" in status and not is_current:
-            recommendation = "Can be deleted"
-        elif "Merged remotely" in status_str and not is_current:
-            recommendation = "Can be deleted"
-        elif "ABANDONED" in status and not is_current:
-            recommendation = "Consider updating or deleting"
-        elif "Never pushed" in status_str:
-            recommendation = "Consider pushing"
-        elif "ahead" in status_str and "behind" not in status_str:
-            recommendation = "Push changes"
-        elif "behind" in status_str and "ahead" not in status_str:
-            recommendation = "Pull changes"
-        elif "behind" in status_str and "ahead" in status_str:
-            recommendation = "Needs merge/rebase"
-        elif "untracked" in status_str:
-            recommendation = "Set up tracking"
-
-        results.append([branch, branch_type, status_str, formatted_date, author, pr_status, recommendation])
-
-        # Store branch details for later use
-        branch_details[branch] = {
-            "type": branch_type,
-            "age": branch_age,
-            "is_current": is_current,
-            "upstream": upstream,
-            "exists_on_remote": (
-                branch_exists_on_remote(branch, remote) or remote_branch_exists(upstream) if upstream else False
-            ),
-        }
+        branches_info.append((branch_info, pr_info))
 
     # Process remote-only branches
     for branch_name, full_branch, commit_date, author, commit_msg in remote_branches:
         # Skip if this branch already has a local counterpart
-        if branch_name in local_branch_names or branch_name == default_remote and "--show-default" not in sys.argv:
+        if branch_name in local_branch_names or (branch_name == default_remote and not include_default):
             continue
 
-        # Determine branch status
-        status = []
-        branch_type = "Remote-only"
+        # Initialize branch info
+        branch_info = {
+            "name": branch_name,
+            "type": "Remote-only",
+            "status": [],
+            "last_commit": format_date(commit_date),
+            "author": author,
+            "last_commit_msg": commit_msg,
+            "age_days": get_branch_age_days(commit_date),
+            "is_current": False,
+            "is_default": branch_name == default_remote,
+            "upstream": None
+        }
 
         # Check if branch is merged
         if branch_name in remote_merged:
-            status.append("MERGED")
-
-        # Get branch age
-        branch_age = get_branch_age_days(commit_date)
+            branch_info["status"].append("MERGED")
 
         # Check if branch is abandoned
-        if is_branch_abandoned(commit_date):
-            status.append("ABANDONED")
+        if is_branch_abandoned(commit_date, days_threshold):
+            branch_info["status"].append("ABANDONED")
 
-        # Format the commit date
-        formatted_date = format_date(commit_date)
+        # Get PR info
+        pr_info = get_pr_info(branch_name, remote)
 
-        # Get PR status
-        pr_status = get_pr_status(branch_name, remote)
+        # Get cleanup recommendation
+        recommendation = get_cleanup_recommendation(branch_info, pr_info, branch_name == default_remote)
+        branch_info["recommendation"] = recommendation
 
-        # Join status items
-        status_str = ", ".join(status)
-
-        # Add recommendation
-        recommendation = ""
-        if "MERGED" in status:
-            recommendation = "Can be deleted from remote"
-        elif "ABANDONED" in status:
-            recommendation = "Consider deleting from remote"
-        else:
-            recommendation = "Consider checking out locally"
-
-        results.append([branch_name, branch_type, status_str, formatted_date, author, pr_status, recommendation])
-
-        # Store branch details for later use
-        branch_details[branch_name] = {
-            "type": branch_type,
-            "age": branch_age,
-            "is_current": False,
-            "upstream": None,
-            "exists_on_remote": True,
-        }
+        branches_info.append((branch_info, pr_info))
 
     # Sort results by branch type and then by date (newest first)
-    results.sort(key=lambda x: (0 if "Local+Remote" in x[1] else (1 if "Local" in x[1] else 2), x[3]), reverse=True)
-
-    if results:
-        headers = ["Branch", "Type", "Status", "Last Commit Date", "Author", "PR Status", "Recommendation"]
-        if tabulate:
-            print(tabulate(results, headers, tablefmt="grid"))
-        else:
-            # Fallback simple table formatting if tabulate is not installed.
-            col_widths = [max(len(str(row[i])) for row in results + [headers]) for i in range(len(headers))]
-
-            # Print header
-            header_line = " | ".join(headers[i].ljust(col_widths[i]) for i in range(len(headers)))
-            print(header_line)
-            print("-+-".join("-" * col_widths[i] for i in range(len(headers))))
-
-            # Print rows
-            for row in results:
-                print(" | ".join(str(row[i]).ljust(col_widths[i]) for i in range(len(headers))))
-    else:
-        print("No branches found.")
-
-    # Ask user for age threshold
-    try:
-        print("\n")
-        days_input = input(
-            "Enter the maximum age in days for branches to keep (branches older than this will be prepared for deletion) or press ENTER to exit: "
+    branches_info.sort(
+        key=lambda x: (
+            0 if "Local+Remote" in x[0]["type"] else (1 if "Local" in x[0]["type"] else 2),
+            x[0]["age_days"]
         )
+    )
 
-        # Exit gracefully if user presses ENTER or enters non-numeric input
-        if not days_input.strip() or not days_input.strip().isdigit():
-            print("Exiting without deleting branches.")
-            sys.exit(0)
+    return branches_info
 
-        days_threshold = int(days_input)
+
+def print_table(branches_info):
+    """Print a formatted table of branch and PR information."""
+    if not branches_info:
+        print("No branches found.")
+        return
+
+    # Define column headers
+    headers = [
+        "Branch", "Type", "Status", "Last Activity",
+        "PR State", "PR Title", "PR #", "Labels", "Recommendation"
+    ]
+
+    # Prepare data for tabulation
+    table_data = []
+
+    # Define maximum column lengths
+    max_lengths = {
+        "branch": 30,
+        "type": 15,
+        "status": 25,
+        "last_commit": 15,
+        "pr_state": 10,
+        "pr_title": 30,
+        "pr_number": 8,
+        "labels": 20,
+        "recommendation": 30
+    }
+
+    for branch_info, pr_info in branches_info:
+        table_data.append(format_table_row(branch_info, pr_info, max_lengths))
+
+    # Print the table
+    if TABULATE_AVAILABLE:
+        print(tabulate(table_data, headers, tablefmt="grid"))
+    else:
+        # Basic table formatting
+        # Calculate column widths based on content
+        col_widths = [
+            max(len(str(row[i])) for row in table_data + [headers])
+            for i in range(len(headers))
+        ]
+
+        # Print header
+        header_line = " | ".join(headers[i].ljust(col_widths[i]) for i in range(len(headers)))
+        print(header_line)
+        print("-" * len(header_line))
+
+        # Print rows
+        for row in table_data:
+            print(" | ".join(str(row[i]).ljust(col_widths[i]) for i in range(len(headers))))
+
+
+def print_deletion_commands(branches_info, days_threshold, remote="origin"):
+    """Print commands to delete old branches."""
+    branches_to_delete = {"local": [], "remote": []}
+
+    for branch_info, pr_info in branches_info:
+        branch_name = branch_info["name"]
+        branch_age = branch_info["age_days"]
+        is_default = branch_info["is_default"]
+        is_current = branch_info["is_current"]
+        branch_type = branch_info["type"]
+
+        # Skip default and current branches
+        if is_default or is_current:
+            continue
 
         # Identify branches older than the threshold
-        branches_to_delete = {"local": [], "remote": []}
+        if branch_age > days_threshold:
+            if "Local" in branch_type:
+                branches_to_delete["local"].append(branch_name)
 
-        for branch, details in branch_details.items():
-            if details["age"] > days_threshold and branch != default_remote and not details["is_current"]:
-                if details["type"] in ["Local", "Local+Remote", "Local+Merged"]:
-                    branches_to_delete["local"].append(branch)
-                if details["exists_on_remote"] or details["type"] == "Remote-only":
-                    branches_to_delete["remote"].append(branch)
+            if "Remote" in branch_type or branch_exists_on_remote(branch_name, remote):
+                branches_to_delete["remote"].append(branch_name)
 
-        # Print deletion commands
-        if branches_to_delete["local"] or branches_to_delete["remote"]:
-            print("\n=== Commands to delete branches older than", days_threshold, "days ===\n")
+    # Print deletion commands
+    if branches_to_delete["local"] or branches_to_delete["remote"]:
+        print(f"\n=== Commands to delete branches older than {days_threshold} days ===\n")
 
-            if branches_to_delete["local"]:
-                print("# Local branches to delete:")
-                for branch in branches_to_delete["local"]:
-                    print(f"git branch -d {branch}  # Use -D instead of -d to force deletion if not fully merged")
+        if branches_to_delete["local"]:
+            print("# Local branches to delete:")
+            for branch in branches_to_delete["local"]:
+                print(f"git branch -d {branch}  # Use -D instead of -d to force deletion if not fully merged")
 
-            if branches_to_delete["remote"]:
-                print("\n# Remote branches to delete:")
-                for branch in branches_to_delete["remote"]:
-                    print(f"git push {remote} --delete {branch}")
+        if branches_to_delete["remote"]:
+            print("\n# Remote branches to delete:")
+            for branch in branches_to_delete["remote"]:
+                print(f"git push {remote} --delete {branch}")
 
-            print("\n# To delete all at once:")
+        print("\n# To delete all at once:")
 
-            if branches_to_delete["local"]:
-                local_delete_cmd = "git branch -d " + " ".join(branches_to_delete["local"])
-                print(f"{local_delete_cmd}  # Use -D instead of -d to force deletion if not fully merged")
+        if branches_to_delete["local"]:
+            local_delete_cmd = "git branch -d " + " ".join(branches_to_delete["local"])
+            print(f"{local_delete_cmd}  # Use -D instead of -d to force deletion if not fully merged")
 
-            if branches_to_delete["remote"]:
-                for branch in branches_to_delete["remote"]:
-                    print(f"git push {remote} --delete {branch}")
-        else:
-            print(f"\nNo branches older than {days_threshold} days found that can be deleted.")
-    except ValueError:
-        print("Invalid input. Please enter a valid number.")
+        if branches_to_delete["remote"]:
+            for branch in branches_to_delete["remote"]:
+                print(f"git push {remote} --delete {branch}")
+    else:
+        print(f"\nNo branches older than {days_threshold} days found that can be deleted.")
 
-    # Print usage information
-    if "--help" in sys.argv:
-        print("\nUsage: git-check-branches [remote] [options]")
-        print("\nOptions:")
-        print("  --show-default   Show the default branch (main/master) in the results")
-        print("  --help           Show this help message")
+
+def print_usage():
+    """Print usage information."""
+    print("\nUsage: git-branches-check-v2.py [remote] [options]")
+    print("\nOptions:")
+    print("  --show-default        Show the default branch (main/master) in the results")
+    print("  --days=<days>         Set the threshold for abandoned branches (default: 90)")
+    print("  --auto-delete=<days>  Automatically generate commands to delete branches older than <days>")
+    print("  --debug               Enable debug output")
+    print("  --help                Show this help message")
+
+
+def main():
+    # Check if we're in a git repository
+    try:
+        subprocess.check_output(["git", "rev-parse", "--is-inside-work-tree"], stderr=subprocess.DEVNULL)
+    except subprocess.CalledProcessError:
+        print("Error: Not in a git repository")
+        sys.exit(1)
+
+    # Parse command line arguments
+    remote = "origin"
+    include_default = False
+    days_threshold = 90
+    auto_delete_threshold = None
+
+    for arg in sys.argv[1:]:
+        if arg == "--show-default":
+            include_default = True
+        elif arg == "--help":
+            print_usage()
+            sys.exit(0)
+        elif arg == "--debug":
+            global DEBUG
+            DEBUG = True
+            print("Debug mode enabled")
+        elif arg.startswith("--days="):
+            try:
+                days_threshold = int(arg.split("=")[1])
+            except (IndexError, ValueError):
+                print(f"Error: Invalid days value: {arg}")
+                sys.exit(1)
+        elif arg.startswith("--auto-delete="):
+            try:
+                auto_delete_threshold = int(arg.split("=")[1])
+            except (IndexError, ValueError):
+                print(f"Error: Invalid auto-delete value: {arg}")
+                sys.exit(1)
+        elif not arg.startswith("--"):
+            remote = arg
+
+    # Get branch information
+    branches_info = get_all_branches_info(remote, include_default, days_threshold)
+
+    # Print the table
+    print_table(branches_info)
+
+    # Print deletion commands if requested
+    if auto_delete_threshold is not None:
+        print_deletion_commands(branches_info, auto_delete_threshold, remote)
+    else:
+        # Ask user for age threshold
+        try:
+            print("\n")
+            days_input = input(
+                "Enter the maximum age in days for branches to keep (branches older than this will be prepared for deletion) or press ENTER to exit: "
+            )
+
+            if days_input.strip() and days_input.strip().isdigit():
+                deletion_threshold = int(days_input)
+                print_deletion_commands(branches_info, deletion_threshold, remote)
+            else:
+                print("Exiting without deleting branches.")
+        except (ValueError, KeyboardInterrupt):
+            print("\nExiting without deleting branches.")
 
 
 if __name__ == "__main__":
