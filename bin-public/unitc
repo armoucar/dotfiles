@@ -1,0 +1,52 @@
+#!/usr/bin/env python3
+import argparse
+
+# Conversion factors defined in terms of bits.
+# Using 1024 multiples for byte-based units.
+UNIT_FACTORS = {
+    "bit": 1,
+    "byte": 8,  # 1 byte = 8 bits
+    "kb": 8 * 1024,  # 1 KB = 1024 bytes
+    "mb": 8 * 1024 * 1024,  # 1 MB = 1024 KB
+    "gb": 8 * 1024 * 1024 * 1024,  # 1 GB = 1024 MB
+    "tb": 8 * 1024 * 1024 * 1024 * 1024,  # 1 TB = 1024 GB
+    "pb": 8 * 1024 * 1024 * 1024 * 1024 * 1024,  # 1 PB = 1024 TB
+}
+
+
+def parse_arguments():
+    parser = argparse.ArgumentParser(description="Convert a given number in a specified data unit to all other units.")
+    parser.add_argument("value", type=float, help="The numeric value to convert")
+    parser.add_argument(
+        "unit",
+        type=str,
+        choices=[u for u in UNIT_FACTORS.keys()],
+        help="The unit of the given value. Choose from: bit, byte, kb, mb, gb, tb, pb",
+    )
+    return parser.parse_args()
+
+
+def main():
+    args = parse_arguments()
+
+    # Normalize the unit input to lower case.
+    unit = args.unit.lower()
+
+    # Convert the input value to bits.
+    if unit not in UNIT_FACTORS:
+        print(f"Unit '{unit}' not recognized. Use one of: {', '.join(UNIT_FACTORS.keys())}")
+        return
+    bits = args.value * UNIT_FACTORS[unit]
+
+    # Display a conversion table.
+    header = f"{'Unit':<10}{'Value':>20}"
+    print(header)
+    print("-" * len(header))
+
+    for u, factor in UNIT_FACTORS.items():
+        converted_value = bits / factor
+        print(f"{u:<10}{converted_value:>20.6f}")
+
+
+if __name__ == "__main__":
+    main()
