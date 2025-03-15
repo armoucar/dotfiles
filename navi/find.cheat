@@ -1,0 +1,4 @@
+% find
+
+# Find all directories containing the keyword
+find . -type d -iname '*<keyword>*'

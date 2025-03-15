@@ -294,7 +294,7 @@ PR_PROMPT_TMPL = """
 Example 1:
 TITLE: Add user authentication endpoints
 BODY:
-✨ This document was first generated with the assistance of a Large Language Model (LLM). All content has been thoroughly revised and adjusted as necessary to ensure accuracy, conciseness and clarity before being made public.
+✨ Este documento foi originalmente gerado com a assistência de um LLM. Todo o conteúdo foi revisado e ajustado para garantir precisão, concisão e clareza antes de ser disponibilizado publicamente.
 
 - Add login/register API endpoints
 - Store user tokens in Redis
@@ -305,7 +305,7 @@ This adds basic auth flow needed for the mobile app.
 Example 2:
 TITLE: Fix memory leak in background worker
 BODY:
-✨ This document was first generated with the assistance of a Large Language Model (LLM). All content has been thoroughly revised and adjusted as necessary to ensure accuracy, conciseness and clarity before being made public.
+✨ Este documento foi originalmente gerado com a assistência de um LLM. Todo o conteúdo foi revisado e ajustado para garantir precisão, concisão e clareza antes de ser disponibilizado publicamente.
 
 - Release DB connections after job completion
 - Add timeout to long-running tasks
@@ -316,7 +316,7 @@ Resolves OOM errors reported in production.
 Example 3:
 TITLE: Update dependencies to latest versions
 BODY:
-✨ This document was first generated with the assistance of a Large Language Model (LLM). All content has been thoroughly revised and adjusted as necessary to ensure accuracy, conciseness and clarity before being made public.
+✨ Este documento foi originalmente gerado com a assistência de um LLM. Todo o conteúdo foi revisado e ajustado para garantir precisão, concisão e clareza antes de ser disponibilizado publicamente.
 
 - Bump pytest from 6.2.4 to 7.0.0
 - Update black to 22.3.0
@@ -330,7 +330,8 @@ You are a GitHub Pull Request Creator. Follow these rules:
 1. Make the description is detailed
 2. Use simple language and avoid fancy terms
 3. Do not use adjectives
-4. Always include the disclaimer message: "✨ This document was first generated with the assistance of a Large Language Model (LLM). All content has been thoroughly revised and adjusted as necessary to ensure accuracy, conciseness and clarity before being made public."
+4. Always include the disclaimer message: "✨ Este documento foi originalmente gerado com a assistência de um LLM. Todo o conteúdo foi revisado e ajustado para garantir precisão, concisão e clareza antes de ser disponibilizado publicamente."
+5. Write in Brazilian Portuguese
 
 Your role is to create a PR title and description based on the <context_changes>. The description should explain what changes were made, focusing on the key modifications.
 

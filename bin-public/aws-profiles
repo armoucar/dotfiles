@@ -1,16 +1,56 @@
 #!/usr/bin/env python3
 import os
 import configparser
+import subprocess
+import json
+import concurrent.futures
+
+
+def check_auth_status(profile_name):
+    try:
+        result = subprocess.run(
+            ["aws", "sts", "get-caller-identity", "--profile", profile_name],
+            capture_output=True,
+            text=True,
+            timeout=5,  # Set a timeout to avoid hanging
+        )
+        if result.returncode == 0:
+            return "Authenticated"
+        else:
+            return "Not authenticated"
+    except Exception:
+        return "Not authenticated"
+
 
 config_path = os.path.expanduser("~/.aws/config")
 config = configparser.ConfigParser()
 config.read(config_path)
 
-print(f"{'Profile':<35} {'SSO Session':<15} {'Account ID':<15}")
-print("-" * 70)
+# Collect all profiles first
+profiles = []
 for section in config.sections():
     if section.startswith("profile "):
         profile_name = section.split("profile ")[1]
         sso_session = config[section].get("sso_session", "N/A")
         sso_account_id = config[section].get("sso_account_id", "N/A")
-        print(f"{profile_name:<35} {sso_session:<15} {sso_account_id:<15}")
+        profiles.append((profile_name, sso_session, sso_account_id))
+
+# Parallelize auth checks using ThreadPoolExecutor
+auth_statuses = {}
+with concurrent.futures.ThreadPoolExecutor() as executor:
+    # Start the auth check operations and mark each future with its profile
+    future_to_profile = {executor.submit(check_auth_status, profile[0]): profile[0] for profile in profiles}
+
+    # Process results as they complete
+    for future in concurrent.futures.as_completed(future_to_profile):
+        profile_name = future_to_profile[future]
+        try:
+            auth_statuses[profile_name] = future.result()
+        except Exception as exc:
+            auth_statuses[profile_name] = "Error: " + str(exc)
+
+print(f"{'Profile':<35} {'SSO Session':<15} {'Account ID':<15} {'Auth Status':<15}")
+print("-" * 85)
+for profile_name, sso_session, sso_account_id in profiles:
+    auth_status = auth_statuses[profile_name]
+    print(f"{profile_name:<35} {sso_session:<15} {sso_account_id:<15} {auth_status:<15}")

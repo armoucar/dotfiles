@@ -35,5 +35,4 @@ llmcontext() {
   } | pbcopy
 }
 
-# Usage:
-# Call `fzf_copy_files` to execute
+source <(fzf --zsh)
