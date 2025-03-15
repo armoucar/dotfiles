@@ -13,6 +13,7 @@ from cli.app.command.alfred import (
     migrate_prompts,
     create_prompts,
     delete_prompts,
+    edit_prompts,
 )
 
 from cli.app.command.notes import (
@@ -63,6 +64,7 @@ alfred.add_command(sync_local)
 alfred.add_command(migrate_prompts)
 alfred.add_command(create_prompts)
 alfred.add_command(delete_prompts)
+alfred.add_command(edit_prompts)
 cli.add_command(alfred)
 
 # Add notes commands
