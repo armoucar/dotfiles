@@ -1,13 +1,13 @@
 % alfred, dot
 
-# Migrate coding prompts to reasoning prompts
-dot alfred migrate-prompts
-
 # Create specialist prompts for a topic
 dot alfred create-prompts --topic "<technology>" <no_reasoning> <no_code_only>
 
-# Delete prompts interactively with fzf
+# Delete prompts
 dot alfred delete-prompts
+
+# Edit prompts
+dot alfred edit-prompts
 
 # Check GitHub CLI authentication status
 dot alfred check-auth
@@ -17,6 +17,9 @@ dot alfred sync-local
 
 # Create a new release (backup) of Alfred preferences
 dot alfred release
+
+# Migrate coding prompts to reasoning prompts
+dot alfred migrate-prompts
 
 $ no_reasoning: echo -e "\n--no-reasoning" --- --prevent-extra
 $ no_code_only: echo -e "\n--no-code-only" --- --prevent-extra

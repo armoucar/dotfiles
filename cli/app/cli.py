@@ -3,7 +3,7 @@ import click
 from cli.app.command.check_prs import check_prs
 from cli.app.command.new_pr import new_pr
 from cli.app.command.work_stats import work_stats
-from cli.app.command.xls_files import xls_files
+from cli.app.command.git_recent import git_recent
 from cli.app.command.kubectl import kubectl
 
 from cli.app.command.alfred import (
@@ -55,10 +55,10 @@ def alfred():
 cli.add_command(check_prs)
 cli.add_command(new_pr)
 cli.add_command(work_stats)
-cli.add_command(xls_files)
+cli.add_command(git_recent)
 cli.add_command(kubectl)
+cli.add_command(check_auth)
 
-alfred.add_command(check_auth)
 alfred.add_command(release)
 alfred.add_command(sync_local)
 alfred.add_command(migrate_prompts)
