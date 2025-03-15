@@ -13,7 +13,7 @@ DEST_DIR = os.path.join(HOME, "Documents", "Alfred.alfredpreferences", "snippets
 
 
 @click.command()
-@click.option("--sample-amount", type=int, default=10, help="Number of prompts to sample")
+@click.option("--sample-amount", type=int, default=9999, help="Number of prompts to sample")
 @click.option("--dry-run", is_flag=True, help="Show what would be done without making any changes")
 @click.option("--verbose", is_flag=True, help="Show verbose output")
 @click.option("--workers", type=int, default=5, help="Number of parallel workers (default: 5)")
