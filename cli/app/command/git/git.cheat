@@ -15,5 +15,5 @@ dot git new-pr --context "<context>"
 # generate statistics about commiters work
 dot git project-stats
 
-$ sort_option: echo -e "edits\ncommits" --- --prevent-extra
+$ sort_option: echo -e "edits\ncommits\nchanges" --- --prevent-extra
 $ limit: echo -e "10\n20\n50"
