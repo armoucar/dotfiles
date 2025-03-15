@@ -9,14 +9,11 @@ dot alfred delete-prompts
 # Edit prompts
 dot alfred edit-prompts
 
-# Check GitHub CLI authentication status
-dot alfred check-auth
+# Create a new release (backup) of Alfred preferences
+dot alfred release
 
 # Sync local Alfred preferences with the latest release
 dot alfred sync-local
-
-# Create a new release (backup) of Alfred preferences
-dot alfred release
 
 # Migrate coding prompts to reasoning prompts
 dot alfred migrate-prompts
