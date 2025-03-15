@@ -10,6 +10,9 @@ from cli.app.command.alfred import (
     check_auth,
     release,
     sync_local,
+    migrate_prompts,
+    create_prompts,
+    delete_prompts,
 )
 
 from cli.app.command.notes import (
@@ -57,6 +60,9 @@ cli.add_command(kubectl)
 alfred.add_command(check_auth)
 alfred.add_command(release)
 alfred.add_command(sync_local)
+alfred.add_command(migrate_prompts)
+alfred.add_command(create_prompts)
+alfred.add_command(delete_prompts)
 cli.add_command(alfred)
 
 # Add notes commands
