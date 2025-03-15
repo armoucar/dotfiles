@@ -1,9 +1,10 @@
 import click
 
-from cli.app.command.check_prs import check_prs
-from cli.app.command.new_pr import new_pr
-from cli.app.command.work_stats import work_stats
-from cli.app.command.git_recent import git_recent
+from cli.app.command.git.prs_check import prs_check
+from cli.app.command.git.new_pr import new_pr
+from cli.app.command.git.project_stats import project_stats
+from cli.app.command.git.changes_check import changes_check
+from cli.app.command.git.auth_check import auth_check
 from cli.app.command.kubectl import kubectl
 
 from cli.app.command.alfred import (
@@ -53,13 +54,24 @@ def alfred():
     pass
 
 
-cli.add_command(check_prs)
-cli.add_command(new_pr)
-cli.add_command(work_stats)
-cli.add_command(git_recent)
-cli.add_command(kubectl)
-cli.add_command(check_auth)
+@click.group()
+def git():
+    """Git and GitHub related commands."""
+    pass
 
+
+# Add git commands to git group
+git.add_command(prs_check)
+git.add_command(new_pr)
+git.add_command(project_stats)
+git.add_command(changes_check)
+git.add_command(auth_check)
+cli.add_command(git)
+
+# Add kubectl command directly to cli
+cli.add_command(kubectl)
+
+# Add alfred commands to alfred group
 alfred.add_command(release)
 alfred.add_command(sync_local)
 alfred.add_command(migrate_prompts)
@@ -67,9 +79,10 @@ alfred.add_command(create_prompts)
 alfred.add_command(delete_prompts)
 alfred.add_command(edit_prompts)
 alfred.add_command(execute_prompt)
+alfred.add_command(check_auth)  # Keep this in alfred group since it's a different command
 cli.add_command(alfred)
 
-# Add notes commands
+# Add notes commands to notes group
 notes.add_command(create)
 notes.add_command(list_cmd, name="list")
 notes.add_command(edit)

@@ -9,10 +9,10 @@ dot alfred delete-prompts
 # Edit prompts
 dot alfred edit-prompts
 
-# Execute prompts with file context
+# Execute prompts
 dot alfred execute-prompt <execute>
 
-# Create a new release (backup) of Alfred preferences
+# New release of Alfred preferences
 dot alfred release
 
 # Sync local Alfred preferences with the latest release

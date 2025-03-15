@@ -1,0 +1,19 @@
+% git, dot
+
+# check if GitHub CLI is authenticated
+dot git auth-check
+
+# check open pull requests across default repositories
+dot git prs-check
+
+# list recent changes
+dot git changes-check --sort <sort_option> --limit <limit> --ext <extension>
+
+# create a new PR
+dot git new-pr --context "<context>"
+
+# generate statistics about commiters work
+dot git project-stats
+
+$ sort_option: echo -e "edits\ncommits" --- --prevent-extra
+$ limit: echo -e "10\n20\n50"
