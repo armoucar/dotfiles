@@ -12,12 +12,83 @@ SOURCE_DIR = os.path.join(HOME, "Documents", "Alfred.alfredpreferences", "snippe
 DEST_DIR = os.path.join(HOME, "Documents", "Alfred.alfredpreferences", "snippets", "0120--reasoning-prompts")
 
 
-def generate_uid():
+@click.command()
+@click.option("--sample-amount", type=int, default=10, help="Number of prompts to sample")
+@click.option("--dry-run", is_flag=True, help="Show what would be done without making any changes")
+@click.option("--verbose", is_flag=True, help="Show verbose output")
+@click.option("--workers", type=int, default=5, help="Number of parallel workers (default: 5)")
+def migrate_prompts(sample_amount, dry_run, verbose, workers):
+    """Migrate Alfred coding prompts to reasoning prompts format."""
+    # Ensure destination directory exists
+    os.makedirs(DEST_DIR, exist_ok=True)
+
+    if not os.path.exists(SOURCE_DIR):
+        click.echo(f"Source directory not found: {SOURCE_DIR}")
+        return
+
+    # Get list of JSON files to process
+    json_files = [f for f in os.listdir(SOURCE_DIR) if f.endswith(".json")]
+
+    # Limit to sample amount if specified
+    if len(json_files) > sample_amount:
+        json_files = json_files[:sample_amount]
+
+    click.echo(f"Found {len(json_files)} JSON files to process")
+
+    files_processed = 0
+    files_skipped = 0
+    files_errored = 0
+
+    # Process files in parallel
+    with ThreadPoolExecutor(max_workers=min(workers, len(json_files))) as executor:
+        # Submit all tasks
+        future_to_file = {
+            executor.submit(_process_file, filename, dry_run, verbose): filename for filename in json_files
+        }
+
+        # Setup progress bar if not in verbose mode
+        if not verbose:
+            pbar = tqdm(total=len(json_files), desc="Processing prompts")
+
+        # Process results as they complete
+        for future in as_completed(future_to_file):
+            filename = future_to_file[future]
+            try:
+                result = future.result()
+                if result["status"] == "processed":
+                    files_processed += 1
+                    if verbose:
+                        click.echo(f"Processed: {result['original_name']} → {result['new_name']}")
+                elif result["status"] == "skipped":
+                    files_skipped += 1
+                    if verbose and result["original_name"]:
+                        click.echo(f"Skipping {result['original_name']} - already exists in destination")
+                else:
+                    files_errored += 1
+                    click.echo(f"Error processing file {filename}: {result['error']}")
+            except Exception as exc:
+                files_errored += 1
+                click.echo(f"Error processing file {filename}: {exc}")
+
+            # Update progress bar
+            if not verbose:
+                pbar.update(1)
+
+        # Close progress bar
+        if not verbose:
+            pbar.close()
+
+    click.echo(
+        f"Migration complete: {files_processed} files processed, {files_skipped} files skipped, {files_errored} files errored"
+    )
+
+
+def _generate_uid():
     """Generate a new uppercase UUID."""
     return str(uuid.uuid4()).upper()
 
 
-def transform_prompt_with_openai(original_prompt):
+def _transform_prompt_with_openai(original_prompt):
     """Use OpenAI to transform a coding prompt into a reasoning prompt."""
     try:
         client = OpenAI()
@@ -64,14 +135,14 @@ def transform_prompt_with_openai(original_prompt):
         return original_prompt
 
 
-def get_destination_filename(original_name):
+def _get_destination_filename(original_name):
     """Generate the destination filename based on the original name."""
     if not original_name.startswith("reason-"):
         return f"reason-{original_name}"
     return original_name
 
 
-def prompt_already_exists(new_name):
+def _prompt_already_exists(new_name):
     """Check if a prompt with the given name already exists in the destination folder."""
     for file in os.listdir(DEST_DIR):
         # Check if the file follows the naming pattern and extract the snippet name
@@ -82,7 +153,7 @@ def prompt_already_exists(new_name):
     return False
 
 
-def process_file(filename, dry_run=False, verbose=False):
+def _process_file(filename, dry_run=False, verbose=False):
     """Process a single file for migration."""
     result = {"status": "skipped", "original_name": None, "new_name": None, "error": None}
 
@@ -102,22 +173,22 @@ def process_file(filename, dry_run=False, verbose=False):
         result["original_name"] = original_name
 
         # Generate new name
-        new_name = get_destination_filename(original_name)
+        new_name = _get_destination_filename(original_name)
         result["new_name"] = new_name
 
         # Check if this prompt already exists
-        if prompt_already_exists(new_name):
+        if _prompt_already_exists(new_name):
             return result
 
         # Generate a new UID
-        new_uid = generate_uid()
+        new_uid = _generate_uid()
 
         # Transform the prompt using OpenAI
         if verbose:
             click.echo(f"Transforming prompt: {original_name}")
 
         if not dry_run:
-            new_snippet = transform_prompt_with_openai(original_snippet)
+            new_snippet = _transform_prompt_with_openai(original_snippet)
         else:
             new_snippet = "[Dry run - transformation would happen here]"
 
@@ -150,77 +221,6 @@ def process_file(filename, dry_run=False, verbose=False):
         result["status"] = "error"
         result["error"] = str(e)
         return result
-
-
-@click.command()
-@click.option("--sample-amount", type=int, default=10, help="Number of prompts to sample")
-@click.option("--dry-run", is_flag=True, help="Show what would be done without making any changes")
-@click.option("--verbose", is_flag=True, help="Show verbose output")
-@click.option("--workers", type=int, default=5, help="Number of parallel workers (default: 5)")
-def migrate_prompts(sample_amount, dry_run, verbose, workers):
-    """Migrate Alfred coding prompts to reasoning prompts format."""
-    # Ensure destination directory exists
-    os.makedirs(DEST_DIR, exist_ok=True)
-
-    if not os.path.exists(SOURCE_DIR):
-        click.echo(f"Source directory not found: {SOURCE_DIR}")
-        return
-
-    # Get list of JSON files to process
-    json_files = [f for f in os.listdir(SOURCE_DIR) if f.endswith(".json")]
-
-    # Limit to sample amount if specified
-    if len(json_files) > sample_amount:
-        json_files = json_files[:sample_amount]
-
-    click.echo(f"Found {len(json_files)} JSON files to process")
-
-    files_processed = 0
-    files_skipped = 0
-    files_errored = 0
-
-    # Process files in parallel
-    with ThreadPoolExecutor(max_workers=min(workers, len(json_files))) as executor:
-        # Submit all tasks
-        future_to_file = {
-            executor.submit(process_file, filename, dry_run, verbose): filename for filename in json_files
-        }
-
-        # Setup progress bar if not in verbose mode
-        if not verbose:
-            pbar = tqdm(total=len(json_files), desc="Processing prompts")
-
-        # Process results as they complete
-        for future in as_completed(future_to_file):
-            filename = future_to_file[future]
-            try:
-                result = future.result()
-                if result["status"] == "processed":
-                    files_processed += 1
-                    if verbose:
-                        click.echo(f"Processed: {result['original_name']} → {result['new_name']}")
-                elif result["status"] == "skipped":
-                    files_skipped += 1
-                    if verbose and result["original_name"]:
-                        click.echo(f"Skipping {result['original_name']} - already exists in destination")
-                else:
-                    files_errored += 1
-                    click.echo(f"Error processing file {filename}: {result['error']}")
-            except Exception as exc:
-                files_errored += 1
-                click.echo(f"Error processing file {filename}: {exc}")
-
-            # Update progress bar
-            if not verbose:
-                pbar.update(1)
-
-        # Close progress bar
-        if not verbose:
-            pbar.close()
-
-    click.echo(
-        f"Migration complete: {files_processed} files processed, {files_skipped} files skipped, {files_errored} files errored"
-    )
 
 
 if __name__ == "__main__":
