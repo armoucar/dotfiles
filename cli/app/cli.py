@@ -8,6 +8,7 @@ from cli.app.command.kubectl import kubectl
 
 from cli.app.command.alfred import (
     check_auth,
+    execute_prompt,
     release,
     sync_local,
     migrate_prompts,
@@ -65,6 +66,7 @@ alfred.add_command(migrate_prompts)
 alfred.add_command(create_prompts)
 alfred.add_command(delete_prompts)
 alfred.add_command(edit_prompts)
+alfred.add_command(execute_prompt)
 cli.add_command(alfred)
 
 # Add notes commands

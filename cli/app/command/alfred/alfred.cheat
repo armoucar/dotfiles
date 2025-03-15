@@ -9,6 +9,9 @@ dot alfred delete-prompts
 # Edit prompts
 dot alfred edit-prompts
 
+# Execute prompts with file context
+dot alfred execute-prompt <execute>
+
 # Create a new release (backup) of Alfred preferences
 dot alfred release
 
@@ -20,3 +23,4 @@ dot alfred migrate-prompts
 
 $ no_reasoning: echo -e "\n--no-reasoning" --- --prevent-extra
 $ no_code_only: echo -e "\n--no-code-only" --- --prevent-extra
+$ execute: echo -e "--execute\n" --- --prevent-extra
