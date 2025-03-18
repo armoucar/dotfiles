@@ -124,7 +124,8 @@ def _handle_changes_mode(limit: int, ext: str | None, no_pager: bool):
             relative_dir = os.path.relpath(current_dir, repo_root)
             if relative_dir == ".":
                 relative_dir = ""  # Root directory case
-            click.secho(f"Listing changes in directory: {relative_dir or '/'}", fg="blue")
+            click.secho(f"Listing changes in directory: ", nl=False, fg="bright_blue")
+            click.secho(f"{relative_dir or '/'}", fg="white")
         else:
             click.secho("Current directory is not inside the git repository", fg="red")
             return
@@ -156,11 +157,16 @@ def _handle_changes_mode(limit: int, ext: str | None, no_pager: bool):
                 all_changes.extend(more_changes)
 
             total_processing_time = time.time() - start_time
-            click.secho(f"Found {len(all_changes)} changes (loaded in {total_processing_time:.2f} seconds)", fg="blue")
+            click.secho(f"Found ", nl=False, fg="bright_blue")
+            click.secho(f"{len(all_changes)}", nl=False, fg="bright_white", bold=True)
+            click.secho(f" changes (loaded in {total_processing_time:.2f} seconds)", fg="bright_blue")
+
+            # Add a separator line
+            click.secho("─" * 80, fg="bright_blue")
 
             # Display all changes with counter
             for i, (timestamp, change_type, file_path, author) in enumerate(all_changes, 1):
-                click.echo(f"{i:4d}. {timestamp} {change_type} {file_path} ({author})")
+                _print_change_entry(i, timestamp, change_type, file_path, author)
         else:
             click.secho(f"Initial batch loaded in {processing_time:.2f} seconds. Starting pagination...", fg="cyan")
             # Use pagination for changes
@@ -251,6 +257,8 @@ class _ChangesCollector:
         self.last_commit = None
         self.all_changes = []
         self.has_more_commits = True
+        # Cache for batches we've already seen
+        self.batch_cache = {}
 
     def has_more(self):
         """Check if there are potentially more changes to load."""
@@ -260,6 +268,11 @@ class _ChangesCollector:
     def get_next_batch(self):
         """Get the next batch of changes."""
         start_idx = self.current_batch * self.batch_size
+
+        # Check if this batch is already in the cache
+        if self.current_batch in self.batch_cache:
+            self.current_batch += 1
+            return self.batch_cache[self.current_batch - 1]
 
         # If we don't have enough changes, try to load more
         while self.has_more_commits and len(self.all_changes) < start_idx + self.batch_size:
@@ -272,7 +285,30 @@ class _ChangesCollector:
         # Get the next batch
         end_idx = min(start_idx + self.batch_size, len(self.all_changes))
         batch = self.all_changes[start_idx:end_idx]
+
+        # Cache this batch
+        self.batch_cache[self.current_batch] = batch
         self.current_batch += 1
+
+        return batch
+
+    def get_batch_at_page(self, page: int):
+        """Get a specific batch by page number (0-indexed)."""
+        # Check if this batch is already in the cache
+        if page in self.batch_cache:
+            return self.batch_cache[page]
+
+        # If we're requesting a page we haven't loaded yet
+        current_page = self.current_batch
+
+        # Reset to the requested page
+        self.current_batch = page
+
+        # Get the batch
+        batch = self.get_next_batch()
+
+        # Restore the current page (minus 1 because get_next_batch increments it)
+        self.current_batch = current_page
 
         return batch
 
@@ -371,6 +407,9 @@ def _paginate_changes(changes_collector: _ChangesCollector):
     total_viewed = 0
     total_changes = 0
     first_page = True
+    # Keep track of pages we've already seen
+    viewed_pages = set()
+
     while True:
         # Clear screen for better UI (except first time)
         if not first_page:
@@ -379,11 +418,31 @@ def _paginate_changes(changes_collector: _ChangesCollector):
         else:
             first_page = False
 
-        # Get next batch of changes
-        current_batch = changes_collector.get_next_batch()
+        # Get batch for the current page
+        start_time = time.time()
+
+        # Check if we've already viewed this page
+        if page in viewed_pages:
+            current_batch = changes_collector.get_batch_at_page(page)
+            load_time = time.time() - start_time
+            if load_time < 0.01:  # If loading was very fast
+                load_message = "(cached)"
+            else:
+                load_message = f"(loaded in {load_time:.2f}s)"
+        else:
+            # First time viewing this page
+            if page < changes_collector.current_batch:
+                # We're going back to a page we should have cached
+                current_batch = changes_collector.get_batch_at_page(page)
+                load_message = "(cached)"
+            else:
+                # Loading a new page
+                current_batch = changes_collector.get_next_batch()
+                load_message = f"(loaded in {time.time() - start_time:.2f}s)"
+            viewed_pages.add(page)
 
         if not current_batch:
-            click.echo("No more changes to display.")
+            click.secho("No more changes to display.", fg="yellow")
             return
 
         # Keep track of how many we've seen
@@ -395,7 +454,8 @@ def _paginate_changes(changes_collector: _ChangesCollector):
         end_idx = start_idx + batch_size - 1
 
         # Increment total viewed and update total changes if we know it
-        total_viewed += batch_size
+        if page >= len(viewed_pages) - 1:  # Only count if this is a new page
+            total_viewed += batch_size
         if not has_more:
             total_changes = total_viewed
 
@@ -403,23 +463,28 @@ def _paginate_changes(changes_collector: _ChangesCollector):
         range_info = f"Showing changes {start_idx}-{end_idx}"
         if total_changes > 0:
             range_info += f" of {total_changes}"
+        range_info += f" {load_message}"
 
-        click.echo(range_info)
-        click.echo("-" * len(range_info))
+        click.secho(range_info, fg="bright_blue", bold=True)
+        click.secho("─" * len(range_info), fg="bright_blue")
 
         # Display changes
         for i, (timestamp, change_type, file_path, author) in enumerate(current_batch, start_idx):
-            click.echo(f"{i:4d}. {timestamp} {change_type} {file_path} ({author})")
+            _print_change_entry(i, timestamp, change_type, file_path, author)
 
         # Show navigation instructions
-        click.echo("\nNavigation:")
+        click.secho("\nNavigation:", fg="bright_cyan", bold=True)
         if page > 0:
-            click.echo("  p - previous page")
+            click.secho("  p", nl=False, fg="bright_green")
+            click.secho(" - previous page", fg="white")
         if has_more:
-            click.echo("  n - next page")
-        click.echo("  q - quit")
+            click.secho("  n", nl=False, fg="bright_green")
+            click.secho(" - next page", fg="white")
+        click.secho("  q", nl=False, fg="bright_green")
+        click.secho(" - quit", fg="white")
 
         # Get user input for navigation
+        click.secho("\nCommand: ", nl=False, fg="bright_green")
         while True:
             key = click.getchar()
             if key == "n" and has_more:
@@ -430,6 +495,35 @@ def _paginate_changes(changes_collector: _ChangesCollector):
                 break
             elif key == "q":
                 return
+            else:
+                # Clear the line and show error for invalid key
+                click.echo("\r" + " " * 50, nl=False)  # Clear the line
+                click.echo("\r", nl=False)
+                click.secho("Invalid command. ", nl=False, fg="red")
+                click.secho("Command: ", nl=False, fg="bright_green")
+
+
+def _print_change_entry(index: int, timestamp: str, change_type: str, file_path: str, author: str):
+    """Print a change entry with appropriate colors."""
+    # Color the index and timestamp in blue
+    click.secho(f"{index:4d}. ", nl=False, fg="blue")
+    click.secho(f"{timestamp} ", nl=False, fg="cyan")
+
+    # Color the change type based on the operation
+    if change_type == "A":
+        click.secho(f"{change_type} ", nl=False, fg="green")  # Added - green
+    elif change_type == "M":
+        click.secho(f"{change_type} ", nl=False, fg="yellow")  # Modified - yellow
+    elif change_type == "D":
+        click.secho(f"{change_type} ", nl=False, fg="red")  # Deleted - red
+    else:
+        click.secho(f"{change_type} ", nl=False, fg="magenta")  # Other changes - magenta
+
+    # Use consistent color for file paths (bright_blue)
+    click.secho(f"{file_path} ", nl=False, fg="bright_blue")
+
+    # Color the author name in a subtle gray
+    click.secho(f"({author})", fg="bright_black")
 
 
 def _run_git_command(args: List[str]) -> str:

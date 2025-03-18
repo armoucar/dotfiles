@@ -361,12 +361,13 @@ def init_desktop_8(chrome_only=False):
     if not chrome_only:
         open_google_meet_with_position(FIRST_SCREEN_BIG_LEFT)
 
-    open_app_with_file_and_position(
-        "TextEdit",
-        "/System/Applications/TextEdit.app",
-        "/Users/U003877/Documents/Meet.txt",
-        FIRST_SCREEN_SMALL_LEFT,
-    )
+    # open_app_with_file_and_position(
+    #     "TextEdit",
+    #     "/System/Applications/TextEdit.app",
+    #     "/Users/U003877/Documents/Meet.txt",
+    #     FIRST_SCREEN_SMALL_LEFT,
+    # )
+
     open_chrome_window_with_url("Meet Colab", SECOND_SCREEN_FULL, "Default", "https://calendar.google.com")
     # Add Screen 3 apps here if needed
 

@@ -1,6 +1,7 @@
 export EDITOR=cursor
 
 alias e="$EDITOR"
+alias docker="podman"
 
 export PATH=$PATH:$HOME/.oh-my-zsh/custom/bin
 export PATH=$PATH:$HOME/.oh-my-zsh/custom/bin-public

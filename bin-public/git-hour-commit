@@ -1,0 +1,71 @@
+#!/bin/bash
+# git-hour-commit
+# This script displays a numbered list of git commit amend commands
+# with custom dates (last 3 days in 3-hour intervals) and executes
+# the one you choose.
+#
+# It supports both GNU date (Linux) and BSD date (macOS).
+
+# Function to format the git commit command for a given full date.
+commit_with_date() {
+  local commit_date="$1"
+  echo "GIT_AUTHOR_DATE=\"$commit_date\" GIT_COMMITTER_DATE=\"$commit_date\" git commit --amend --no-edit"
+}
+
+# Helper function to get a date string for N days ago.
+# Uses GNU date if available; otherwise falls back to BSD date (macOS).
+get_day() {
+  if date --version >/dev/null 2>&1; then
+    # GNU date
+    date -d "$1 days ago" +%Y-%m-%d
+  else
+    # macOS/BSD date
+    date -v-"$1"d +%Y-%m-%d
+  fi
+}
+
+# Array to store commands and their corresponding full date/time labels.
+commands=()
+labels=()
+
+# Hours array in descending order (each is 3 hours apart).
+hours=("21" "18" "15" "12" "09" "06" "03" "00")
+
+# Build the list of commands for the last 3 days (0, 1, 2 days ago).
+for d in {0..2}; do
+  day=$(get_day "$d")
+  for h in "${hours[@]}"; do
+    # Format the time (HH:MM:SS)
+    commit_time=$(printf "%s:00:00" "$h")
+    # Construct the full date string (with timezone offset)
+    full_date="$day $commit_time -0300"
+    # Generate the command
+    cmd=$(commit_with_date "$full_date")
+    # Save for display and later execution
+    commands+=("$cmd")
+    labels+=("$full_date")
+  done
+done
+
+# Display the list of available commit commands with line numbers.
+echo "Available commit dates:"
+index=1
+for i in "${!labels[@]}"; do
+  echo "$index) ${labels[$i]}"
+  ((index++))
+done
+
+echo ""
+read -p "Enter the number of the date you want to use: " choice
+
+# Validate the input.
+if ! [[ $choice =~ ^[0-9]+$ ]] || [ "$choice" -lt 1 ] || [ "$choice" -gt "${#commands[@]}" ]; then
+  echo "Invalid choice. Exiting."
+  exit 1
+fi
+
+# Get the selected command (adjust for zero-indexed array).
+selected_command="${commands[$((choice - 1))]}"
+echo "Executing commit with date: ${labels[$((choice - 1))]}"
+# Execute the selected command.
+eval $selected_command
