@@ -9,7 +9,7 @@
 # Function to format the git commit command for a given full date.
 commit_with_date() {
   local commit_date="$1"
-  echo "GIT_AUTHOR_DATE=\"$commit_date\" GIT_COMMITTER_DATE=\"$commit_date\" git commit --amend --no-edit"
+  echo "GIT_AUTHOR_DATE=\"$commit_date\" GIT_COMMITTER_DATE=\"$commit_date\" git commit --amend --no-edit --date \"$commit_date\""
 }
 
 # Helper function to get a date string for N days ago.

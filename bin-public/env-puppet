@@ -377,7 +377,8 @@ def init_desktop_9(chrome_only=False):
     switch_desktop(DESKTOP_9)
     if chrome_only:
         return  # No Chrome apps on Desktop 9
-    open_app_with_position("Docker Desktop", "/Applications/Docker.app", SECOND_SCREEN_FULL)
+
+    open_app_with_position("Podman Desktop", "/Applications/Podman Desktop.app", SECOND_SCREEN_FULL)
     # Add Screen 3 apps here if needed
 
 
