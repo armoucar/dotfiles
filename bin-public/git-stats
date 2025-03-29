@@ -82,6 +82,10 @@ def get_contributors_stats(since=None, verbose=False):
     # Process the results
     result = []
     for author, (added, removed, commit_count, files) in contributors.items():
+        # Skip contributors with [bot] in their name
+        if '[bot]' in author.lower():
+            continue
+
         # Calculate commit frequency (commits per day)
         if since and period_days and period_days > 0:
             commit_freq = commit_count / period_days
@@ -100,8 +104,8 @@ def get_contributors_stats(since=None, verbose=False):
             )
         )
 
-    # Sort by total lines (added + removed) in descending order
-    sorted_contributors = sorted(result, key=lambda x: x[2][0] + x[2][1], reverse=True)  # Sort by total lines
+    # Sort by number of commits in descending order
+    sorted_contributors = sorted(result, key=lambda x: x[2][2], reverse=True)  # Sort by commit_count
 
     return sorted_contributors
 
@@ -132,9 +136,47 @@ def format_table(headers, rows):
     return "\n".join(table)
 
 
+def get_author_commits(author_name, verbose=False):
+    """Get the last 20 commits for a specific author."""
+    cmd = [
+        "git",
+        "--no-pager",
+        "log",
+        "--author",
+        author_name,
+        "--format=%h|%ad|%d|%s",
+        "--date=short",  # Changed to short date format for compactness
+        "-n",
+        "20",
+    ]
+
+    output = run_cmd(cmd, verbose)
+
+    if not output.strip():
+        return []
+
+    commits = []
+    for line in output.splitlines():
+        if not line.strip():
+            continue
+
+        # Split the line into components
+        hash_, date, refs, message = line.split("|", 3)
+
+        # Clean up refs (branch/tag names)
+        refs = refs.strip("()").replace("HEAD -> ", "")
+        if not refs:
+            refs = "main"  # Default to main if no ref is shown
+
+        commits.append((hash_, date, refs, message))
+
+    return commits
+
+
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Display git repository contributor statistics")
     parser.add_argument("-v", "--verbose", action="store_true", help="Print git commands being executed")
+    parser.add_argument("--author", help="Show last 20 commits for a specific author")
     return parser.parse_args()
 
 
@@ -147,6 +189,34 @@ def main():
     except Exception:
         print("Error: Not a git repository or git is not installed.")
         sys.exit(1)
+
+    # If --author is specified, show author commits instead of stats
+    if args.author:
+        commits = get_author_commits(args.author, args.verbose)
+
+        if not commits:
+            print(f"\nNo commits found for author: {args.author}")
+            sys.exit(0)
+
+        print(f"\nLast 20 commits by {args.author}:\n")
+
+        # Prepare table data
+        headers = ["Date", "Hash", "Branch", "Message"]
+        rows = []
+
+        for hash_, date, refs, message in commits:
+            # Truncate message if too long
+            if len(message) > 50:
+                message = message[:47] + "..."
+
+            rows.append([date, hash_, refs, message])
+
+        # Sort rows by date in descending order (most recent first)
+        rows.sort(key=lambda x: x[0], reverse=True)
+
+        # Print table
+        print(format_table(headers, rows))
+        return
 
     # Define time periods
     time_periods = {
@@ -161,7 +231,7 @@ def main():
     results = {}
     for period_name, since in time_periods.items():
         contributors = get_contributors_stats(since, args.verbose)
-        results[period_name] = contributors[:5]  # Top 5 contributors
+        results[period_name] = contributors
 
     # Display results
     print("\nGit Repository Contributor Statistics\n")

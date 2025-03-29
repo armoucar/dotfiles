@@ -1,0 +1,10 @@
+% misc
+
+# jupyter to md, jupmd, ipynb to markdown
+jupyter nbconvert --to markdown \
+  --TemplateExporter.exclude_output=True \
+  <notebook_path> --stdout | \
+  perl -0777 -pe 's/<audio.*?<\/audio>//gs; \
+  s/<img.*?>//gs' | pbcopy
+
+

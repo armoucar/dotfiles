@@ -1,0 +1,34 @@
+#!/usr/bin/env python3
+import subprocess
+
+def run_command(cmd):
+    """Run a command in the shell and return its output as a string."""
+    result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    if result.returncode != 0:
+        raise Exception(f"Command {' '.join(cmd)} failed: {result.stderr.strip()}")
+    return result.stdout.strip()
+
+def main():
+    try:
+        # Find the fork point (common ancestor) between main and the current branch.
+        base_commit = run_command(["git", "merge-base", "main", "HEAD"])
+    except Exception as e:
+        print(f"Error finding merge base: {e}")
+        return
+
+    try:
+        # Count how many commits your branch is ahead of the fork point.
+        ahead = run_command(["git", "rev-list", "--count", "HEAD", f"^{base_commit}"])
+        # Count how many commits main is ahead of the fork point.
+        behind = run_command(["git", "rev-list", "--count", "main", f"^{base_commit}"])
+    except Exception as e:
+        print(f"Error counting commits: {e}")
+        return
+
+    print(f"Your branch is {ahead} commits ahead of main.")
+    print(f"Your branch is {behind} commits behind main.")
+    if int(behind) > 0:
+        print("You have commits in main that you should consider merging.")
+
+if __name__ == "__main__":
+    main()

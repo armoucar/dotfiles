@@ -1,0 +1,61 @@
+#!/usr/bin/env python3
+import os
+import subprocess
+import tempfile
+import re
+
+
+def convert_nb_to_md():
+    # Use fzf to select only .ipynb files (multi-select enabled)
+    try:
+        selected_files = subprocess.check_output("find . -name '*.ipynb' | fzf --multi", shell=True).decode("utf-8").strip().split("\n")
+    except subprocess.CalledProcessError:
+        return
+
+    # Create a temporary file to store the output
+    with tempfile.NamedTemporaryFile(delete=False) as tmp:
+        tmpfile = tmp.name
+
+    # Process each selected file
+    for file in selected_files:
+        if not file:  # Skip empty lines
+            continue
+
+        with open(tmpfile, "a") as f:
+            f.write(f"<{file}>\n")
+
+        # Convert notebook to markdown
+        nbconvert_cmd = [
+            "jupyter",
+            "nbconvert",
+            "--to",
+            "markdown",
+            "--TemplateExporter.exclude_output=True",
+            file,
+            "--stdout",
+        ]
+
+        try:
+            md_content = subprocess.check_output(nbconvert_cmd).decode("utf-8")
+
+            # Remove audio and img tags using regex
+            md_content = re.sub(r"<audio.*?</audio>", "", md_content, flags=re.DOTALL)
+            md_content = re.sub(r"<img.*?>", "", md_content, flags=re.DOTALL)
+
+            with open(tmpfile, "a") as f:
+                f.write(md_content)
+                f.write(f"\n</{file}>\n\n")
+
+        except subprocess.CalledProcessError as e:
+            print(f"Error processing {file}: {e}")
+
+    # Copy the combined output to the clipboard
+    subprocess.run(["pbcopy"], input=open(tmpfile, "rb").read())
+
+    # Clean up
+    os.unlink(tmpfile)
+    print("Markdown content copied to clipboard.")
+
+
+if __name__ == "__main__":
+    convert_nb_to_md()

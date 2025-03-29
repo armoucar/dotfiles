@@ -81,11 +81,19 @@ def new_pr(dry_run, verbose, context):
             click.secho(f'Running: gh pr edit {existing_pr["number"]} --title "{title}" --body "{body}"', fg="blue")
         subprocess.check_output(["gh", "pr", "edit", str(existing_pr["number"]), "--title", title, "--body", body])
         click.secho(f"PR updated successfully with title: {title}", fg="green")
+        # Get and display PR URL
+        pr_url = subprocess.check_output(["gh", "pr", "view", str(existing_pr["number"]), "--json", "url"]).decode().strip()
+        pr_url = json.loads(pr_url)["url"]
+        click.secho(f"PR URL: {pr_url}", fg="green")
     else:
         if verbose:
             click.secho(f'Running: gh pr create --title "{title}" --body "{body}"', fg="blue")
-        subprocess.check_output(["gh", "pr", "create", "--title", title, "--body", body])
+        # Capture the output to get the PR URL
+        pr_output = subprocess.check_output(["gh", "pr", "create", "--title", title, "--body", body]).decode().strip()
         click.secho(f"PR created successfully with title: {title}", fg="green")
+        # Extract and display the PR URL from the output
+        pr_url = pr_output.split("\n")[-1]  # The URL is typically the last line
+        click.secho(f"PR URL: {pr_url}", fg="green")
 
 
 def _check_existing_pr(branch, verbose=False):

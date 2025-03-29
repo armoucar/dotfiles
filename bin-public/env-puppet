@@ -23,11 +23,25 @@ SECOND_SCREEN_FULL = [1728, 37, 1920, 1080]
 THIRD_SCREEN_FULL = [3648, 37, 1920, 1080]
 
 FIRST_SCREEN_FIRST_HALF = [0, 38, 864, 1079]
+FIRST_SCREEN_FIRST_HALF_TOP = [0, 38, 864, 558]
+FIRST_SCREEN_FIRST_HALF_BOTTOM = [0, 559, 864, 558]
 FIRST_SCREEN_SECOND_HALF = [864, 38, 864, 1079]
+FIRST_SCREEN_SECOND_HALF_TOP = [864, 38, 864, 558]
+FIRST_SCREEN_SECOND_HALF_BOTTOM = [864, 559, 864, 558]
+
 SECOND_SCREEN_FIRST_HALF = [1728, 37, 960, 1080]
+SECOND_SCREEN_FIRST_HALF_TOP = [1728, 37, 960, 540]
+SECOND_SCREEN_FIRST_HALF_BOTTOM = [1728, 577, 960, 540]
 SECOND_SCREEN_SECOND_HALF = [2688, 37, 960, 1080]
+SECOND_SCREEN_SECOND_HALF_TOP = [2688, 37, 960, 540]
+SECOND_SCREEN_SECOND_HALF_BOTTOM = [2688, 577, 960, 540]
+
 THIRD_SCREEN_FIRST_HALF = [3648, 37, 960, 1080]
+THIRD_SCREEN_FIRST_HALF_TOP = [3648, 37, 960, 540]
+THIRD_SCREEN_FIRST_HALF_BOTTOM = [3648, 577, 960, 540]
 THIRD_SCREEN_SECOND_HALF = [4608, 37, 960, 1080]
+THIRD_SCREEN_SECOND_HALF_TOP = [4608, 37, 960, 540]
+THIRD_SCREEN_SECOND_HALF_BOTTOM = [4608, 577, 960, 540]
 
 FIRST_SCREEN_BIG_LEFT = [0, 38, 1382, 1079]
 FIRST_SCREEN_SMALL_LEFT = [1382, 38, 346, 1079]
@@ -61,7 +75,7 @@ APP_LIST = [
     "Slack",
     "Cursor",
     "Spotify",
-    "Docker",
+    "Podman Desktop",
     "Preview",
     "QuickTime Player",
     "Visual Studio Code",
@@ -285,10 +299,15 @@ def open_google_meet_with_position(position):
 def init_desktop_1(chrome_only=False):
     """Initialize Desktop 1 with applications"""
     switch_desktop(DESKTOP_1)
+
+    open_chrome_window("Dev", FIRST_SCREEN_FULL, "Default")
+
     if not chrome_only:
         open_cursor_with_new_window(SECOND_SCREEN_FULL)
-    open_chrome_window("Dev", FIRST_SCREEN_FULL, "Default")
-    # Add Screen 3 apps here if needed
+        open_chrome_app_with_url("https://chat.openai.com/", THIRD_SCREEN_FIRST_HALF_TOP, "Profile 1")
+        open_chrome_app_with_url("https://chat.openai.com/", THIRD_SCREEN_FIRST_HALF_BOTTOM, "Profile 1")
+        open_iterm_with_position(THIRD_SCREEN_SECOND_HALF)
+
 
 
 def init_desktop_2(chrome_only=False):
@@ -303,12 +322,10 @@ def init_desktop_2(chrome_only=False):
 def init_desktop_3(chrome_only=False):
     """Initialize Desktop 3 with applications"""
     switch_desktop(DESKTOP_3)
-    if not chrome_only:
-        open_iterm_with_position(SECOND_SCREEN_FULL)
-    open_chrome_window_with_url(
-        "Monitoring Research", FIRST_SCREEN_FULL, "Default", "https://neon.go/gugelmin-service-dashboard"
-    )
-    # Add Screen 3 apps here if needed
+
+    open_chrome_app_with_url("https://neon.go/hermes-service-dashboard", FIRST_SCREEN_FULL, "Default")
+    open_chrome_app_with_url("https://neon.go/gugelmin-service-dashboard", SECOND_SCREEN_FULL, "Default")
+    open_chrome_app_with_url("http://neon--phoenix.in.neoncorp.com.br/projects", THIRD_SCREEN_FULL, "Default")
 
 
 def init_desktop_4(chrome_only=False):
@@ -316,8 +333,10 @@ def init_desktop_4(chrome_only=False):
     switch_desktop(DESKTOP_4)
     open_chrome_app_with_url("https://chat.openai.com/", FIRST_SCREEN_FIRST_HALF, "Profile 1")
     open_chrome_app_with_url("https://chat.openai.com/", FIRST_SCREEN_SECOND_HALF, "Profile 1")
-    # open_chrome_window_with_url("GPT Research", SECOND_SCREEN_FULL, "Default", "about:blank")
-    # Add Screen 3 apps here if needed
+    open_chrome_app_with_url("https://chat.openai.com/", SECOND_SCREEN_FIRST_HALF, "Profile 1")
+    open_chrome_app_with_url("https://chat.openai.com/", SECOND_SCREEN_SECOND_HALF, "Profile 1")
+    open_chrome_app_with_url("https://chat.openai.com/", THIRD_SCREEN_FIRST_HALF, "Profile 1")
+    open_chrome_app_with_url("https://chat.openai.com/", THIRD_SCREEN_SECOND_HALF, "Profile 1")
 
 
 def init_desktop_5(chrome_only=False):

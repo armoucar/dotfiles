@@ -1,0 +1,5 @@
+#!/bin/bash
+
+podman machine ssh "sudo hwclock -s"
+podman machine stop
+podman machine start

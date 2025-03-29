@@ -1,0 +1,77 @@
+#!/usr/bin/env python3
+import subprocess
+import sys
+
+
+def run_command(cmd):
+    """Run a command in the shell and return its output as a string."""
+    result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    if result.returncode != 0:
+        print(f"Error executing command: {' '.join(cmd)}", file=sys.stderr)
+        print(result.stderr, file=sys.stderr)
+        return None
+    return result.stdout.strip()
+
+
+def prune_branches():
+    """Prune branches that have been fully merged into main."""
+    # Store the original branch name
+    original_branch = run_command(["git", "rev-parse", "--abbrev-ref", "HEAD"])
+    if original_branch is None:
+        return False
+
+    # First checkout main branch
+    print("Checking out main branch...")
+    if run_command(["git", "checkout", "-q", "main"]) is None:
+        return False
+
+    # Get all local branches
+    branches = run_command(["git", "for-each-ref", "refs/heads/", "--format=%(refname:short)"])
+    if branches is None:
+        return False
+
+    branches = branches.split("\n")
+
+    for branch in branches:
+        if branch == "main":
+            continue
+
+        # Find merge base between main and the branch
+        merge_base = run_command(["git", "merge-base", "main", branch])
+        if merge_base is None:
+            continue
+
+        # Create a tree object from the branch
+        tree_sha = run_command(["git", "rev-parse", f"{branch}^{{tree}}"])
+        if tree_sha is None:
+            continue
+
+        # Create a commit with that tree and the merge-base as parent
+        commit_sha = run_command(["git", "commit-tree", tree_sha, "-p", merge_base, "-m", "_"])
+        if commit_sha is None:
+            continue
+
+        # Check if this branch is fully merged using git cherry
+        cherry_result = run_command(["git", "cherry", "main", commit_sha])
+        if cherry_result is None:
+            continue
+
+        # If the output starts with a minus sign, the branch is fully merged
+        if cherry_result.startswith("-"):
+            print(f"Deleting fully merged branch: {branch}")
+            run_command(["git", "branch", "-D", branch])
+
+    # Switch back to the original branch
+    print(f"Switching back to {original_branch}...")
+    if run_command(["git", "checkout", "-q", original_branch]) is None:
+        return False
+
+
+def main():
+    print("Pruning fully merged branches...")
+    prune_branches()
+    print("Done!")
+
+
+if __name__ == "__main__":
+    main()
