@@ -1,0 +1,20 @@
+{
+  "configurations": [
+    {
+      "name": "Crawl Page",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "cli/app/command/crawl/page.py",
+      "console": "integratedTerminal",
+      "args": [
+        "https://opentelemetry-python-contrib.readthedocs.io/en/latest/instrumentation/fastapi/fastapi.html",
+        "--format",
+        "markdown"
+      ],
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}"
+      }
+    }
+  ]
+}

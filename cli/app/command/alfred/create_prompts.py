@@ -26,9 +26,10 @@ REASONING_PROMPTS_DIR = os.path.join(
 
 @click.command()
 @click.option("--topic", prompt="Enter the technology or topic", help="Technology or topic to create prompts for")
+@click.option("--context", help="Additional context for the prompt generation")
 @click.option("--no-reasoning", is_flag=True, help="Don't create reasoning prompts")
 @click.option("--no-code-only", is_flag=True, help="Don't create code-only prompts")
-def create_prompts(topic, no_reasoning, no_code_only):
+def create_prompts(topic, context, no_reasoning, no_code_only):
     """Create specialist prompts for Alfred snippets."""
     # Ensure the prompts directories exist
     os.makedirs(PROMPTS_DIR, exist_ok=True)
@@ -47,7 +48,7 @@ def create_prompts(topic, no_reasoning, no_code_only):
         click.echo(f"Generating AI prompts for '{topic}'...")
 
         # Generate prompts using OpenAI
-        specialist_prompt, code_only_prompt, reasoning_prompt = _generate_prompts_with_openai(topic)
+        specialist_prompt, code_only_prompt, reasoning_prompt = _generate_prompts_with_openai(topic, context)
 
         # Create the snippet files
         specialist_file = _create_snippet_file(specialist_name, specialist_prompt)
@@ -88,7 +89,7 @@ def _create_snippet_file(name, prompt, directory=PROMPTS_DIR):
     return filename
 
 
-def _generate_reasoning_prompt(specialist_prompt, topic):
+def _generate_reasoning_prompt(specialist_prompt, topic, add_context):
     """Generate a reasoning prompt based on specialist prompt."""
     try:
         client = OpenAI()
@@ -102,6 +103,7 @@ def _generate_reasoning_prompt(specialist_prompt, topic):
         user_prompt = REASONING_PROMPT_TEMPLATE.format(
             specialist_prompt=specialist_prompt,
             topic=topic,
+            add_context=add_context,
         )
 
         # Make the API call
@@ -119,7 +121,7 @@ def _generate_reasoning_prompt(specialist_prompt, topic):
         raise
 
 
-def _generate_prompts_with_openai(topic):
+def _generate_prompts_with_openai(topic, add_context):
     """Use OpenAI to generate prompts for the given topic."""
     try:
         client = OpenAI()
@@ -133,7 +135,7 @@ def _generate_prompts_with_openai(topic):
             model="gpt-4o",
             messages=[
                 {"role": "system", "content": system_message},
-                {"role": "user", "content": GENERAL_PROMPT_TEMPLATE.format(topic=topic)},
+                {"role": "user", "content": GENERAL_PROMPT_TEMPLATE.format(topic=topic, add_context=add_context)},
             ],
             temperature=0.7,
             max_tokens=300,
@@ -146,7 +148,7 @@ def _generate_prompts_with_openai(topic):
             model="gpt-4o",
             messages=[
                 {"role": "system", "content": system_message},
-                {"role": "user", "content": CODE_ONLY_PROMPT_TEMPLATE.format(topic=topic)},
+                {"role": "user", "content": CODE_ONLY_PROMPT_TEMPLATE.format(topic=topic, add_context=add_context)},
             ],
             temperature=0.7,
             max_tokens=300,
@@ -155,7 +157,7 @@ def _generate_prompts_with_openai(topic):
         code_only_prompt = response.choices[0].message.content.strip()
 
         # Generate reasoning prompt
-        reasoning_prompt = _generate_reasoning_prompt(specialist_prompt, topic)
+        reasoning_prompt = _generate_reasoning_prompt(specialist_prompt, topic, add_context)
 
         return specialist_prompt, code_only_prompt, reasoning_prompt
 
@@ -182,11 +184,11 @@ Follow the rules below when creating the prompts. They are surrounded by the <ru
 6. It should be written in simple plain text, without any formatting.
 7. The final prompt should instruct the answers to be concise and direct.
 8. Added to the topic, more context information might be provided to be added to the prompt.
-9. If the given topic is about a programming technology, you might add to the prompt that the target environment is a Mac OS.
-10. If the given topic is about a programming technology, the prompt should instruct to skip installation and set up instructions.
-11. Bring as much details as possible to the prompt.
+9. If the given topic is about a programming technology, the prompt should instruct to skip installation and set up instructions.
+10. Bring as much details as possible to the prompt.
 </rules>
 
+Additional context: {{add_context}}
 My title for the prompt is: {{topic}}
 
 Return ONLY the prompt text, nothing else.
@@ -212,11 +214,11 @@ Follow the rules below when creating the prompts. They are surrounded by the <ru
 8. The prompt should instruct to provide answers with code only.
 9. The prompt should instruct to use standard libraries or community defaults where possible instead of creating its own custom solutions.
 10. Added to the topic, more context information might be provided to be added to the prompt.
-11. If the given topic is about a programming technology, you might add to the prompt that the target environment is a Mac OS.
-12. The prompt should instruct to skip installation and set up instructions.
-13. Bring as much details as possible to the prompt.
+11. The prompt should instruct to skip installation and set up instructions.
+12. Bring as much details as possible to the prompt.
 </rules>
 
+Additional context: {{add_context}}
 My title for the prompt is: {{topic}}
 
 Return ONLY the prompt text, nothing else.
@@ -240,6 +242,7 @@ Guidelines for the transformation:
 7. The prompt should ask guidance on how to do something, not a question
 8. The prompt should finish with ":"
 
+Additional context: {{add_context}}
 The topic is: {{topic}}
 
 Return ONLY the transformed prompt text, nothing else.

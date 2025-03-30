@@ -13,6 +13,40 @@ PROMPTS_DIRS = [
 ]
 
 
+@click.command()
+@click.option("--dry-run", is_flag=True, help="Show what would be deleted without actually deleting")
+def delete_prompts(dry_run):
+    """Delete Alfred prompts using interactive selection with fzf."""
+    click.echo("Collecting prompts...")
+    prompts = collect_prompts()
+
+    if not prompts:
+        click.echo("No prompts found in the configured directories.")
+        return
+
+    click.echo(f"Found {len(prompts)} prompts. Opening selector...")
+    formatted_file = format_for_fzf(prompts)
+
+    selected_paths = select_prompts_with_fzf(formatted_file)
+
+    if not selected_paths:
+        click.echo("No prompts selected for deletion.")
+        return
+
+    if dry_run:
+        click.echo(f"Selected {len(selected_paths)} prompts for deletion (dry run):")
+    else:
+        confirmation = click.confirm(f"Delete {len(selected_paths)} selected prompts?")
+        if not confirmation:
+            click.echo("Operation cancelled.")
+            return
+
+    delete_selected_prompts(selected_paths, dry_run)
+
+    if not dry_run:
+        click.echo(f"Successfully deleted {len(selected_paths)} prompts.")
+
+
 def get_snippet_info(filepath):
     """Extract snippet information from a JSON file."""
     try:
@@ -118,40 +152,6 @@ def delete_selected_prompts(selected_paths, dry_run=False):
                 click.echo(f"Deleted: {filename}")
         except Exception as e:
             click.echo(f"Error deleting {filename}: {str(e)}")
-
-
-@click.command()
-@click.option("--dry-run", is_flag=True, help="Show what would be deleted without actually deleting")
-def delete_prompts(dry_run):
-    """Delete Alfred prompts using interactive selection with fzf."""
-    click.echo("Collecting prompts...")
-    prompts = collect_prompts()
-
-    if not prompts:
-        click.echo("No prompts found in the configured directories.")
-        return
-
-    click.echo(f"Found {len(prompts)} prompts. Opening selector...")
-    formatted_file = format_for_fzf(prompts)
-
-    selected_paths = select_prompts_with_fzf(formatted_file)
-
-    if not selected_paths:
-        click.echo("No prompts selected for deletion.")
-        return
-
-    if dry_run:
-        click.echo(f"Selected {len(selected_paths)} prompts for deletion (dry run):")
-    else:
-        confirmation = click.confirm(f"Delete {len(selected_paths)} selected prompts?")
-        if not confirmation:
-            click.echo("Operation cancelled.")
-            return
-
-    delete_selected_prompts(selected_paths, dry_run)
-
-    if not dry_run:
-        click.echo(f"Successfully deleted {len(selected_paths)} prompts.")
 
 
 if __name__ == "__main__":

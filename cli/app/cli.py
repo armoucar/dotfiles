@@ -34,6 +34,8 @@ from cli.app.command.notes import (
     summary,
 )
 
+
+from cli.app.command.crawl import page
 from cli.app.telemetry import initialize_telemetry
 
 
@@ -71,6 +73,12 @@ def kubectl():
     pass
 
 
+@click.group()
+def crawl():
+    """Crawl commands."""
+    pass
+
+
 # Add git commands to git group
 git.add_command(prs_check)
 git.add_command(new_pr)
@@ -105,6 +113,10 @@ cli.add_command(notes)
 kubectl.add_command(watch_gugelmin)
 kubectl.add_command(pod_interact)
 cli.add_command(kubectl)
+
+# Add all commands to the crawl group
+crawl.add_command(page)
+cli.add_command(crawl)
 
 if __name__ == "__main__":
     cli()
