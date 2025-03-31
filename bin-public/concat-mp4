@@ -1,0 +1,380 @@
+#!/usr/bin/env python3
+import os
+import sys
+import argparse
+import subprocess
+import re
+
+
+def get_duration(filename):
+    """Use ffprobe to get the duration (in seconds) of a video file."""
+    cmd = [
+        "ffprobe",
+        "-v",
+        "error",
+        "-show_entries",
+        "format=duration",
+        "-of",
+        "default=noprint_wrappers=1:nokey=1",
+        filename,
+    ]
+    result = subprocess.run(
+        cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
+    )
+    try:
+        return float(result.stdout.strip())
+    except Exception:
+        print(f"Error reading duration for {filename}")
+        sys.exit(1)
+
+
+def get_video_dimensions(filename):
+    """Use ffprobe to get the width and height of a video file."""
+    # First method: Use stream info with csv format
+    cmd1 = [
+        "ffprobe",
+        "-v",
+        "error",
+        "-select_streams",
+        "v:0",
+        "-show_entries",
+        "stream=width,height",
+        "-of",
+        "csv=s=x:p=0",
+        filename,
+    ]
+
+    # Second method: Use stream info with default format
+    cmd2 = [
+        "ffprobe",
+        "-v",
+        "error",
+        "-select_streams",
+        "v:0",
+        "-show_entries",
+        "stream=width,height",
+        "-of",
+        "default=noprint_wrappers=1",
+        filename,
+    ]
+
+    # Third method: Use mediainfo if available
+    cmd3 = [
+        "mediainfo",
+        "--Output=Video;%Width%x%Height%",
+        filename,
+    ]
+
+    # Try the first method
+    result = subprocess.run(
+        cmd1, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
+    )
+
+    try:
+        dimensions = result.stdout.strip()
+        if dimensions:
+            width, height = map(int, dimensions.split("x"))
+            return width, height
+    except Exception:
+        pass
+
+    # Try the second method
+    try:
+        result = subprocess.run(
+            cmd2, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
+        )
+        output = result.stdout.strip()
+        if output:
+            width_match = re.search(r"width=(\d+)", output)
+            height_match = re.search(r"height=(\d+)", output)
+            if width_match and height_match:
+                return int(width_match.group(1)), int(height_match.group(1))
+    except Exception:
+        pass
+
+    # Try the third method (if mediainfo is installed)
+    try:
+        result = subprocess.run(
+            cmd3, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
+        )
+        dimensions = result.stdout.strip()
+        if dimensions and "x" in dimensions:
+            width, height = map(int, dimensions.split("x"))
+            return width, height
+    except Exception:
+        pass
+
+    # Manually open the file and look for resolution info within
+    try:
+        result = subprocess.run(
+            ["ffmpeg", "-i", filename],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        output = result.stderr
+        match = re.search(r"(\d+)x(\d+)", output)
+        if match:
+            return int(match.group(1)), int(match.group(2))
+    except Exception:
+        pass
+
+    # If all methods fail, return None
+    print(
+        f"Error detecting dimensions for {filename}: Could not determine dimensions with any method"
+    )
+    return None
+
+
+def is_valid_video(filename):
+    """Check if a file is a valid video by trying to get its duration and dimensions."""
+    try:
+        duration = get_duration(filename)
+        dimensions = get_video_dimensions(filename)
+        return duration > 0 and dimensions is not None
+    except Exception:
+        return False
+
+
+def build_filter_complex(
+    files, durations, target_width, target_height, fade_duration=1
+):
+    """
+    Build a filter_complex string for ffmpeg that:
+      - Scales all videos to match the target aspect ratio
+      - Adds fade-in and fade-out to each video clip
+      - Concatenates the clips using the concat filter
+    """
+    parts = []
+    n = len(files)
+
+    # Process each input to add scaling and fades
+    for i in range(n):
+        # Scale to target dimensions while preserving aspect ratio and filling with black bars if needed
+        scale_filter = f"scale={target_width}:{target_height}:force_original_aspect_ratio=decrease,pad={target_width}:{target_height}:(ow-iw)/2:(oh-ih)/2:color=black"
+
+        # Calculate fade in/out positions
+        if i == 0:  # First clip
+            # Only add fade out
+            parts.append(
+                f"[{i}:v]fps=30,{scale_filter},format=yuv420p,setpts=PTS-STARTPTS,fade=t=out:st={durations[i]-fade_duration}:d={fade_duration}[fv{i}];"
+            )
+        elif i == n - 1:  # Last clip
+            # Only add fade in
+            parts.append(
+                f"[{i}:v]fps=30,{scale_filter},format=yuv420p,setpts=PTS-STARTPTS,fade=t=in:st=0:d={fade_duration}[fv{i}];"
+            )
+        else:  # Middle clips
+            # Add both fade in and fade out
+            parts.append(
+                f"[{i}:v]fps=30,{scale_filter},format=yuv420p,setpts=PTS-STARTPTS,fade=t=in:st=0:d={fade_duration},fade=t=out:st={durations[i]-fade_duration}:d={fade_duration}[fv{i}];"
+            )
+
+        # Add audio fade in/out to match video
+        if i == 0:  # First clip
+            parts.append(
+                f"[{i}:a]asetpts=PTS-STARTPTS,afade=t=out:st={durations[i]-fade_duration}:d={fade_duration}[fa{i}];"
+            )
+        elif i == n - 1:  # Last clip
+            parts.append(
+                f"[{i}:a]asetpts=PTS-STARTPTS,afade=t=in:st=0:d={fade_duration}[fa{i}];"
+            )
+        else:  # Middle clips
+            parts.append(
+                f"[{i}:a]asetpts=PTS-STARTPTS,afade=t=in:st=0:d={fade_duration},afade=t=out:st={durations[i]-fade_duration}:d={fade_duration}[fa{i}];"
+            )
+
+    # If there's only one video, just output it
+    if n == 1:
+        v_output = "[fv0]"
+        a_output = "[fa0]"
+    else:
+        # Create concat strings for video and audio
+        v_inputs = "".join([f"[fv{i}]" for i in range(n)])
+        a_inputs = "".join([f"[fa{i}]" for i in range(n)])
+
+        # Concatenate all videos
+        parts.append(f"{v_inputs}concat=n={n}:v=1:a=0[vout];")
+
+        # Concatenate all audio streams
+        parts.append(f"{a_inputs}concat=n={n}:v=0:a=1[aout];")
+
+        v_output = "[vout]"
+        a_output = "[aout]"
+
+    filter_complex = "".join(parts)
+    return filter_complex, v_output, a_output
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Concatenate all mp4 files in a folder with 1s fade transitions using ffmpeg."
+    )
+    parser.add_argument("folder", help="Folder containing .mp4 files")
+    parser.add_argument(
+        "--quality",
+        choices=["low", "medium", "high"],
+        default="medium",
+        help="Output quality setting (affects video bitrate)",
+    )
+    parser.add_argument(
+        "--skip-errors",
+        action="store_true",
+        help="Skip files that can't be processed instead of exiting",
+    )
+    parser.add_argument(
+        "--dimensions",
+        type=str,
+        help="Force specific dimensions (format: WIDTHxHEIGHT, e.g. 1280x720)",
+    )
+    parser.add_argument(
+        "--vertical",
+        action="store_true",
+        help="Use vertical video dimensions (portrait mode, 720x1280) as default",
+    )
+    parser.add_argument(
+        "--horizontal",
+        action="store_true",
+        help="Use horizontal video dimensions (landscape mode, 1280x720) as default",
+    )
+    args = parser.parse_args()
+
+    folder = args.folder
+    quality = args.quality
+    skip_errors = args.skip_errors
+
+    # Determine target video bitrate based on quality
+    if quality == "low":
+        bitrate = "500k"
+    elif quality == "high":
+        bitrate = "3000k"
+    else:
+        bitrate = "1500k"
+
+    # Create output filename with quality included
+    output_filename = f"output_{quality}.mp4"
+
+    # Get sorted list of mp4 files in the folder, excluding any previously generated output files
+    all_files = sorted(
+        [
+            os.path.join(folder, f)
+            for f in os.listdir(folder)
+            if f.lower().endswith(".mp4") and not f.startswith("output_")
+        ]
+    )
+
+    if not all_files:
+        print("No mp4 files found in the specified folder.")
+        sys.exit(1)
+
+    # Filter out invalid files if skip_errors is enabled
+    if skip_errors:
+        files = []
+        for f in all_files:
+            if is_valid_video(f):
+                files.append(f)
+            else:
+                print(f"Skipping invalid file: {f}")
+
+        if not files:
+            print("No valid mp4 files found after filtering.")
+
+            # Check if we should proceed with default dimensions
+            if args.dimensions or args.vertical or args.horizontal:
+                print("Proceeding with specified dimensions for all files.")
+                files = all_files
+            else:
+                sys.exit(1)
+    else:
+        files = all_files
+
+    # Determine target dimensions
+    if args.dimensions:
+        try:
+            target_width, target_height = map(int, args.dimensions.split("x"))
+            print(f"Using specified dimensions: {target_width}x{target_height}")
+        except Exception:
+            print(
+                f"Invalid dimensions format: {args.dimensions}. Use format WIDTHxHEIGHT (e.g. 1280x720)"
+            )
+            sys.exit(1)
+    elif args.vertical:
+        target_width, target_height = 720, 1280
+        print(
+            f"Using default vertical (portrait) dimensions: {target_width}x{target_height}"
+        )
+    elif args.horizontal:
+        target_width, target_height = 1280, 720
+        print(
+            f"Using default horizontal (landscape) dimensions: {target_width}x{target_height}"
+        )
+    else:
+        # Try to get dimensions from the first valid video
+        target_width, target_height = None, None
+        for f in files:
+            dimensions = get_video_dimensions(f)
+            if dimensions:
+                target_width, target_height = dimensions
+                print(
+                    f"Using aspect ratio from video {os.path.basename(f)}: {target_width}x{target_height}"
+                )
+                break
+
+        if target_width is None or target_height is None:
+            print(
+                "Could not determine video dimensions from any file. Using default 720p dimensions."
+            )
+            target_width, target_height = 1280, 720
+
+    # Get durations for each file using ffprobe
+    durations = []
+    for f in files:
+        try:
+            dur = get_duration(f)
+            durations.append(dur)
+        except Exception:
+            # If we can't get duration, use a default of 5 seconds
+            print(
+                f"Could not get duration for {f}, using default duration of 5 seconds."
+            )
+            durations.append(5.0)
+
+    # Build the filter_complex string along with the output labels.
+    filter_complex, v_output, a_output = build_filter_complex(
+        files, durations, target_width, target_height, fade_duration=1
+    )
+
+    # Build the ffmpeg command.
+    # - We include all input files.
+    # - The filter_complex builds the transition chain.
+    # - The output is encoded with libx264 for video (using the chosen bitrate) and aac for audio.
+    cmd = ["ffmpeg", "-y"]
+    for f in files:
+        cmd.extend(["-i", f])
+    cmd.extend(
+        [
+            "-filter_complex",
+            filter_complex,
+            "-map",
+            v_output,
+            "-map",
+            a_output,
+            "-c:v",
+            "libx264",
+            "-b:v",
+            bitrate,
+            "-c:a",
+            "aac",
+            output_filename,
+        ]
+    )
+
+    print("Running ffmpeg command:")
+    print(" ".join(cmd))
+    subprocess.run(cmd)
+
+    print(f"Concatenation complete! Output saved as: {output_filename}")
+
+
+if __name__ == "__main__":
+    main()
