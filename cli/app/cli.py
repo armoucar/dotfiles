@@ -34,6 +34,11 @@ from cli.app.command.notes import (
     summary,
 )
 
+from cli.app.command.investment import (
+    simulate,
+    compare,
+    generator,
+)
 
 from cli.app.command.crawl import page
 from cli.app.telemetry import initialize_telemetry
@@ -79,6 +84,12 @@ def crawl():
     pass
 
 
+@click.group()
+def investment():
+    """Investment simulation commands."""
+    pass
+
+
 # Add git commands to git group
 git.add_command(prs_check)
 git.add_command(new_pr)
@@ -117,6 +128,12 @@ cli.add_command(kubectl)
 # Add all commands to the crawl group
 crawl.add_command(page)
 cli.add_command(crawl)
+
+# Add all commands to the investment group
+investment.add_command(simulate)
+investment.add_command(compare)
+investment.add_command(generator)
+cli.add_command(investment)
 
 if __name__ == "__main__":
     cli()

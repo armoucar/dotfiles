@@ -19,6 +19,8 @@ opentelemetry-sdk = "^1.30.0"
 opentelemetry-exporter-otlp = "^1.30.0"
 openinference-instrumentation-openai = "^0.1.21"
 firecrawl-py = "^1.15.0"
+python-dateutil = "^2.9.0.post0"
+pandas = "^2.2.3"
 
 [tool.poetry.scripts]
 dot = "cli.app.cli:cli"
