@@ -1,5 +1,27 @@
 #!/bin/bash
 
+# Store the list of running containers
+running_containers=$(podman ps --format '{{.Names}}')
+
+# Stop all running containers gracefully
+if [ ! -z "$running_containers" ]; then
+  echo "Stopping running containers..."
+  echo "$running_containers" | while read container; do
+    podman stop "$container"
+  done
+fi
+
+# Fix the time
 podman machine ssh "sudo hwclock -s"
+
+# Stop and start the machine
 podman machine stop
 podman machine start
+
+# Restart previously running containers
+if [ ! -z "$running_containers" ]; then
+  echo "Restarting previously running containers..."
+  echo "$running_containers" | while read container; do
+    podman start "$container"
+  done
+fi

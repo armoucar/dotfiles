@@ -4,21 +4,50 @@ import locale
 import dateutil.relativedelta
 from tabulate import tabulate
 
+
 @click.command()
-@click.option("--principal", "-p", type=float, required=True, help="Initial investment amount in BRL")
-@click.option("--start-date", "-s", type=click.DateTime(formats=["%Y-%m-%d"]), default=lambda: datetime.now().strftime("%Y-%m-%d"),
-              help="Start date (YYYY-MM-DD), defaults to today")
-@click.option("--end-date", "-e", type=click.DateTime(formats=["%Y-%m-%d"]), required=True,
-              help="End date (YYYY-MM-DD)")
-@click.option("--annual-rate", "-r", type=float, default=12.654, help="Annual interest rate (%), defaults to 12.654%")
-@click.option("--tax-rate", "-t", type=float, default=17.5, help="Income tax rate (%), defaults to 17.5%")
+@click.option(
+    "--principal",
+    "-p",
+    type=float,
+    required=True,
+    help="Initial investment amount in BRL",
+)
+@click.option(
+    "--start-date",
+    "-s",
+    type=click.DateTime(formats=["%Y-%m-%d"]),
+    default=lambda: datetime.now().strftime("%Y-%m-%d"),
+    help="Start date (YYYY-MM-DD), defaults to today",
+)
+@click.option(
+    "--end-date",
+    "-e",
+    type=click.DateTime(formats=["%Y-%m-%d"]),
+    required=True,
+    help="End date (YYYY-MM-DD)",
+)
+@click.option(
+    "--annual-rate",
+    "-r",
+    type=float,
+    default=12.654,
+    help="Annual interest rate (%), defaults to 12.654%",
+)
+@click.option(
+    "--tax-rate",
+    "-t",
+    type=float,
+    default=17.5,
+    help="Income tax rate (%), defaults to 17.5%",
+)
 def simulate(principal, start_date, end_date, annual_rate, tax_rate):
     """
     Simulate a pre-fixed CDB investment with month-by-month breakdown.
     Shows initial amount, monthly accrued interest, final amount, and tax deduction.
     """
     # Convert annual rate to monthly rate
-    monthly_rate = (1 + annual_rate/100) ** (1/12) - 1
+    monthly_rate = (1 + annual_rate / 100) ** (1 / 12) - 1
 
     # Initialize variables
     current_date = start_date
@@ -85,13 +114,15 @@ def simulate(principal, start_date, end_date, annual_rate, tax_rate):
         monthly_interests.append(interest_earned)
 
         # Add row to table data
-        rows.append([
-            month_count,
-            current_date.strftime("%d %b %Y"),
-            f"{current_amount:,.2f}",
-            f"{interest_earned:,.2f}",
-            f"{monthly_growth_pct:.4f}%"
-        ])
+        rows.append(
+            [
+                month_count,
+                current_date.strftime("%d %b %Y"),
+                f"{current_amount:,.2f}",
+                f"{interest_earned:,.2f}",
+                f"{monthly_growth_pct:.4f}%",
+            ]
+        )
 
     # Print the monthly breakdown table
     click.echo(tabulate(rows, headers=headers, tablefmt="fancy_grid", numalign="right"))
@@ -117,12 +148,15 @@ def simulate(principal, start_date, end_date, annual_rate, tax_rate):
         ["Gross return", f"R$ {total_return:,.2f} ({(total_return/original_principal)*100:.2f}%)"],
         ["Income tax", f"R$ {tax_amount:,.2f} ({tax_rate:.2f}%)"],
         ["Net final amount", f"R$ {net_amount:,.2f}"],
-        ["Net return", f"R$ {net_amount - original_principal:,.2f} ({((net_amount - original_principal)/original_principal)*100:.2f}%)"],
+        [
+            "Net return",
+            f"R$ {net_amount - original_principal:,.2f} ({((net_amount - original_principal)/original_principal)*100:.2f}%)",
+        ],
         ["", ""],
         ["Monthly Averages", ""],
         ["Avg. account balance", f"R$ {avg_monthly_amount:,.2f}"],
         ["Avg. monthly interest", f"R$ {avg_monthly_interest:,.2f}"],
-        ["Avg. monthly growth", f"{avg_monthly_growth:.4f}%"]
+        ["Avg. monthly growth", f"{avg_monthly_growth:.4f}%"],
     ]
 
     click.echo(tabulate(summary_rows, headers=summary_headers, tablefmt="simple"))

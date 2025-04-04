@@ -3,12 +3,23 @@ import os
 import subprocess
 import tempfile
 import re
+import argparse
 
 
-def convert_nb_to_md():
+def convert_nb(format_type="markdown", output_type="clipboard"):
+    """Convert Jupyter notebooks to either markdown or python format."""
+    if format_type not in ["markdown", "python"]:
+        print("Invalid format type. Use 'markdown' or 'python'")
+        return
+
     # Use fzf to select only .ipynb files (multi-select enabled)
     try:
-        selected_files = subprocess.check_output("find . -name '*.ipynb' | fzf --multi", shell=True).decode("utf-8").strip().split("\n")
+        selected_files = (
+            subprocess.check_output("find . -name '*.ipynb' | fzf --multi", shell=True)
+            .decode("utf-8")
+            .strip()
+            .split("\n")
+        )
     except subprocess.CalledProcessError:
         return
 
@@ -21,41 +32,65 @@ def convert_nb_to_md():
         if not file:  # Skip empty lines
             continue
 
-        with open(tmpfile, "a") as f:
-            f.write(f"<{file}>\n")
+        if output_type == "clipboard":
+            with open(tmpfile, "a") as f:
+                f.write(f"<{file}>\n")
 
-        # Convert notebook to markdown
+        # Convert notebook to specified format
         nbconvert_cmd = [
             "jupyter",
             "nbconvert",
             "--to",
-            "markdown",
-            "--TemplateExporter.exclude_output=True",
+            format_type,
             file,
             "--stdout",
         ]
 
+        # Add template options for markdown format
+        if format_type == "markdown":
+            nbconvert_cmd.insert(4, "--TemplateExporter.exclude_output=True")
+
         try:
-            md_content = subprocess.check_output(nbconvert_cmd).decode("utf-8")
+            converted_content = subprocess.check_output(nbconvert_cmd).decode("utf-8")
 
-            # Remove audio and img tags using regex
-            md_content = re.sub(r"<audio.*?</audio>", "", md_content, flags=re.DOTALL)
-            md_content = re.sub(r"<img.*?>", "", md_content, flags=re.DOTALL)
+            # Clean up content for markdown format
+            if format_type == "markdown":
+                converted_content = re.sub(r"<audio.*?</audio>", "", converted_content, flags=re.DOTALL)
+                converted_content = re.sub(r"<img.*?>", "", converted_content, flags=re.DOTALL)
 
-            with open(tmpfile, "a") as f:
-                f.write(md_content)
-                f.write(f"\n</{file}>\n\n")
+            if output_type == "clipboard":
+                with open(tmpfile, "a") as f:
+                    f.write(converted_content)
+                    f.write(f"\n</{file}>\n\n")
+            else:  # file output
+                output_ext = ".md" if format_type == "markdown" else ".py"
+                output_file = os.path.splitext(file)[0] + output_ext
+                with open(output_file, "w") as f:
+                    f.write(converted_content)
+                print(f"Saved to {output_file}")
 
         except subprocess.CalledProcessError as e:
             print(f"Error processing {file}: {e}")
 
-    # Copy the combined output to the clipboard
-    subprocess.run(["pbcopy"], input=open(tmpfile, "rb").read())
+    if output_type == "clipboard":
+        # Copy the combined output to the clipboard
+        subprocess.run(["pbcopy"], input=open(tmpfile, "rb").read())
+        # Clean up
+        os.unlink(tmpfile)
+        print(f"{format_type.capitalize()} content copied to clipboard.")
 
-    # Clean up
-    os.unlink(tmpfile)
-    print("Markdown content copied to clipboard.")
+
+def main():
+    parser = argparse.ArgumentParser(description="Convert Jupyter notebooks to markdown or python")
+    parser.add_argument(
+        "-f", "--format", choices=["markdown", "python"], default="markdown", help="Output format (default: markdown)"
+    )
+    parser.add_argument(
+        "-o", "--output", choices=["clipboard", "file"], default="clipboard", help="Output type (default: clipboard)"
+    )
+    args = parser.parse_args()
+    convert_nb(args.format, args.output)
 
 
 if __name__ == "__main__":
-    convert_nb_to_md()
+    main()

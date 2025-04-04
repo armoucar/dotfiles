@@ -9,7 +9,7 @@ packages = [{ include = "cli/app" }]
 [tool.poetry.dependencies]
 python = ">=3.12,<3.14"
 click = "^8.1.8"
-openai = "^1.65.2"
+openai = {version = "1.70.0", extras = ["voice_helpers"]}
 pyaudio = "^0.2.14"
 python-dotenv = "^1.0.1"
 pyyaml = "^6.0.2"

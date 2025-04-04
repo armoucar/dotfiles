@@ -1,0 +1,4 @@
+% crawl, dot
+
+# Gets the content of a page in markdown to the clipboard
+dot crawl page <url>
