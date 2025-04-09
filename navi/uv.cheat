@@ -1,0 +1,28 @@
+% uv
+
+# Initialize a new project with UV
+uv init <project-name>
+
+# Install all dependencies specified in uv.lock
+uv sync
+
+# Add a new package to your project dependencies
+uv add <package-name>
+
+# Remove a package from your project dependencies
+uv remove <package-name>
+
+# Update all dependencies to their latest compatible versions
+uv lock --upgrade
+
+# Run a command in the virtual environment created by UV
+uv run <command>
+
+# Show information about the project's dependency tree
+uv tree
+
+# Start a shell within the virtual environment
+source .venv/bin/activate
+
+# Show outdated packages
+uv pip list --outdated

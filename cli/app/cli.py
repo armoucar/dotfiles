@@ -41,6 +41,7 @@ from cli.app.command.investment import (
 )
 
 from cli.app.command.crawl import page
+from cli.app.command.audio import audio
 from cli.app.telemetry import initialize_telemetry
 
 
@@ -134,6 +135,9 @@ investment.add_command(simulate)
 investment.add_command(compare)
 investment.add_command(generator)
 cli.add_command(investment)
+
+# Add audio command group
+cli.add_command(audio)
 
 if __name__ == "__main__":
     cli()

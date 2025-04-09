@@ -1,0 +1,97 @@
+#!/bin/bash
+
+# normalize-filename - A script to normalize filenames
+# - Replaces spaces with hyphens
+# - Removes duplicate hyphens
+# - Transliterates accented characters to ASCII
+# - Removes special characters
+# - Converts to lowercase
+
+# Enable for debugging
+DEBUG=0
+
+if [ $# -eq 0 ]; then
+  echo "Usage: normalize-filename <filename>"
+  echo "Normalizes filenames by:"
+  echo "  - Converting to lowercase"
+  echo "  - Transliterating accented characters (é → e)"
+  echo "  - Replacing spaces with hyphens"
+  echo "  - Removing special characters"
+  echo "  - Replacing multiple hyphens with a single hyphen"
+  exit 1
+fi
+
+debug_print() {
+  if [ "$DEBUG" -eq 1 ]; then
+    echo "DEBUG: $1: '$2'"
+  fi
+}
+
+for file in "$@"; do
+  if [ ! -e "$file" ]; then
+    echo "Error: File '$file' does not exist."
+    continue
+  fi
+
+  # Get the directory and filename
+  dir=$(dirname "$file")
+  filename=$(basename "$file")
+  debug_print "Original filename" "$filename"
+
+  # Get extension (if any)
+  ext=""
+  if [[ "$filename" == *.* ]]; then
+    ext=".${filename##*.}"
+    filename="${filename%.*}"
+    debug_print "Filename without extension" "$filename"
+    debug_print "Extension" "$ext"
+  fi
+
+  # Step 1: Convert to lowercase
+  temp=$(echo "$filename" | tr '[:upper:]' '[:lower:]')
+  debug_print "After lowercase" "$temp"
+
+  # Step 2: Transliterate accented characters
+  if command -v iconv >/dev/null 2>&1; then
+    # Using a temporary variable to avoid clobbering the result if iconv fails
+    temp_translit=$(echo "$temp" | iconv -f utf-8 -t ascii//TRANSLIT 2>/dev/null) || temp_translit="$temp"
+    temp="$temp_translit"
+    debug_print "After transliteration" "$temp"
+  fi
+
+  # Step 3: Replace spaces and underscores with hyphens
+  temp=$(echo "$temp" | tr ' _' '-')
+  debug_print "After replacing spaces" "$temp"
+
+  # Step 4: Remove special characters except hyphens, letters, numbers, and dots
+  temp=$(echo "$temp" | tr -cd 'a-z0-9-.')
+  debug_print "After removing special chars" "$temp"
+
+  # Step 5: Replace multiple hyphens with a single hyphen
+  temp=$(echo "$temp" | sed -e 's/--*/-/g')
+  debug_print "After replacing multiple hyphens" "$temp"
+
+  # Step 6: Remove leading and trailing hyphens
+  normalized=$(echo "$temp" | sed -e 's/^-//' -e 's/-$//')
+  debug_print "After removing leading/trailing hyphens" "$normalized"
+
+  # Add extension back
+  normalized="${normalized}${ext}"
+  debug_print "Final normalized filename" "$normalized"
+
+  # Skip if the filename is already normalized
+  if [ "$filename$ext" = "$normalized" ]; then
+    echo "File '$file' already normalized."
+    continue
+  fi
+
+  # Create the new path
+  new_path="$dir/$normalized"
+
+  # Rename the file
+  if [ -e "$new_path" ] && [ "$file" != "$new_path" ]; then
+    echo "Error: Cannot rename '$file' to '$new_path'. File already exists."
+  else
+    mv -v "$file" "$new_path"
+  fi
+done

@@ -1,0 +1,4 @@
+% audio, dot
+
+# Converts a markdown file to speech
+dot audio md-to-speech '<file_path>' --save --language ptbr
