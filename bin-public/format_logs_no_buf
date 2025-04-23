@@ -1,0 +1,44 @@
+#!/usr/bin/env python3
+
+import sys
+import subprocess
+import os
+import argparse
+
+
+def parse_arguments():
+    """Parse command line arguments."""
+    parser = argparse.ArgumentParser(
+        description="Format piped logs without buffering."
+    )
+
+    parser.add_argument(
+        "fields",
+        nargs="*",
+        help="Additional fields to include in formatted output (e.g., 'log.logger' 'process.pid')"
+    )
+
+    return parser.parse_args()
+
+
+def main():
+    args = parse_arguments()
+
+    # Just format stdin using stdbuf with format_logs
+    format_logs_cmd = ["stdbuf", "-oL", "-eL", "format_logs"] + args.fields
+
+    process = subprocess.Popen(
+        format_logs_cmd,
+        stdin=sys.stdin,
+        stdout=sys.stdout,
+        stderr=sys.stderr
+    )
+
+    return process.wait()
+
+
+if __name__ == "__main__":
+    # Ensure Python itself doesn't buffer output
+    os.environ["PYTHONUNBUFFERED"] = "1"
+
+    sys.exit(main())

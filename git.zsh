@@ -10,6 +10,7 @@ alias gdss="git diff --shortstat $(git_main_branch)..$(git_current_branch)"
 
 alias gwips='git rm $(git ls-files --deleted) 2> /dev/null; git commit --no-verify --no-gpg-sign --message "--wip-- [skip ci]"'
 alias gwipns='git rm $(git ls-files --deleted) 2> /dev/null; git commit --no-verify --no-gpg-sign --message "--wip--"'
+alias gwip='git add -A; git rm $(git ls-files --deleted) 2> /dev/null; git commit --message "--wip-- [skip ci]"'
 
 alias inctag="_increment_tag"
 alias gk='\gitk --all --branches 2> >(grep -v "IMKClient\|IMKInputSession" >&2) &!'

@@ -60,6 +60,6 @@ dot notes summary --days 6
 # summarize notes and tasks for a specific number of days
 dot notes summary --days <number>
 
-$ notes_args: echo '~/.oh-my-zsh/custom/notes/args.json'
+$ notes_args: echo '~/.oh-my-zsh/custom/cli/app/command/notes/args.json'
 $ notes_types: jq -r ".types | join(\" \")" <notes_args> | tr ' ' '\n'
 $ notes_tags: jq -r ".tags | join(\" \")" <notes_args> | tr ' ' '\n'

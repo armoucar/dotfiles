@@ -1,0 +1,76 @@
+#!/usr/bin/env python3
+
+import sys
+import subprocess
+import os
+import argparse
+
+
+def format_logs(additional_fields=None):
+    """
+    Format logs from stdin similar to the format_logs shell function.
+    Uses jq to process each line from stdin with colorized output.
+
+    Args:
+        additional_fields: A list of additional fields to include in the output.
+                           Dot notation is supported for nested fields (e.g., log.logger).
+    """
+    # Build the jq filter with optional additional fields
+    filter_parts = ['timestamp: .["@timestamp"], level: .["log.level"], message: .message']
+
+    if additional_fields:
+        for field in additional_fields:
+            # Handle nested fields with dot notation by converting to jq path format
+            jq_field = "".join([f'["{part}"]' for part in field.split(".")])
+            field_name = field.split(".")[-1]  # Use the last part of the field as the key name
+            filter_parts.append(f"{field_name}: .{jq_field}")
+
+    filter_str = (
+        'fromjson? // . | if type == "object" and has("@timestamp") then { '
+        + ", ".join(filter_parts)
+        + " } else . end"
+    )
+
+    jq_cmd = [
+        "jq",
+        "-C",
+        "-Rc",  # -C forces colored output
+        filter_str,
+    ]
+
+    # Call jq as a subprocess and pipe stdin to it
+    process = subprocess.Popen(
+        jq_cmd, stdin=sys.stdin, stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=0, universal_newlines=True
+    )
+
+    # Print the output without buffering
+    while True:
+        line = process.stdout.readline()
+        if not line and process.poll() is not None:
+            break
+        if line:
+            sys.stdout.write(line)
+            sys.stdout.flush()
+
+    # If there were errors, write them to stderr
+    if process.returncode != 0:
+        for line in process.stderr:
+            sys.stderr.write(line)
+            sys.stderr.flush()
+
+
+def parse_arguments():
+    """Parse command line arguments."""
+    parser = argparse.ArgumentParser(description="Format JSON logs with customizable field selection.")
+    parser.add_argument(
+        "fields", nargs="*", help="Additional fields to include in output (e.g., 'log.logger' 'process.pid')"
+    )
+    return parser.parse_args()
+
+
+if __name__ == "__main__":
+    # Ensure stdout is not buffered for immediate output
+    os.environ["PYTHONUNBUFFERED"] = "1"
+
+    args = parse_arguments()
+    format_logs(args.fields)

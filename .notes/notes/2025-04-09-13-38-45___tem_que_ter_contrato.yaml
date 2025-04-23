@@ -1,0 +1,9 @@
+content: "- Tem que ter contrato Avro\n - Cria\xE7\xE3o via Recurso na Lotus\n - Minha\
+  \ conex\xE3o com o Kafka \xE9 provida pela lotus\n     - broker, groupid, user,\
+  \ pass, url schema registry, pass schema regis, iuser schema registry, kafka timeout\n\
+  \     - s\xE3o variaveis que ser\xE3o criadas pela lotus\n - Ref impl: https://github.com/confluentinc/confluent-kafka-python\n\
+  \ - Na lotus promove pra prod\n - t\xF3pico -> mensagem com metadata, passa um correlation\n\
+  \    - correlationId -> serializar como byte[]\n    - Out na key, passar o correlationId"
+created_at: '2025-04-09T13:38:45.674533'
+tags: []
+updated_at: '2025-04-09T13:38:45.674539'
