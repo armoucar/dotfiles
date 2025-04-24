@@ -292,8 +292,7 @@ def init_desktop_1(chrome_only=False):
 
     if not chrome_only:
         open_cursor_with_new_window(SECOND_SCREEN_FULL)
-        open_chrome_app_with_url("https://chat.openai.com/", THIRD_SCREEN_FIRST_HALF_TOP, "Profile 1")
-        open_chrome_app_with_url("https://chat.openai.com/", THIRD_SCREEN_FIRST_HALF_BOTTOM, "Profile 1")
+        open_chrome_app_with_url("https://chat.openai.com/", THIRD_SCREEN_FIRST_HALF, "Profile 1")
         open_iterm_with_position(THIRD_SCREEN_SECOND_HALF)
 
 
