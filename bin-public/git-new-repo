@@ -1,0 +1,126 @@
+#!/usr/bin/env python3
+
+import os
+import re
+import subprocess
+
+
+def run_command(command):
+    """Run a shell command and return the output."""
+    result = subprocess.run(command, shell=True, capture_output=True, text=True)
+    return result.stdout.strip()
+
+
+def get_current_dir_name():
+    """Get the name of the current directory."""
+    return os.path.basename(os.getcwd())
+
+
+def parse_ssh_config():
+    """Parse SSH config to find GitHub hosts."""
+    hosts = {}
+    ssh_config_path = os.path.expanduser("~/.ssh/config")
+
+    if not os.path.exists(ssh_config_path):
+        return hosts
+
+    current_host = None
+    with open(ssh_config_path, "r") as f:
+        for line in f:
+            line = line.strip()
+            if line.startswith("Host ") and "github" in line.lower():
+                current_host = line.split()[1]
+                hosts[current_host] = {"host": current_host}
+            elif current_host and line.startswith("IdentityFile "):
+                identity_file = line.split()[1]
+                # Extract username from identity file name if possible
+                username_match = re.search(r"id_\w+_(\w+)", identity_file)
+                if username_match:
+                    hosts[current_host]["username"] = username_match.group(1)
+                else:
+                    hosts[current_host]["username"] = None
+
+    return hosts
+
+
+def get_current_github_account():
+    """Get the currently active GitHub account."""
+    output = run_command("gh auth status")
+
+    # Try to extract the current logged in account
+    logged_in_match = re.search(r"Logged in to github\.com as (\w+)", output)
+    if logged_in_match:
+        return logged_in_match.group(1)
+
+    return None
+
+
+def select_github_account(current_account, hosts):
+    """Let the user select a GitHub account."""
+    print(f"Current active GitHub account: {current_account or 'None'}")
+    print("\nAvailable GitHub hosts in SSH config:")
+
+    host_options = list(hosts.keys())
+    for i, host in enumerate(host_options):
+        username = hosts[host].get("username", "unknown")
+        print(f"{i + 1}. {host} ({username})")
+
+    while True:
+        selection = input("\nSelect account number (or press Enter to keep current): ")
+        if not selection:
+            return current_account, None
+
+        try:
+            index = int(selection) - 1
+            if 0 <= index < len(host_options):
+                selected_host = host_options[index]
+                selected_username = hosts[selected_host].get("username")
+
+                # If we couldn't determine the username, ask for it
+                if not selected_username:
+                    selected_username = input(
+                        f"Enter the GitHub username for {selected_host}: "
+                    )
+
+                return selected_username, selected_host
+            else:
+                print("Invalid selection. Please try again.")
+        except ValueError:
+            print("Invalid input. Please enter a number.")
+
+
+def main():
+    # Get current GitHub account
+    current_account = get_current_github_account()
+
+    # Parse SSH config for available hosts
+    hosts = parse_ssh_config()
+
+    # Let user select account
+    selected_username, selected_host = select_github_account(current_account, hosts)
+
+    if selected_username != current_account and selected_username:
+        print(f"Switching to GitHub account: {selected_username}")
+        result = run_command(f"gh auth switch --user {selected_username}")
+        print(result)
+
+    # Get current directory name for repo name
+    repo_name = get_current_dir_name()
+
+    # Create the repository
+    print(f"\nCreating repository: {repo_name}")
+    result = run_command(f"gh repo create {repo_name} --private --source=.")
+    print(result)
+
+    # Update remote URL if needed
+    if selected_host and selected_host != "github.com":
+        remote_url = f"git@{selected_host}:{selected_username}/{repo_name}.git"
+        print(f"\nUpdating remote URL to: {remote_url}")
+        result = run_command(f"git remote set-url origin {remote_url}")
+        print("Remote URL updated successfully!")
+
+    print("\nRepository setup complete!")
+
+
+if __name__ == "__main__":
+    main()

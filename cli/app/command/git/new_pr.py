@@ -233,7 +233,7 @@ def _get_git_info(verbose=False):
             if verbose:
                 click.secho(f"Running: git diff origin/main..{current_branch} -- {file}", fg="blue")
             file_diff = (
-                subprocess.check_output(["git", "diff", f"origin/main..{current_branch}", "--", file]).decode().strip()
+                subprocess.check_output(["git", "diff", f"origin/main..{current_branch}", "--", file]).decode(errors='replace').strip()
             )
             if file_diff:
                 changes_content.append(f"<{file}>\n{file_diff}\n</{file}>\n")
