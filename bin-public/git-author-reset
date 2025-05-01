@@ -1,0 +1,20 @@
+#!/bin/bash
+
+# Reset author information for all commits in the repository
+git filter-branch \
+  --env-filter '
+    export GIT_AUTHOR_NAME="Arthur Moura Carvalho"
+    export GIT_AUTHOR_EMAIL="armoucar@gmail.com"
+    export GIT_COMMITTER_NAME="$GIT_AUTHOR_NAME"
+    export GIT_COMMITTER_EMAIL="$GIT_AUTHOR_EMAIL"
+  ' \
+  --tag-name-filter cat -- --branches --tags
+
+# Clean up the repository after the filter-branch operation
+rm -rf .git/refs/original/
+
+# Expire all reflogs
+git reflog expire --expire=now --all
+
+# Garbage collect and optimize the repository
+git gc --prune=now --aggressive
