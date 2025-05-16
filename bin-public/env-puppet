@@ -526,9 +526,9 @@ def close_chrome_windows():
     if is_process_running("Google Chrome"):
         logger.info("Google Chrome is running. Closing all windows.")
         script = """
-        tell application "Google Chrome"
-            close every window
-´        end tell
+          tell application "Google Chrome"
+              close every window
+          end tell
         """
         result = run_applescript_snippet(script)
         logger.info(result)

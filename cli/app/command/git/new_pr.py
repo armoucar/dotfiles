@@ -8,6 +8,8 @@ from pathlib import Path
 
 from openai import OpenAI
 
+DEFAULT_MODEL = "o3-2025-04-16"
+
 
 @click.command(name="new-pr")
 @click.option("--dry-run", is_flag=True, help="Dry run mode (don't create PR)")
@@ -155,7 +157,7 @@ The body should start with the disclaimer: "✨ This document was first generate
     response = (
         OpenAI()
         .chat.completions.create(
-            model="o3-mini-2025-01-31",
+            model=DEFAULT_MODEL,
             messages=[{"role": "user", "content": prompt}],
         )
         .choices[0]
@@ -256,7 +258,7 @@ def _generate_pr_content(context):
     response = (
         OpenAI()
         .chat.completions.create(
-            model="o3-mini-2025-01-31",
+            model=DEFAULT_MODEL,
             messages=[{"role": "user", "content": prompt}],
         )
         .choices[0]

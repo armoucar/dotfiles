@@ -6,6 +6,7 @@ from cli.app.command.git import (
     project_stats,
     changes_check,
     auth_check,
+    commit,
 )
 
 from cli.app.command.kubectl import (
@@ -97,6 +98,7 @@ git.add_command(new_pr)
 git.add_command(project_stats)
 git.add_command(changes_check)
 git.add_command(auth_check)
+git.add_command(commit)
 cli.add_command(git)
 
 

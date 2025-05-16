@@ -4,7 +4,10 @@ alias ggpt="git push origin --tags"
 
 alias gbrprune='git checkout -q main && git for-each-ref refs/heads/ "--format=%(refname:short)" | while read branch; do mergeBase=$(git merge-base main $branch) && [[ $(git cherry main $(git commit-tree $(git rev-parse "$branch^{tree}") -p $mergeBase -m _)) == "-"* ]] && git branch -D $branch; done'
 
-alias glocal-squash='git reset --soft "$(git merge-base $(git_main_branch) $(git_current_branch))" && git commit -m "--wip-- [skip ci]"'
+function glocal-squash() {
+  local message="${1:---wip-- [skip ci]}"
+  git reset --soft "$(git merge-base $(git_main_branch) $(git_current_branch))" && git commit -m "$message"
+}
 
 alias gdss="git diff --shortstat $(git_main_branch)..$(git_current_branch)"
 

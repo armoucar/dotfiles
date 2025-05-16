@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+
+# setwall: regenerate and install wallpaper file, then flush caches & restart Dock
+# Usage: setwall /full/path/to/your/fixed-wallpaper.png
+
+# Ensure an argument is provided
+if [[ $# -ne 1 ]]; then
+  echo "Usage: setwall <full-path-to-wallpaper>"
+  exit 1
+fi
+
+DEST="$1"
+
+# Create a tiny placeholder image
+TMPIMG="$(mktemp /tmp/wpXXXXXX.png)"
+rm -f "$TMPIMG"
+magick -size 5x5 canvas:black "$TMPIMG"
+
+# Move into place (will prompt for password)
+sudo mv "$TMPIMG" "$DEST"
+
+# Flush preferences and restart Dock twice (with a 2s pause)
+for i in 1 2; do
+  killall cfprefsd 2>/dev/null
+  killall Dock    2>/dev/null
+  [[ $i -eq 1 ]] && sleep 2
+done

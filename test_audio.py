@@ -10,8 +10,8 @@ async def main() -> None:
     async with openai.audio.speech.with_streaming_response.create(
         model="gpt-4o-mini-tts",
         voice="coral",
-        input="Today is a wonderful day to build something people love!",
-        instructions="Speak in a cheerful and positive tone.",
+        input="Hoje é um dia maravilhoso para construir algo que as pessoas amem!",
+        instructions="Fale em PT BR",
         response_format="pcm",
     ) as response:
         await LocalAudioPlayer().play(response)
