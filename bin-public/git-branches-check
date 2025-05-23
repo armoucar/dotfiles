@@ -6,6 +6,7 @@ import re
 import json
 import os
 from textwrap import shorten
+import concurrent.futures
 
 # Set to True for debugging output
 DEBUG = False
@@ -599,122 +600,156 @@ def get_all_branches_info(remote="origin", include_default=False, days_threshold
 
     branches_info = []
 
-    # Process local branches
+    # Combine local and remote-only branches into one list for processing
+    all_branches_to_process = []
+
+    # Prepare local branches for processing
     for branch, upstream, commit_date, author, commit_msg in local_branches:
-        # Skip the default branch if requested
         if branch == default_remote and not include_default:
             continue
-
-        # Initialize branch info
-        branch_info = {
+        all_branches_to_process.append({
             "name": branch,
             "type": "Local",
-            "status": [],
-            "last_commit": format_date(commit_date),
+            "upstream": upstream,
+            "commit_date": commit_date,
             "author": author,
-            "last_commit_msg": commit_msg,
-            "age_days": get_branch_age_days(commit_date),
+            "commit_msg": commit_msg,
             "is_current": branch == current_branch,
             "is_default": branch == default_remote,
-            "upstream": upstream
-        }
+            "is_local": True
+        })
 
-        # Check if branch is merged
-        if branch in merged_branches:
-            branch_info["status"].append("MERGED")
-        elif check_if_branch_was_merged_remotely(branch, remote):
-            branch_info["status"].append("MERGED on GitHub")
-
-        # Check if branch is abandoned
-        if is_branch_abandoned(commit_date, days_threshold):
-            branch_info["status"].append("ABANDONED")
-
-        # Check tracking status
-        if not upstream:
-            # Check if branch exists on remote even without tracking relationship
-            if branch_exists_on_remote(branch, remote):
-                behind, ahead = compare_with_remote(branch, remote)
-                if ahead > 0:
-                    branch_info["status"].append(f"{ahead} ahead (untracked)")
-                elif behind > 0:
-                    branch_info["status"].append(f"{behind} behind (untracked)")
-                else:
-                    branch_info["status"].append("In sync (untracked)")
-                branch_info["type"] = "Local+Remote"
-            else:
-                # Check if it was merged remotely
-                is_merged_remotely = check_if_branch_was_merged_remotely(branch, remote)
-
-                if is_merged_remotely:
-                    branch_info["status"].append("Merged remotely, deleted on remote")
-                    branch_info["type"] = "Local+Merged"
-                else:
-                    branch_info["status"].append("Never pushed")
-        else:
-            if remote_branch_exists(upstream):
-                behind, ahead = get_ahead_behind_count(branch, upstream)
-                if ahead > 0:
-                    branch_info["status"].append(f"{ahead} ahead")
-                if behind > 0:
-                    branch_info["status"].append(f"{behind} behind")
-                if ahead == 0 and behind == 0:
-                    branch_info["status"].append("In sync")
-                branch_info["type"] = "Local+Remote"
-            else:
-                # Check if it was merged remotely
-                is_merged_remotely = check_if_branch_was_merged_remotely(branch, remote)
-
-                if is_merged_remotely:
-                    branch_info["status"].append("Merged remotely, deleted on remote")
-                    branch_info["type"] = "Local+Merged"
-                else:
-                    branch_info["status"].append("Remote missing")
-
-        # Get PR info
-        pr_info = get_pr_info(branch, remote)
-
-        # Get cleanup recommendation
-        recommendation = get_cleanup_recommendation(branch_info, pr_info, branch == default_remote)
-        branch_info["recommendation"] = recommendation
-
-        branches_info.append((branch_info, pr_info))
-
-    # Process remote-only branches
+    # Prepare remote-only branches for processing
     for branch_name, full_branch, commit_date, author, commit_msg in remote_branches:
-        # Skip if this branch already has a local counterpart
         if branch_name in local_branch_names or (branch_name == default_remote and not include_default):
             continue
+        all_branches_to_process.append({
+            "name": branch_name,
+            "type": "Remote-only",
+            "upstream": None,
+            "commit_date": commit_date,
+            "author": author,
+            "commit_msg": commit_msg,
+            "is_current": False,
+            "is_default": branch_name == default_remote,
+            "is_local": False
+        })
+
+    # Define a worker function to process a single branch
+    def process_branch(branch_data):
+        branch_name = branch_data["name"]
 
         # Initialize branch info
         branch_info = {
             "name": branch_name,
-            "type": "Remote-only",
+            "type": branch_data["type"],
             "status": [],
-            "last_commit": format_date(commit_date),
-            "author": author,
-            "last_commit_msg": commit_msg,
-            "age_days": get_branch_age_days(commit_date),
-            "is_current": False,
-            "is_default": branch_name == default_remote,
-            "upstream": None
+            "last_commit": format_date(branch_data["commit_date"]),
+            "author": branch_data["author"],
+            "last_commit_msg": branch_data["commit_msg"],
+            "age_days": get_branch_age_days(branch_data["commit_date"]),
+            "is_current": branch_data["is_current"],
+            "is_default": branch_data["is_default"],
+            "upstream": branch_data["upstream"]
         }
 
-        # Check if branch is merged
-        if branch_name in remote_merged:
-            branch_info["status"].append("MERGED")
+        # Different processing based on whether it's a local or remote branch
+        if branch_data["is_local"]:
+            # Check if branch is merged
+            if branch_name in merged_branches:
+                branch_info["status"].append("MERGED")
+            elif check_if_branch_was_merged_remotely(branch_name, remote):
+                branch_info["status"].append("MERGED on GitHub")
 
-        # Check if branch is abandoned
-        if is_branch_abandoned(commit_date, days_threshold):
-            branch_info["status"].append("ABANDONED")
+            # Check if branch is abandoned
+            if is_branch_abandoned(branch_data["commit_date"], days_threshold):
+                branch_info["status"].append("ABANDONED")
+
+            # Check tracking status
+            if not branch_data["upstream"]:
+                # Check if branch exists on remote even without tracking relationship
+                if branch_exists_on_remote(branch_name, remote):
+                    behind, ahead = compare_with_remote(branch_name, remote)
+                    if ahead > 0:
+                        branch_info["status"].append(f"{ahead} ahead (untracked)")
+                    elif behind > 0:
+                        branch_info["status"].append(f"{behind} behind (untracked)")
+                    else:
+                        branch_info["status"].append("In sync (untracked)")
+                    branch_info["type"] = "Local+Remote"
+                else:
+                    # Check if it was merged remotely
+                    is_merged_remotely = check_if_branch_was_merged_remotely(branch_name, remote)
+
+                    if is_merged_remotely:
+                        branch_info["status"].append("Merged remotely, deleted on remote")
+                        branch_info["type"] = "Local+Merged"
+                    else:
+                        branch_info["status"].append("Never pushed")
+            else:
+                if remote_branch_exists(branch_data["upstream"]):
+                    behind, ahead = get_ahead_behind_count(branch_name, branch_data["upstream"])
+                    if ahead > 0:
+                        branch_info["status"].append(f"{ahead} ahead")
+                    if behind > 0:
+                        branch_info["status"].append(f"{behind} behind")
+                    if ahead == 0 and behind == 0:
+                        branch_info["status"].append("In sync")
+                    branch_info["type"] = "Local+Remote"
+                else:
+                    # Check if it was merged remotely
+                    is_merged_remotely = check_if_branch_was_merged_remotely(branch_name, remote)
+
+                    if is_merged_remotely:
+                        branch_info["status"].append("Merged remotely, deleted on remote")
+                        branch_info["type"] = "Local+Merged"
+                    else:
+                        branch_info["status"].append("Remote missing")
+        else:
+            # Check if branch is merged
+            if branch_name in remote_merged:
+                branch_info["status"].append("MERGED")
+
+            # Check if branch is abandoned
+            if is_branch_abandoned(branch_data["commit_date"], days_threshold):
+                branch_info["status"].append("ABANDONED")
 
         # Get PR info
         pr_info = get_pr_info(branch_name, remote)
 
         # Get cleanup recommendation
-        recommendation = get_cleanup_recommendation(branch_info, pr_info, branch_name == default_remote)
+        recommendation = get_cleanup_recommendation(branch_info, pr_info, branch_info["is_default"])
         branch_info["recommendation"] = recommendation
 
-        branches_info.append((branch_info, pr_info))
+        return (branch_info, pr_info)
+
+    total_branches = len(all_branches_to_process)
+    print(f"Processing {total_branches} branches in parallel...")
+
+    # Use counters for progress tracking
+    processed_branches = 0
+    results = []
+
+    # Process branches in parallel with progress updates
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        # Submit all tasks
+        future_to_branch = {executor.submit(process_branch, branch_data): branch_data for branch_data in all_branches_to_process}
+
+        # Process results as they complete
+        for future in concurrent.futures.as_completed(future_to_branch):
+            branch_data = future_to_branch[future]
+            try:
+                result = future.result()
+                results.append(result)
+            except Exception as exc:
+                print(f"Branch {branch_data['name']} generated an exception: {exc}")
+
+            # Update progress
+            processed_branches += 1
+            if processed_branches % 5 == 0 or processed_branches == total_branches:
+                print(f"Progress: {processed_branches}/{total_branches} branches processed ({int(processed_branches/total_branches*100)}%)")
+
+    branches_info = results
 
     # Sort results by branch type and then by date (newest first)
     branches_info.sort(
@@ -724,6 +759,7 @@ def get_all_branches_info(remote="origin", include_default=False, days_threshold
         )
     )
 
+    print(f"Finished processing all {total_branches} branches.")
     return branches_info
 
 

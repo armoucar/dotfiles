@@ -17,6 +17,14 @@ DEFAULT_MODEL = "o3-2025-04-16"
 @click.option("--context", help="Additional context to include in the PR description generation")
 def new_pr(dry_run, verbose, context):
     """Create a new PR with AI-generated title and description."""
+    # First push the current branch to make sure it's up to date
+    current_branch = _get_branch_name(["git", "branch", "--show-current"], verbose)
+
+    # Push the current branch
+    if not _push_current_branch(current_branch, verbose):
+        return
+
+    # Get full git info now that branch is pushed
     current_branch, commit_logs, changes_content = _get_git_info(verbose)
 
     # Check if PR already exists for this branch
@@ -169,7 +177,7 @@ The body should start with the disclaimer: "✨ This document was first generate
 
     if not title_match or not body_match:
         click.secho("Failed to parse AI response for combined description", fg="red")
-        click.secho(f"Using new title and body instead", fg="yellow")
+        click.secho("Using new title and body instead", fg="yellow")
         return new_title, new_body
 
     final_title = title_match.group(1).strip()
@@ -293,6 +301,32 @@ def _get_branch_name(args, verbose=False):
     if verbose:
         click.secho(f"Output: {output}", fg="blue")
     return output
+
+
+def _push_current_branch(branch, verbose=False):
+    """Push the current branch to remote, handling cases where the branch doesn't exist remotely yet."""
+    try:
+        if verbose:
+            click.secho(f"Running: git push origin {branch}", fg="blue")
+        subprocess.check_output(["git", "push", "origin", branch], stderr=subprocess.STDOUT)
+        if verbose:
+            click.secho(f"Successfully pushed branch {branch} to remote", fg="green")
+        return True
+    except subprocess.CalledProcessError as e:
+        if "git push --set-upstream" in e.output.decode():
+            # Branch doesn't exist on remote yet, create it
+            if verbose:
+                click.secho(f"Running: git push --set-upstream origin {branch}", fg="blue")
+            subprocess.check_output(["git", "push", "--set-upstream", "origin", branch])
+            if verbose:
+                click.secho(f"Successfully pushed and set upstream for branch {branch}", fg="green")
+            return True
+        else:
+            click.secho(f"Error pushing current branch: {e.output.decode()}", fg="red")
+            if not click.confirm("Continue with PR creation anyway?"):
+                click.secho("Aborting PR creation", fg="red")
+                return False
+            return True
 
 
 PR_PROMPT_TMPL = """

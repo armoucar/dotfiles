@@ -5,6 +5,8 @@ from typing import List, Tuple
 DEFAULT_REPOS = [
     "neon/cros-chnls.hermes",
     "neon/neon.gugelmin",
+    "neon/neon.gugelmin-metrics",
+    "neon/neon.gugelmin-packages",
     "neon/neon.neo-cli",
     "neon/neon.gugelmin-ingestion-pipeline-worker",
     "neon/neon.metrics-store",
@@ -13,7 +15,9 @@ DEFAULT_REPOS = [
 
 
 @click.command(name="prs-check")
-@click.option("--repos", "-r", multiple=True, help="Repositories to check (format: owner/repo)")
+@click.option(
+    "--repos", "-r", multiple=True, help="Repositories to check (format: owner/repo)"
+)
 @click.option("--verbose", is_flag=True, help="Print commands being executed")
 def prs_check(repos: Tuple[str, ...], verbose: bool):
     """Check open pull requests across repositories."""
@@ -40,16 +44,23 @@ def prs_check(repos: Tuple[str, ...], verbose: bool):
         return
 
     # Calculate column widths
-    widths = [max(len(str(row[i])) for row in [headers] + all_prs) for i in range(len(headers))]
+    widths = [
+        max(len(str(row[i])) for row in [headers] + all_prs)
+        for i in range(len(headers))
+    ]
 
     # Print header
-    header_format = "  ".join(f"{header:<{width}}" for header, width in zip(headers, widths))
+    header_format = "  ".join(
+        f"{header:<{width}}" for header, width in zip(headers, widths)
+    )
     click.echo(header_format)
     click.echo("-" * len(header_format))
 
     # Print PRs
     for pr in all_prs:
-        row_format = "  ".join(f"{str(cell):<{width}}" for cell, width in zip(pr, widths))
+        row_format = "  ".join(
+            f"{str(cell):<{width}}" for cell, width in zip(pr, widths)
+        )
         click.echo(row_format)
 
 

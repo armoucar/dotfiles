@@ -65,18 +65,44 @@ def _get_staged_changes(verbose=False):
     if verbose:
         click.secho(f"Arquivos em stage: {staged_files}", fg="blue")
 
-    # Obter o diff completo
-    if verbose:
-        click.secho("Executando: git diff --staged", fg="blue")
+    # Obter o diff processado (sem arquivos lock)
+    diff_content = _process_diff_without_lock_files(staged_files, verbose)
 
-    diff_content = subprocess.check_output(["git", "diff", "--staged"]).decode(errors='replace').strip()
     if verbose:
-        click.secho(f"Conteúdo do diff:\n{diff_content}", fg="blue")
+        click.secho("Conteúdo do diff processado", fg="blue")
 
     return {
         "files": staged_files,
         "diff": diff_content
     }
+
+
+def _process_diff_without_lock_files(staged_files, verbose=False):
+    """Processa o diff, excluindo arquivos lock."""
+    # Identificar arquivos que não são lock files
+    non_lock_files = [file for file in staged_files if not file.endswith('lock')]
+
+    # Se não temos arquivos além de lock files
+    if not non_lock_files and staged_files:
+        return "Dependências atualizadas."
+
+    # Obter diff apenas para arquivos que não são lock files
+    diff_content = ""
+    for file in non_lock_files:
+        if verbose:
+            click.secho(f"Obtendo diff para: {file}", fg="blue")
+        try:
+            file_diff = subprocess.check_output(["git", "diff", "--staged", "--", file]).decode(errors='replace').strip()
+            if file_diff:
+                diff_content += file_diff + "\n\n"
+        except subprocess.CalledProcessError:
+            pass
+
+    # Se temos lock files, adicionar uma nota simples
+    if len(non_lock_files) < len(staged_files):
+        diff_content += "\nDependências atualizadas.\n"
+
+    return diff_content
 
 
 def _generate_commit_message(staged_changes):
