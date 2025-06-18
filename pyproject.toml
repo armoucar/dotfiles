@@ -1,3 +1,10 @@
+[project]
+name = "dotfiles"
+version = "0.1.0"
+requires-python = ">=3.12"
+description = "My dot files"
+authors = [{ name = "Arthur Moura Carvalho", email = "armoucar@gmail.com" }]
+
 [tool.poetry]
 name = "cli"
 version = "0.1.0"
