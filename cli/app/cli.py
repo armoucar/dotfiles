@@ -7,6 +7,7 @@ from cli.app.command.git import (
     changes_check,
     auth_check,
     commit,
+    approve,
 )
 
 from cli.app.command.kubectl import (
@@ -43,6 +44,7 @@ from cli.app.command.investment import (
 
 from cli.app.command.crawl import page
 from cli.app.command.audio import audio
+from cli.app.command.llm import code
 from cli.app.telemetry import initialize_telemetry
 
 
@@ -92,6 +94,12 @@ def investment():
     pass
 
 
+@click.group()
+def llm():
+    """LLM and AI-powered commands."""
+    pass
+
+
 # Add git commands to git group
 git.add_command(prs_check)
 git.add_command(new_pr)
@@ -99,6 +107,7 @@ git.add_command(project_stats)
 git.add_command(changes_check)
 git.add_command(auth_check)
 git.add_command(commit)
+git.add_command(approve)
 cli.add_command(git)
 
 
@@ -140,6 +149,10 @@ cli.add_command(investment)
 
 # Add audio command group
 cli.add_command(audio)
+
+# Add all commands to the llm group
+llm.add_command(code)
+cli.add_command(llm)
 
 if __name__ == "__main__":
     cli()

@@ -8,14 +8,17 @@ from pathlib import Path
 
 from openai import OpenAI
 
-DEFAULT_MODEL = "o3-2025-04-16"
-
 
 @click.command(name="new-pr")
 @click.option("--dry-run", is_flag=True, help="Dry run mode (don't create PR)")
 @click.option("--verbose", is_flag=True, help="Print git commands and their outputs")
-@click.option("--context", help="Additional context to include in the PR description generation")
-def new_pr(dry_run, verbose, context):
+@click.option(
+    "--context", help="Additional context to include in the PR description generation"
+)
+@click.option(
+    "--model", default="o3-pro", help="OpenAI model to use for PR generation (default: o3-pro)"
+)
+def new_pr(dry_run, verbose, context, model):
     """Create a new PR with AI-generated title and description."""
     # First push the current branch to make sure it's up to date
     current_branch = _get_branch_name(["git", "branch", "--show-current"], verbose)
@@ -40,7 +43,7 @@ def new_pr(dry_run, verbose, context):
     </commit_messages>
 
     <file_changes>
-    {''.join(changes_content)}
+    {"".join(changes_content)}
     </file_changes>
     """
 
@@ -56,7 +59,7 @@ def new_pr(dry_run, verbose, context):
         full_context = git_context
 
     click.secho("Generating PR content...", fg="green")
-    title, body = _generate_pr_content(full_context)
+    title, body = _generate_pr_content(full_context, model)
 
     if existing_pr:
         old_title = existing_pr["title"]
@@ -66,7 +69,7 @@ def new_pr(dry_run, verbose, context):
 
         # Combine old and new descriptions for a final version
         click.secho("Combining existing and new PR descriptions...", fg="green")
-        title, body = _combine_pr_descriptions(old_title, old_body, title, body)
+        title, body = _combine_pr_descriptions(old_title, old_body, title, body, model)
 
     click.secho(f"Generated PR Title: {title}", fg="yellow")
     click.secho("Generated PR Body:", fg="yellow")
@@ -88,18 +91,46 @@ def new_pr(dry_run, verbose, context):
 
     if existing_pr:
         if verbose:
-            click.secho(f'Running: gh pr edit {existing_pr["number"]} --title "{title}" --body "{body}"', fg="blue")
-        subprocess.check_output(["gh", "pr", "edit", str(existing_pr["number"]), "--title", title, "--body", body])
+            click.secho(
+                f'Running: gh pr edit {existing_pr["number"]} --title "{title}" --body "{body}"',
+                fg="blue",
+            )
+        subprocess.check_output(
+            [
+                "gh",
+                "pr",
+                "edit",
+                str(existing_pr["number"]),
+                "--title",
+                title,
+                "--body",
+                body,
+            ]
+        )
         click.secho(f"PR updated successfully with title: {title}", fg="green")
         # Get and display PR URL
-        pr_url = subprocess.check_output(["gh", "pr", "view", str(existing_pr["number"]), "--json", "url"]).decode().strip()
+        pr_url = (
+            subprocess.check_output(
+                ["gh", "pr", "view", str(existing_pr["number"]), "--json", "url"]
+            )
+            .decode()
+            .strip()
+        )
         pr_url = json.loads(pr_url)["url"]
         click.secho(f"PR URL: {pr_url}", fg="green")
     else:
         if verbose:
-            click.secho(f'Running: gh pr create --title "{title}" --body "{body}"', fg="blue")
+            click.secho(
+                f'Running: gh pr create --title "{title}" --body "{body}"', fg="blue"
+            )
         # Capture the output to get the PR URL
-        pr_output = subprocess.check_output(["gh", "pr", "create", "--title", title, "--body", body]).decode().strip()
+        pr_output = (
+            subprocess.check_output(
+                ["gh", "pr", "create", "--title", title, "--body", body]
+            )
+            .decode()
+            .strip()
+        )
         click.secho(f"PR created successfully with title: {title}", fg="green")
         # Extract and display the PR URL from the output
         pr_url = pr_output.split("\n")[-1]  # The URL is typically the last line
@@ -110,10 +141,15 @@ def _check_existing_pr(branch, verbose=False):
     """Check if a PR already exists for the given branch."""
     try:
         if verbose:
-            click.secho(f"Running: gh pr list --head {branch} --json number,title,body", fg="blue")
+            click.secho(
+                f"Running: gh pr list --head {branch} --json number,title,body",
+                fg="blue",
+            )
 
         result = (
-            subprocess.check_output(["gh", "pr", "list", "--head", branch, "--json", "number,title,body"])
+            subprocess.check_output(
+                ["gh", "pr", "list", "--head", branch, "--json", "number,title,body"]
+            )
             .decode()
             .strip()
         )
@@ -132,7 +168,7 @@ def _check_existing_pr(branch, verbose=False):
     return None
 
 
-def _combine_pr_descriptions(old_title, old_body, new_title, new_body):
+def _combine_pr_descriptions(old_title, old_body, new_title, new_body, model="o3-pro"):
     """Combine old and new PR descriptions using OpenAI."""
     prompt = f"""
 I have an existing Pull Request with this title and description:
@@ -162,18 +198,24 @@ The body should start with the disclaimer: "✨ This document was first generate
     tmp_file.write_text(prompt)
     click.secho(f"Wrote combine prompt to {tmp_file}", fg="green")
 
-    response = (
-        OpenAI()
-        .chat.completions.create(
-            model=DEFAULT_MODEL,
-            messages=[{"role": "user", "content": prompt}],
-        )
-        .choices[0]
-        .message.content
+    response = OpenAI().responses.create(
+        model=model,
+        input=[
+            {
+                "role": "developer",
+                "content": [{"type": "input_text", "text": prompt}],
+            }
+        ],
+        text={"format": {"type": "text"}},
+        reasoning={"effort": "high", "summary": "auto"},
+        tools=[],
+        store=True,
     )
 
-    title_match = re.search(r"TITLE:\s*(.*?)(?:\n|$)", response)
-    body_match = re.search(r"BODY:\s*(.*)", response, re.DOTALL)
+    response_content = response.output_text
+
+    title_match = re.search(r"TITLE:\s*(.*?)(?:\n|$)", response_content)
+    body_match = re.search(r"BODY:\s*(.*)", response_content, re.DOTALL)
 
     if not title_match or not body_match:
         click.secho("Failed to parse AI response for combined description", fg="red")
@@ -197,9 +239,14 @@ def _get_git_info(verbose=False):
     current_branch = _get_branch_name(["git", "branch", "--show-current"], verbose)
 
     if verbose:
-        click.secho(f"Running: git log origin/main..{current_branch} --pretty=format:%s%n%b", fg="blue")
+        click.secho(
+            f"Running: git log origin/main..{current_branch} --pretty=format:%s%n%b",
+            fg="blue",
+        )
     commit_logs = (
-        subprocess.check_output(["git", "log", f"origin/main..{current_branch}", "--pretty=format:%s%n%b"])
+        subprocess.check_output(
+            ["git", "log", f"origin/main..{current_branch}", "--pretty=format:%s%n%b"]
+        )
         .decode()
         .strip()
     )
@@ -207,9 +254,13 @@ def _get_git_info(verbose=False):
         click.secho(f"Commit logs:\n{commit_logs}", fg="blue")
 
     if verbose:
-        click.secho(f"Running: git diff origin/main..{current_branch} --name-only", fg="blue")
+        click.secho(
+            f"Running: git diff origin/main..{current_branch} --name-only", fg="blue"
+        )
     changed_files = (
-        subprocess.check_output(["git", "diff", f"origin/main..{current_branch}", "--name-only"])
+        subprocess.check_output(
+            ["git", "diff", f"origin/main..{current_branch}", "--name-only"]
+        )
         .decode()
         .strip()
         .split("\n")
@@ -226,9 +277,21 @@ def _get_git_info(verbose=False):
         try:
             # Check if file has been deleted
             if verbose:
-                click.secho(f"Running: git diff --name-status origin/main..{current_branch} -- {file}", fg="blue")
+                click.secho(
+                    f"Running: git diff --name-status origin/main..{current_branch} -- {file}",
+                    fg="blue",
+                )
             file_status = (
-                subprocess.check_output(["git", "diff", "--name-status", f"origin/main..{current_branch}", "--", file])
+                subprocess.check_output(
+                    [
+                        "git",
+                        "diff",
+                        "--name-status",
+                        f"origin/main..{current_branch}",
+                        "--",
+                        file,
+                    ]
+                )
                 .decode()
                 .strip()
             )
@@ -241,9 +304,16 @@ def _get_git_info(verbose=False):
                 continue
 
             if verbose:
-                click.secho(f"Running: git diff origin/main..{current_branch} -- {file}", fg="blue")
+                click.secho(
+                    f"Running: git diff origin/main..{current_branch} -- {file}",
+                    fg="blue",
+                )
             file_diff = (
-                subprocess.check_output(["git", "diff", f"origin/main..{current_branch}", "--", file]).decode(errors='replace').strip()
+                subprocess.check_output(
+                    ["git", "diff", f"origin/main..{current_branch}", "--", file]
+                )
+                .decode(errors="replace")
+                .strip()
             )
             if file_diff:
                 changes_content.append(f"<{file}>\n{file_diff}\n</{file}>\n")
@@ -255,7 +325,7 @@ def _get_git_info(verbose=False):
     return current_branch, commit_logs, changes_content
 
 
-def _generate_pr_content(context):
+def _generate_pr_content(context, model="o3-pro"):
     """Generate PR content using OpenAI."""
     prompt = PR_PROMPT_TMPL.format(context=context)
 
@@ -263,22 +333,28 @@ def _generate_pr_content(context):
     tmp_file.write_text(prompt)
     click.secho(f"Wrote prompt to {tmp_file}", fg="green")
 
-    response = (
-        OpenAI()
-        .chat.completions.create(
-            model=DEFAULT_MODEL,
-            messages=[{"role": "user", "content": prompt}],
-        )
-        .choices[0]
-        .message.content
+    response = OpenAI().responses.create(
+        model=model,
+        input=[
+            {
+                "role": "developer",
+                "content": [{"type": "input_text", "text": prompt}],
+            }
+        ],
+        text={"format": {"type": "text"}},
+        reasoning={"effort": "high", "summary": "auto"},
+        tools=[],
+        store=True,
     )
 
-    title_match = re.search(r"TITLE:\s*(.*?)(?:\n|$)", response)
-    body_match = re.search(r"BODY:\s*(.*)", response, re.DOTALL)
+    response_content = response.output_text
+
+    title_match = re.search(r"TITLE:\s*(.*?)(?:\n|$)", response_content)
+    body_match = re.search(r"BODY:\s*(.*)", response_content, re.DOTALL)
 
     if not title_match or not body_match:
         click.secho("Failed to parse AI response", fg="red")
-        click.secho(f"Full response:\n{response}", fg="red")
+        click.secho(f"Full response:\n{response_content}", fg="red")
         click.secho(f"Title match: {title_match}", fg="red")
         click.secho(f"Body match: {body_match}", fg="red")
         sys.exit(1)
@@ -308,7 +384,9 @@ def _push_current_branch(branch, verbose=False):
     try:
         if verbose:
             click.secho(f"Running: git push origin {branch}", fg="blue")
-        subprocess.check_output(["git", "push", "origin", branch], stderr=subprocess.STDOUT)
+        subprocess.check_output(
+            ["git", "push", "origin", branch], stderr=subprocess.STDOUT
+        )
         if verbose:
             click.secho(f"Successfully pushed branch {branch} to remote", fg="green")
         return True
@@ -316,10 +394,15 @@ def _push_current_branch(branch, verbose=False):
         if "git push --set-upstream" in e.output.decode():
             # Branch doesn't exist on remote yet, create it
             if verbose:
-                click.secho(f"Running: git push --set-upstream origin {branch}", fg="blue")
+                click.secho(
+                    f"Running: git push --set-upstream origin {branch}", fg="blue"
+                )
             subprocess.check_output(["git", "push", "--set-upstream", "origin", branch])
             if verbose:
-                click.secho(f"Successfully pushed and set upstream for branch {branch}", fg="green")
+                click.secho(
+                    f"Successfully pushed and set upstream for branch {branch}",
+                    fg="green",
+                )
             return True
         else:
             click.secho(f"Error pushing current branch: {e.output.decode()}", fg="red")
@@ -377,7 +460,9 @@ You are a GitHub Pull Request Creator. Follow these rules:
 4. Always include the disclaimer message: "✨ Este documento foi originalmente gerado com a assistência de um LLM. Todo o conteúdo foi revisado e ajustado para garantir precisão, concisão e clareza antes de ser disponibilizado publicamente."
 5. Write in Brazilian Portuguese
 
-Your role is to create a PR title and description based on the <context_changes>. The description should explain what changes were made, focusing on the key modifications.
+Your role is to create a PR title and description. The description should explain what changes were made, focusing on the key modifications.
+
+If <context_changes> has content, then this should be used as the primary context for the PR. This is what I intended to update the most and this is the most important part of the PR.
 
 Please generate a PR title and description following the format and style of the examples above. Remember to include the disclaimer message at the start of the body:
 

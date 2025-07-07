@@ -7,9 +7,10 @@
       "program": "cli/app/command/crawl/page.py",
       "console": "integratedTerminal",
       "args": [
-        "https://opentelemetry-python-contrib.readthedocs.io/en/latest/instrumentation/fastapi/fastapi.html",
+        "https://www.planalto.gov.br/ccivil_03/constituicao/ConstituicaoCompilado.htm",
         "--format",
-        "markdown"
+        "markdown",
+        "--ignore-ssl"
       ],
       "cwd": "${workspaceFolder}",
       "env": {

@@ -6,14 +6,38 @@ import hashlib
 from datetime import datetime
 from pathlib import Path
 from firecrawl import FirecrawlApp
+import urllib.parse
+
+from cli.app.ignore_ssl import disable_ssl_verification
 
 
 @click.command()
 @click.argument("url")
-@click.option("--format", "-f", type=click.Choice(["markdown", "html"]), default="markdown", help="Output format")
-@click.option("--no-cache", is_flag=True, help="Ignore cached results and force new scrape")
-def page(url: str, format: str, no_cache: bool):
-    """Scrape a webpage and copy the content to clipboard."""
+@click.option(
+    "--format",
+    "-f",
+    type=click.Choice(["markdown", "html"]),
+    default="markdown",
+    help="Output format",
+)
+@click.option(
+    "--no-cache",
+    is_flag=True,
+    help="Ignore cached results and force new scrape",
+)
+@click.option("--ignore-ssl", is_flag=True, help="Ignore SSL certificate verification")
+@click.option(
+    "--output",
+    "-o",
+    type=click.Path(),
+    help="Output file path (default: generated from URL)",
+)
+def page(url: str, format: str, no_cache: bool, ignore_ssl: bool, output: str):
+    """Scrape a webpage and save the content to a markdown file."""
+
+    if ignore_ssl:
+        disable_ssl_verification()
+
     try:
         cache_path = get_cache_path(url, format)
 
@@ -22,48 +46,69 @@ def page(url: str, format: str, no_cache: bool):
             cached_result = load_from_cache(cache_path)
             if cached_result:
                 click.echo("Using cached result...")
-                content = wrap_content(cached_result["data"].get(format, ""), url)
+                content = cached_result["data"].get(format, "")
                 if content:
-                    process = subprocess.Popen(["pbcopy"], stdin=subprocess.PIPE)
-                    process.communicate(content.encode())
-                    click.echo(f"Successfully loaded cached content for {url} and copied to clipboard")
+                    output_path = get_output_path(url, output, format)
+                    save_content_to_file(content, output_path)
+                    click.echo(
+                        f"Successfully loaded cached content for {url} and saved to {output_path}"
+                    )
                     return
 
         app = FirecrawlApp()
 
-        # Configure scrape parameters
-        params = {"formats": [format]}
-
         # Perform the scrape
-        scrape_result = app.scrape_url(url, params=params)
+        scrape_result = app.scrape_url(url, formats=[format])
 
         if not scrape_result:
             click.echo("Error: Failed to scrape the URL", err=True)
             return
 
         # Get the content in the requested format
-        content = scrape_result.get(format, "")
+        content = scrape_result.markdown if format == "markdown" else scrape_result.html
         if not content:
             click.echo("Error: No content found in the response", err=True)
             return
 
-        content = wrap_content(content, url)
-
         # Save to cache
-        save_to_cache(cache_path, scrape_result)
+        save_to_cache(cache_path, content)
 
-        # Copy to clipboard using pbcopy
-        process = subprocess.Popen(["pbcopy"], stdin=subprocess.PIPE)
-        process.communicate(content.encode())
+        # Save content to file
+        output_path = get_output_path(url, output, format)
+        save_content_to_file(content, output_path)
 
-        click.echo(f"Successfully scraped {url} and copied content to clipboard")
+        click.echo(f"Successfully scraped {url} and saved content to {output_path}")
 
     except Exception as e:
         click.echo(f"Error: {str(e)}", err=True)
 
 
-def wrap_content(content: str, url: str) -> str:
-    return f'<documentation_content link="{url}">\n{content}\n</documentation_content>'
+def get_output_path(url: str, output: str, format: str) -> Path:
+    """Generate output file path based on URL and format."""
+    if output:
+        return Path(output)
+
+    # Generate filename from URL
+    parsed_url = urllib.parse.urlparse(url)
+    domain = parsed_url.netloc.replace("www.", "")
+    path_parts = [part for part in parsed_url.path.split("/") if part]
+
+    if path_parts:
+        filename = f"{domain}_{'-'.join(path_parts)}"
+    else:
+        filename = domain
+
+    # Clean filename and add extension
+    filename = "".join(c for c in filename if c.isalnum() or c in ("-", "_")).rstrip()
+    extension = "md" if format == "markdown" else "html"
+
+    return Path(f"{filename}.{extension}")
+
+
+def save_content_to_file(content: str, output_path: Path):
+    """Save content to the specified file."""
+    with output_path.open("w", encoding="utf-8") as f:
+        f.write(content)
 
 
 def get_cache_path(url: str, format: str) -> Path:

@@ -13,17 +13,38 @@ from openai import AsyncOpenAI, OpenAI
 
 
 @click.command()
-@click.argument("markdown_file", type=click.Path(exists=True, file_okay=True, dir_okay=False, readable=True))
+@click.argument(
+    "markdown_file",
+    type=click.Path(exists=True, file_okay=True, dir_okay=False, readable=True),
+)
 @click.option(
-    "--voice", default="alloy", help="Voice to use for speech (alloy, echo, fable, onyx, nova, shimmer, coral)"
+    "--voice",
+    default="alloy",
+    help="Voice to use for speech (alloy, echo, fable, onyx, nova, shimmer, coral)",
 )
 @click.option("--model", default="gpt-4o-mini-tts", help="Model to use for TTS")
-@click.option("--output", type=click.Path(), help="Output file path (defaults to tmp folder with input filename)")
-@click.option("--language", default="ptbr", help="Language to generate content in (e.g., en, ptbr)")
-@click.option("--no-cache", is_flag=True, help="Skip using cached results even if available")
+@click.option(
+    "--output",
+    type=click.Path(),
+    help="Output file path (defaults to tmp folder with input filename)",
+)
+@click.option(
+    "--language",
+    default="ptbr",
+    help="Language to generate content in (e.g., en, ptbr)",
+)
+@click.option(
+    "--no-cache", is_flag=True, help="Skip using cached results even if available"
+)
 @click.option("--debug", is_flag=True, help="Show detailed debugging information")
-@click.option("--keypoints", is_flag=True, help="Also extract and vocalize key points from the document")
-def md_to_speech(markdown_file, voice, model, output, language, no_cache, debug, keypoints):
+@click.option(
+    "--keypoints",
+    is_flag=True,
+    help="Also extract and vocalize key points from the document",
+)
+def md_to_speech(
+    markdown_file, voice, model, output, language, no_cache, debug, keypoints
+):
     """Convert a markdown file to speech using OpenAI's text-to-speech API.
 
     This command takes a markdown file, sends it to OpenAI to transform into
@@ -41,7 +62,9 @@ def md_to_speech(markdown_file, voice, model, output, language, no_cache, debug,
         markdown_content = f.read()
 
     if debug:
-        click.echo(f"Markdown content hash: {hashlib.md5(markdown_content.encode()).hexdigest()}")
+        click.echo(
+            f"Markdown content hash: {hashlib.md5(markdown_content.encode()).hexdigest()}"
+        )
 
     # Preprocess the markdown content to remove image data
     markdown_content = preprocess_markdown(markdown_content)
@@ -59,7 +82,10 @@ def md_to_speech(markdown_file, voice, model, output, language, no_cache, debug,
     transform_key = f"{file_hash}|{language}"
     transform_cache_key = hashlib.md5(transform_key.encode()).hexdigest()
     transform_cache_path = os.path.join(
-        cache_dir, transform_cache_key[:2], transform_cache_key[2:4], f"{transform_cache_key}.txt"
+        cache_dir,
+        transform_cache_key[:2],
+        transform_cache_key[2:4],
+        f"{transform_cache_key}.txt",
     )
 
     # Check if we have a cached transformed text
@@ -100,7 +126,16 @@ def md_to_speech(markdown_file, voice, model, output, language, no_cache, debug,
 
     # Step 3: Process each chunk and concatenate the results
     asyncio.run(
-        process_text_chunks(text_chunks, voice, model, output_path, transform_cache_key, language, no_cache, debug)
+        process_text_chunks(
+            text_chunks,
+            voice,
+            model,
+            output_path,
+            transform_cache_key,
+            language,
+            no_cache,
+            debug,
+        )
     )
 
     # Process key points if requested
@@ -127,7 +162,14 @@ def md_to_speech(markdown_file, voice, model, output, language, no_cache, debug,
         # Generate audio for keypoints
         asyncio.run(
             process_text_chunks(
-                keypoints_chunks, voice, model, keypoints_audio_path, keypoints_cache_key, language, no_cache, debug
+                keypoints_chunks,
+                voice,
+                model,
+                keypoints_audio_path,
+                keypoints_cache_key,
+                language,
+                no_cache,
+                debug,
             )
         )
 
@@ -153,7 +195,10 @@ def md_to_speech(markdown_file, voice, model, output, language, no_cache, debug,
 
     # Open the mp3 file with VLC
     # Start VLC with the desired playback rate and pause it after a second
-    subprocess.run(["/Applications/VLC.app/Contents/MacOS/VLC", "--rate=1.5", output_path], shell=False)
+    subprocess.run(
+        ["/Applications/VLC.app/Contents/MacOS/VLC", "--rate=1.5", output_path],
+        shell=False,
+    )
 
 
 def split_text_into_chunks(text, max_chunk_size=3000):
@@ -179,7 +224,9 @@ def split_text_into_chunks(text, max_chunk_size=3000):
     return chunks
 
 
-async def process_text_chunks(chunks, voice, model, output_path, transform_key, language, no_cache, debug):
+async def process_text_chunks(
+    chunks, voice, model, output_path, transform_key, language, no_cache, debug
+):
     """Process each text chunk, generate audio, and combine them."""
     temp_dir = tempfile.mkdtemp(prefix="md_to_speech_chunks_", dir="/tmp")
     chunk_files = []
@@ -206,12 +253,12 @@ async def process_text_chunks(chunks, voice, model, output_path, transform_key, 
 
         # Check if we have a cached version of this chunk
         if not no_cache and os.path.exists(audio_cache_path):
-            click.echo(f"Using cached audio for chunk {i+1}/{len(chunks)}")
+            click.echo(f"Using cached audio for chunk {i + 1}/{len(chunks)}")
             # Copy from cache to temp file
             with open(audio_cache_path, "rb") as src, open(chunk_file, "wb") as dst:
                 dst.write(src.read())
         else:
-            click.echo(f"Generating audio for chunk {i+1}/{len(chunks)}")
+            click.echo(f"Generating audio for chunk {i + 1}/{len(chunks)}")
             # Generate audio for this chunk
             await save_speech_to_file(chunk, voice, model, chunk_file)
 
@@ -261,7 +308,9 @@ def preprocess_markdown(content):
     content = re.sub(r"\[.*?\]:\s*<data:image/[^>]+base64,[^>]+>", "", content)
 
     # Remove inline base64 images
-    content = re.sub(r"!\[.*?\]\(data:image/[^)]+base64,[^)]+\)", "[Image removed]", content)
+    content = re.sub(
+        r"!\[.*?\]\(data:image/[^)]+base64,[^)]+\)", "[Image removed]", content
+    )
 
     # Remove other potential large embedded data
     content = re.sub(r"<img[^>]*?base64,[^>]+>", "[Image removed]", content)
@@ -303,14 +352,18 @@ def get_language_instruction(language_code):
         "de": "\n\nWichtig: Generieren Sie den Text auf Deutsch (de).",
     }
 
-    return language_map.get(language_code.lower(), f"\n\nImportant: Generate the text in {language_code}.")
+    return language_map.get(
+        language_code.lower(), f"\n\nImportant: Generate the text in {language_code}."
+    )
 
 
 async def save_speech_to_file(text, voice, model, output_path):
     """Save the speech to a file using streaming API."""
     client = AsyncOpenAI()
 
-    async with client.audio.speech.with_streaming_response.create(model=model, voice=voice, input=text) as response:
+    async with client.audio.speech.with_streaming_response.create(
+        model=model, voice=voice, input=text
+    ) as response:
         with open(output_path, "wb") as f:
             async for chunk in response.iter_bytes():
                 f.write(chunk)

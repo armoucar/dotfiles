@@ -32,10 +32,10 @@ function gopenac() {
 
 vslaunch_sort_configurations_by_name() {
   local file="$1"
-  jq '.configurations |= sort_by(.name)' "$file" > temp.json && mv temp.json "$file"
+  jq '.configurations |= sort_by(.name)' "$file" >temp.json && mv temp.json "$file"
 }
 
 vslaunch_sort_inputs_by_id() {
   local file="$1"
-  jq '.inputs |= sort_by(.id)' "$file" > temp.json && mv temp.json "$file"
+  jq '.inputs |= sort_by(.id)' "$file" >temp.json && mv temp.json "$file"
 }
