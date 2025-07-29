@@ -5,3 +5,4 @@ from cli.app.command.git.changes_check import changes_check
 from cli.app.command.git.auth_check import auth_check
 from cli.app.command.git.commit import commit
 from cli.app.command.git.approve import approve
+from cli.app.command.git.analyze_prs import analyze_prs

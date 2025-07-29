@@ -8,6 +8,7 @@ from cli.app.command.git import (
     auth_check,
     commit,
     approve,
+    analyze_prs,
 )
 
 from cli.app.command.kubectl import (
@@ -108,6 +109,7 @@ git.add_command(changes_check)
 git.add_command(auth_check)
 git.add_command(commit)
 git.add_command(approve)
+git.add_command(analyze_prs)
 cli.add_command(git)
 
 

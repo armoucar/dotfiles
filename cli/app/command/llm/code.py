@@ -79,7 +79,7 @@ Objectives:
 1."""
 
 DEVELOP_INSTRUCTIONS = """
-Given the files above, rewrite all of them to achieve the objectives below. Only make necessary changes to achieve the objectives.
+Given the files above, write the code necessary to achieve the objectives below. You can make changes to files, create new files, or delete files.
 
 Objectives:
 
