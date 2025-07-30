@@ -4,6 +4,7 @@ import sys
 import argparse
 import subprocess
 import re
+from datetime import datetime
 
 
 def get_duration(filename):
@@ -157,17 +158,17 @@ def build_filter_complex(
         if i == 0:  # First clip
             # Only add fade out
             parts.append(
-                f"[{i}:v]fps=30,{scale_filter},format=yuv420p,setpts=PTS-STARTPTS,fade=t=out:st={durations[i]-fade_duration}:d={fade_duration}[fv{i}];"
+                f"[{i}:v]setpts=PTS-STARTPTS,fps=30,{scale_filter},fade=t=out:st={durations[i]-fade_duration}:d={fade_duration},format=yuv420p[fv{i}];"
             )
         elif i == n - 1:  # Last clip
             # Only add fade in
             parts.append(
-                f"[{i}:v]fps=30,{scale_filter},format=yuv420p,setpts=PTS-STARTPTS,fade=t=in:st=0:d={fade_duration}[fv{i}];"
+                f"[{i}:v]setpts=PTS-STARTPTS,fps=30,{scale_filter},fade=t=in:st=0:d={fade_duration},format=yuv420p[fv{i}];"
             )
         else:  # Middle clips
             # Add both fade in and fade out
             parts.append(
-                f"[{i}:v]fps=30,{scale_filter},format=yuv420p,setpts=PTS-STARTPTS,fade=t=in:st=0:d={fade_duration},fade=t=out:st={durations[i]-fade_duration}:d={fade_duration}[fv{i}];"
+                f"[{i}:v]setpts=PTS-STARTPTS,fps=30,{scale_filter},fade=t=in:st=0:d={fade_duration},fade=t=out:st={durations[i]-fade_duration}:d={fade_duration},format=yuv420p[fv{i}];"
             )
 
         # Add audio fade in/out to match video
@@ -204,6 +205,26 @@ def build_filter_complex(
 
     filter_complex = "".join(parts)
     return filter_complex, v_output, a_output
+
+
+def extract_timestamp_from_filename(filename):
+    """Extract timestamp from filename in format YYYYMMDD_HHMMSS"""
+    basename = os.path.basename(filename)
+    # Try to match YYYYMMDD_HHMMSS pattern
+    match = re.match(r'(\d{8})_(\d{6})', basename)
+    if match:
+        date_part = match.group(1)
+        time_part = match.group(2)
+        # Parse the timestamp
+        year = date_part[0:4]
+        month = date_part[4:6]
+        day = date_part[6:8]
+        hour = time_part[0:2]
+        minute = time_part[2:4]
+        second = time_part[4:6]
+        # Create ISO format timestamp
+        return f"{year}-{month}-{day}T{hour}:{minute}:{second}"
+    return None
 
 
 def main():
@@ -246,20 +267,23 @@ def main():
     # Determine target video bitrate based on quality
     if quality == "low":
         bitrate = "500k"
+        crf = "28"
     elif quality == "high":
-        bitrate = "3000k"
+        bitrate = "5000k"
+        crf = "18"
     else:
-        bitrate = "1500k"
+        bitrate = "2000k"
+        crf = "23"
 
-    # Create output filename with quality included
-    output_filename = f"output_{quality}.mp4"
+    # Create output filename based on first file
+    # Will be set after we have the files list
 
     # Get sorted list of mp4 files in the folder, excluding any previously generated output files
     all_files = sorted(
         [
             os.path.join(folder, f)
             for f in os.listdir(folder)
-            if f.lower().endswith(".mp4") and not f.startswith("output_")
+            if f.lower().endswith(".mp4") and not f.startswith("output_") and not f.endswith(".concat.mp4")
         ]
     )
 
@@ -326,6 +350,14 @@ def main():
             )
             target_width, target_height = 1280, 720
 
+    # Create output filename based on first file
+    if files:
+        first_file_base = os.path.basename(files[0])
+        first_file_name = os.path.splitext(first_file_base)[0]
+        output_filename = os.path.join(folder, f"{first_file_name}.concat.mp4")
+    else:
+        output_filename = os.path.join(folder, "output.concat.mp4")
+
     # Get durations for each file using ffprobe
     durations = []
     for f in files:
@@ -344,6 +376,13 @@ def main():
         files, durations, target_width, target_height, fade_duration=1
     )
 
+    # Extract timestamp from first file if available
+    creation_time = None
+    if files:
+        creation_time = extract_timestamp_from_filename(files[0])
+        if creation_time:
+            print(f"Using creation time from first file: {creation_time}")
+
     # Build the ffmpeg command.
     # - We include all input files.
     # - The filter_complex builds the transition chain.
@@ -361,19 +400,65 @@ def main():
             a_output,
             "-c:v",
             "libx264",
+            "-preset",
+            "slow",
+            "-crf",
+            crf,
             "-b:v",
             bitrate,
+            "-pix_fmt",
+            "yuv420p",
             "-c:a",
             "aac",
-            output_filename,
+            "-b:a",
+            "192k",
+            "-ar",
+            "48000",
         ]
     )
+    
+    # Add metadata if we have a creation time
+    if creation_time:
+        cmd.extend([
+            "-metadata",
+            f"creation_time={creation_time}",
+        ])
+    
+    cmd.extend([
+        "-movflags",
+        "+faststart",
+        output_filename,
+    ])
 
     print("Running ffmpeg command:")
     print(" ".join(cmd))
     subprocess.run(cmd)
 
     print(f"Concatenation complete! Output saved as: {output_filename}")
+    
+    # Extract thumbnail from first video at 10 seconds
+    if files and durations and durations[0] > 10:
+        thumbnail_time = "00:00:10"
+    else:
+        # If first video is shorter than 10 seconds, take thumbnail from middle
+        thumbnail_time = "00:00:01" if not durations else f"00:00:{int(durations[0]/2):02d}"
+    
+    thumbnail_filename = os.path.splitext(output_filename)[0] + ".jpg"
+    
+    print(f"Extracting thumbnail from first video at {thumbnail_time}...")
+    
+    thumbnail_cmd = [
+        "ffmpeg",
+        "-y",
+        "-ss", thumbnail_time,
+        "-i", files[0],
+        "-vframes", "1",
+        "-q:v", "2",
+        thumbnail_filename
+    ]
+    
+    subprocess.run(thumbnail_cmd)
+    print(f"Thumbnail saved as: {thumbnail_filename}")
 
 
 if __name__ == "__main__":
