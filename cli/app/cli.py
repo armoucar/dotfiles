@@ -26,12 +26,6 @@ from cli.app.command.alfred import (
     edit_prompts,
 )
 
-from cli.app.command.investment import (
-    simulate,
-    compare,
-    generator,
-)
-
 from cli.app.command.crawl import page
 from cli.app.command.audio import audio
 from cli.app.command.llm import code
@@ -115,12 +109,6 @@ cli.add_command(kubectl)
 # Add all commands to the crawl group
 crawl.add_command(page)
 cli.add_command(crawl)
-
-# Add all commands to the investment group
-investment.add_command(simulate)
-investment.add_command(compare)
-investment.add_command(generator)
-cli.add_command(investment)
 
 # Add audio command group
 cli.add_command(audio)
