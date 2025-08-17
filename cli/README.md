@@ -1,6 +1,6 @@
 # CLI Application
 
-This CLI application provides various commands for working with GitHub, Alfred, notes management, and Kubernetes operations.
+This CLI application provides various commands for working with GitHub, Alfred, and Kubernetes operations.
 
 ## Commands
 
@@ -9,7 +9,6 @@ This CLI application provides various commands for working with GitHub, Alfred, 
 - **work-stats**: Get work statistics
 - **xls-files**: Manage Excel files
 - **alfred**: Commands for managing Alfred preferences
-- **notes**: Commands for managing notes and tasks
 - **kubectl**: Kubernetes operations
 
 ## Installation
