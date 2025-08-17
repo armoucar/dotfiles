@@ -26,17 +26,6 @@ from cli.app.command.alfred import (
     edit_prompts,
 )
 
-from cli.app.command.notes import (
-    create,
-    list_cmd,
-    edit,
-    delete,
-    complete,
-    incomplete,
-    search,
-    summary,
-)
-
 from cli.app.command.investment import (
     simulate,
     compare,
@@ -58,11 +47,6 @@ def cli():
     """CLI application with GitHub commands."""
     pass
 
-
-@click.group()
-def notes():
-    """Commands for managing notes and tasks."""
-    pass
 
 
 @click.group()
@@ -122,17 +106,6 @@ alfred.add_command(delete_prompts)
 alfred.add_command(edit_prompts)
 alfred.add_command(execute_prompt)
 cli.add_command(alfred)
-
-# Add notes commands to notes group
-notes.add_command(create)
-notes.add_command(list_cmd, name="list")
-notes.add_command(edit)
-notes.add_command(delete)
-notes.add_command(complete)
-notes.add_command(incomplete)
-notes.add_command(search)
-notes.add_command(summary)
-cli.add_command(notes)
 
 # Add all commands to the kubectl group
 kubectl.add_command(watch_gugelmin)

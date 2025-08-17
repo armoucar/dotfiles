@@ -26,7 +26,7 @@ readme = "cli/README.md"
 dot = "cli.app.cli:cli"
 
 [tool.hatch.build.targets.wheel]
-packages = ["cli/app"]
+packages = ["cli"]
 
 [build-system]
 requires = ["hatchling"]
