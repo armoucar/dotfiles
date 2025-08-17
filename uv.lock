@@ -225,6 +225,7 @@ source = { editable = "." }
 dependencies = [
     { name = "click" },
     { name = "firecrawl-py" },
+    { name = "httpx" },
     { name = "openai", extra = ["voice-helpers"] },
     { name = "openinference-instrumentation-openai" },
     { name = "opentelemetry-api" },
@@ -242,6 +243,7 @@ dependencies = [
 requires-dist = [
     { name = "click", specifier = ">=8.1.8,<9.0.0" },
     { name = "firecrawl-py", specifier = ">=2.16.5,<3.0.0" },
+    { name = "httpx", specifier = ">=0.28.1" },
     { name = "openai", extras = ["voice-helpers"], specifier = ">=1.99.9,<2.0.0" },
     { name = "openinference-instrumentation-openai", specifier = ">=0.1.21,<1.0.0" },
     { name = "opentelemetry-api", specifier = ">=1.36.0,<2.0.0" },
