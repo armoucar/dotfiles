@@ -1,0 +1,99 @@
+#!/bin/bash
+
+# Setup VSCode/Cursor settings to fix terminal issues
+
+set -e
+
+CONFIG_FILE="$HOME/.oh-my-zsh/custom/config/vscode-settings.jsonc"
+
+# VSCode settings paths
+VSCODE_SETTINGS="$HOME/Library/Application Support/Code/User/settings.json"
+CURSOR_SETTINGS="$HOME/Library/Application Support/Cursor/User/settings.json"
+
+# Function to merge JSON settings using Python
+merge_json_files() {
+    local target_file="$1"
+    local config_file="$2"
+    
+    python3 -c "
+import sys, json, re
+
+def clean_json(content):
+    # Remove comments
+    content = re.sub(r'//.*', '', content)
+    content = re.sub(r'/\*.*?\*/', '', content, flags=re.DOTALL)
+    # Remove trailing commas
+    content = re.sub(r',(\s*[}\]])', r'\1', content)
+    return content
+
+# Read and clean target file
+try:
+    with open('$target_file', 'r') as f:
+        target_content = f.read()
+    target_json = json.loads(clean_json(target_content))
+except Exception as e:
+    print(f'[!] Warning: Could not parse existing settings: {e}', file=sys.stderr)
+    target_json = {}
+
+# Read and clean config file
+try:
+    with open('$config_file', 'r') as f:
+        config_content = f.read()
+    config_json = json.loads(clean_json(config_content))
+except Exception as e:
+    print(f'[!] Error: Could not parse config file: {e}', file=sys.stderr)
+    sys.exit(1)
+
+# Merge settings (config overwrites target)
+target_json.update(config_json)
+
+# Write merged settings
+with open('$target_file.tmp', 'w') as f:
+    json.dump(target_json, f, indent=2)
+
+print('[+] Settings merged successfully')
+"
+}
+
+# Function to merge settings
+merge_settings() {
+    local target="$1"
+    local target_dir=$(dirname "$target")
+    
+    # Create directory if it doesn't exist
+    mkdir -p "$target_dir"
+    
+    if [ -f "$target" ]; then
+        echo "[*] Merging settings into $target"
+        
+        # Backup existing settings
+        cp "$target" "$target.backup.$(date +%Y%m%d_%H%M%S)"
+        
+        # Merge using Python
+        if merge_json_files "$target" "$CONFIG_FILE"; then
+            mv "$target.tmp" "$target"
+        else
+            echo "[!] Failed to merge settings. Keeping original file."
+            rm -f "$target.tmp"
+        fi
+    else
+        echo "[*] Creating new settings file at $target"
+        cp "$CONFIG_FILE" "$target"
+        echo "[+] Settings created successfully"
+    fi
+}
+
+# Check which editor is installed and apply settings
+if [ -d "$(dirname "$CURSOR_SETTINGS")" ]; then
+    echo "[>] Found Cursor installation"
+    merge_settings "$CURSOR_SETTINGS"
+fi
+
+if [ -d "$(dirname "$VSCODE_SETTINGS")" ]; then
+    echo "[>] Found VSCode installation"
+    merge_settings "$VSCODE_SETTINGS"
+fi
+
+echo ""
+echo "[*] Please restart VSCode/Cursor for changes to take effect"
+echo "[i] Tip: Your original settings were backed up with timestamp"
