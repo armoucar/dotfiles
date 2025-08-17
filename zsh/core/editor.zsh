@@ -4,6 +4,7 @@ alias eg="$EDITOR ~/.gitconfig"
 alias eb="$EDITOR ~/.bash_profile"
 alias ec="$EDITOR ~/.oh-my-zsh/custom"
 alias en="$EDITOR ~/.oh-my-zsh/custom/navi"
+alias ea="$EDITOR ${AEROSPACE_CONFIG_HOME:-$HOME/.oh-my-zsh/custom/config/aerospace}/aerospace.toml"
 alias enc="$EDITOR $(navi info config-path)"
 # alias es="$EDITOR ~/.oh-my-zsh/custom/zsh/shorthands.zsh" # File doesn't exist
 alias ee="$EDITOR ~/.oh-my-zsh/custom/zsh/core/editor.zsh"

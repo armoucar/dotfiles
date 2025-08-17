@@ -1,0 +1,57 @@
+#!/bin/bash
+
+# AeroSpace Workspace Setup Script
+# Distributes workspaces to preferred monitors
+
+echo "Setting up AeroSpace workspace distribution..."
+
+# Save current workspace
+INITIAL_WORKSPACE=$(aerospace list-workspaces --focused)
+echo "Current workspace: $INITIAL_WORKSPACE"
+
+# Send notification that setup is starting
+osascript -e 'display notification "Starting workspace distribution..." with title "AeroSpace Setup" sound name "Pop"'
+
+# First, go to each workspace and move it to the correct monitor
+
+# Monitor 1: 1,2,3,4,5
+echo "Moving workspaces 1,2,3,4,5 to Monitor 1 (Built-in)..."
+for ws in 1 2 3 4 5; do
+    echo "  Moving workspace $ws to Monitor 1"
+    aerospace workspace $ws && aerospace move-workspace-to-monitor 1
+    sleep 0.05
+done
+
+# Monitor 3: 6,7,8,9,0
+echo "Moving workspaces 6,7,8,9,0 to Monitor 3 (LG FULL HD)..."
+for ws in 6 7 8 9 0; do
+    echo "  Moving workspace $ws to Monitor 3"
+    aerospace workspace $ws && aerospace move-workspace-to-monitor 3
+    sleep 0.05
+done
+
+# Monitor 2: All letters (they should already be there, but let's ensure)
+echo "Moving letter workspaces to Monitor 2 (LG ULTRAGEAR)..."
+for ws in A B D E G I M N O P Q R S T U V W Y; do
+    echo "  Moving workspace $ws to Monitor 2"
+    aerospace workspace $ws && aerospace move-workspace-to-monitor 2
+    sleep 0.05
+done
+
+# Return to initial workspace
+echo "Returning to workspace $INITIAL_WORKSPACE..."
+aerospace workspace "$INITIAL_WORKSPACE"
+
+echo ""
+echo "Workspace setup complete!"
+echo ""
+echo "Verifying distribution..."
+echo "Monitor 1:"
+aerospace list-workspaces --monitor 1
+echo "Monitor 2:"
+aerospace list-workspaces --monitor 2
+echo "Monitor 3:"
+aerospace list-workspaces --monitor 3
+
+# Send completion notification
+osascript -e 'display notification "Workspaces distributed successfully!\n• Monitor 1: 1-5\n• Monitor 2: Letters\n• Monitor 3: 6-9,0" with title "AeroSpace Setup Complete" sound name "Glass"'

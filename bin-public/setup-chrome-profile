@@ -1,0 +1,77 @@
+#!/bin/bash
+
+# Chrome profiles directory
+CHROME_DIR="$HOME/Library/Application Support/Google/Chrome"
+PROFILE_FILE="$HOME/.chrome_profile"
+
+# Function to get profile display name
+get_profile_name() {
+    local profile_dir="$1"
+    if [ -f "$profile_dir/Preferences" ]; then
+        python3 -c "
+import json
+try:
+    with open('$profile_dir/Preferences') as f:
+        data = json.load(f)
+        print(data.get('profile', {}).get('name', 'Unknown'))
+except:
+    print('Unable to read')
+" 2>/dev/null || echo "Unable to read"
+    else
+        echo "No Preferences file"
+    fi
+}
+
+echo "Available Chrome Profiles:"
+echo "========================="
+
+# Array to store profile directories
+profiles=()
+index=1
+
+# Check for Default profile
+if [ -d "$CHROME_DIR/Default" ]; then
+    name=$(get_profile_name "$CHROME_DIR/Default")
+    echo "$index) Default - $name"
+    profiles+=("Default")
+    ((index++))
+fi
+
+# Check for numbered profiles
+for dir in "$CHROME_DIR"/Profile*; do
+    if [ -d "$dir" ]; then
+        profile_id=$(basename "$dir")
+        name=$(get_profile_name "$dir")
+        echo "$index) $profile_id - $name"
+        profiles+=("$profile_id")
+        ((index++))
+    fi
+done
+
+# Check for Guest Profile
+if [ -d "$CHROME_DIR/Guest Profile" ]; then
+    echo "$index) Guest Profile"
+    profiles+=("Guest Profile")
+    ((index++))
+fi
+
+# Show current profile if set
+if [ -f "$PROFILE_FILE" ]; then
+    echo ""
+    echo "Current profile: $(cat $PROFILE_FILE)"
+fi
+
+echo ""
+read -p "Select profile number to set as default (1-$((index-1))): " choice
+
+# Validate choice
+if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le $((index-1)) ]; then
+    selected_profile="${profiles[$((choice-1))]}"
+    echo "$selected_profile" > "$PROFILE_FILE"
+    echo ""
+    echo "Chrome profile set to: $selected_profile"
+    echo "Configuration saved to: $PROFILE_FILE"
+else
+    echo "Invalid selection. Exiting."
+    exit 1
+fi
