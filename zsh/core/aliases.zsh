@@ -8,6 +8,7 @@ alias ntl='ntl -A'
 alias tree='tree -I "__pycache__"'
 alias showpath="echo \$PATH | tr ':' '\n' | sort"
 alias alsg="als --groups"
+alias mcp-inspector="npx @modelcontextprotocol/inspector"
 
 function fg() {
   ignored_folders=(.venv __pycache__ node_modules dist build)

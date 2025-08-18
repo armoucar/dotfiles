@@ -1,0 +1,11 @@
+#!/bin/bash
+
+find . -type f -name "AGENTS.md" | while read -r agents_file; do
+    dir=$(dirname "$agents_file")
+    claude_file="$dir/CLAUDE.md"
+    
+    echo "Copying: $agents_file -> $claude_file"
+    cp "$agents_file" "$claude_file"
+done
+
+echo "Done! All AGENTS.md files have been copied to CLAUDE.md"
