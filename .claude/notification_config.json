@@ -1,0 +1,6 @@
+{
+  "audio": {
+    "type": "bell",
+    "bell_file": "/System/Library/Sounds/Tink.aiff"
+  }
+}

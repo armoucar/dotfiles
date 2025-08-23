@@ -7,7 +7,7 @@ private/*
 !private/keep.zsh
 navi/_*
 tmp/
-claude/.claude
+.claude/voice_notifications
 
 ### Python ###
 # Byte-compiled / optimized / DLL files

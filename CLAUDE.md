@@ -10,7 +10,7 @@ This is a dotfiles repository for managing development tools, scripts, and confi
 - **cli/**: Python Click application for advanced workflows
 - **config/**: Configuration files for various tools
 - **zsh/**: ZSH configurations organized by category (core, tools, languages, containers, personal, setup)
-- **workflow/**: Documentation for specific workflows
+- **workflow/**: Documentation for specific workflows (see [Workflow Documentation](#workflow-documentation))
 - **private/**: Git-ignored directory for secrets and private configurations
 
 ## Key Commands
@@ -111,9 +111,32 @@ tmux kill-server
 
 The tmux config already includes the necessary Catppuccin mocha theme configuration.
 
+## Workflow Documentation
+
+The `workflow/` directory contains organized documentation for specific workflows and configurations:
+
+### claude-code/
+Claude Code hooks management and configuration workflows. See `workflow/claude-code/CLAUDE.md` for:
+- Hook management (Notification, Command Logger, Stop hooks)
+- Audio notification configuration
+- `setup-claude.zsh` integration
+
+### development/
+Development environment setup and configuration. See `workflow/development/CLAUDE.md` for:
+- Tmux configuration and theme setup
+- VS Code configuration
+- Development tool workflows
+
+### tools/
+System-level tools and utilities configuration. See `workflow/tools/CLAUDE.md` for:
+- AeroSpace window manager setup
+- Desktop organization workflows
+- System productivity tools
+
 ## Notes
 
 - The project uses `uv` for Python dependency management (not pip or poetry)
 - Telemetry only initializes if the OpenTelemetry server is running (http://127.0.0.1:6006)
 - The `dot` command entry point requires proper package structure (packages = ["cli"] in pyproject.toml)
 - Private keys and secrets should only be placed in the `private/` directory
+- Claude Code configuration is managed through `.claude/` directory and `setup-claude.zsh`
