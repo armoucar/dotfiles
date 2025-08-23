@@ -59,7 +59,7 @@ setup-claude
 **Usage**: `setup-claude`  
 **What it does**:
 
-- Syncs `.claude/` directory contents to `~/.claude/`
+- Syncs `config/claude/` directory contents to `~/.claude/`
 - Configures notification, logging, and stop hooks
 - Sets up audio notifications (requires `generate_notification_voices.py`)
 

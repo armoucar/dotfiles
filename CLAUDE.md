@@ -149,4 +149,4 @@ System-level tools and utilities configuration. See `workflow/tools/CLAUDE.md` f
 - Telemetry only initializes if the OpenTelemetry server is running (<http://127.0.0.1:6006>)
 - The `dot` command entry point requires proper package structure (packages = ["cli"] in pyproject.toml)
 - Private keys and secrets should only be placed in the `private/` directory
-- Claude Code configuration is managed through `.claude/` directory and `setup-claude.zsh`
+- Claude Code configuration is managed through `config/claude/` directory and `setup-claude`

@@ -2,7 +2,7 @@
 # Claude Code Configuration Setup Script
 # Syncs user-specific Claude configuration from dotfiles to ~/.claude
 
-DOTFILES_CLAUDE="$HOME/.oh-my-zsh/custom/.claude"
+DOTFILES_CLAUDE="$HOME/.oh-my-zsh/custom/config/claude"
 GLOBAL_CLAUDE="$HOME/.claude"
 
 # Ensure global ~/.claude directory exists
