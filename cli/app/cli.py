@@ -42,7 +42,6 @@ def cli():
     pass
 
 
-
 @click.group()
 def alfred():
     """Commands for managing Alfred preferences."""
@@ -64,12 +63,6 @@ def kubectl():
 @click.group()
 def crawl():
     """Crawl commands."""
-    pass
-
-
-@click.group()
-def investment():
-    """Investment simulation commands."""
     pass
 
 
