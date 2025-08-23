@@ -1,69 +1,73 @@
-# AeroSpace Quick Cheatsheet
+# AeroSpace Reference Guide
 
-AeroSpace is a tiling window manager for macOS. All keybindings use **Alt** as the main modifier by default.
+## What is AeroSpace?
 
-## Essential Commands
+AeroSpace is a tiling window manager for macOS that automatically arranges windows in a grid layout. It provides keyboard-driven window management similar to i3wm on Linux.
 
-### Window Navigation
-- `alt + h/l` - Focus window left/right
-- `alt + j/k` - Focus window down/up (only with vertical splits)
+## Key Features
 
-### Multi-Monitor
-- `ctrl + alt + ,/.` - Focus prev/next monitor
-- `ctrl + alt + left/right` - Move window to prev/next monitor (focus follows)
+- **Automatic tiling**: Windows snap into grid layouts
+- **Workspace management**: Organize apps across multiple virtual desktops
+- **Multi-monitor support**: Seamless window movement between displays
+- **Service mode**: Temporary mode for quick adjustments
+- **Configurable**: Customize all keybindings and behavior
 
-### Workspace Management
-- `alt + 1-9` - Go to workspace (jumps to its monitor)
-- `alt + shift + 1-9` - Move window to workspace
-- `alt + shift + tab` - Move entire workspace to next monitor
+## Setup & Installation
 
-### Layout Management
-- `alt + /` - Cycle tile layouts (horizontal ↔ vertical)
-- `alt + ,` - Switch to accordion layout (one window visible)
-- `alt + f` - Fullscreen (temporary, resets when switching)
-- `alt + shift + f` - macOS native fullscreen
-
-### Window Resizing
-- `alt + -/=` - Shrink/grow focused window by 50px
-
-### Service Mode (alt + shift + semicolon to enter)
-In service mode, you can use these commands without holding alt:
-- `r` - Reset/flatten layout (auto-exits)
-- `f` - Toggle floating/tiling (auto-exits)
-- `backspace` - Close all except current (auto-exits)
-- `esc` - Exit service mode
-
-### Workspace Assignments (Persist After Restart)
-- **Monitor 1:** 1,2,3,Q,W,E,A,S,D
-- **Monitor 2:** 4,5,6,R,T,Y,F,G,H,V,B,N
-- **Monitor 3:** 7,8,9,U,I,O,J,K,L,M
-
-## Quick Setup Tips
-
-1. **Config Location**: `~/.config/aerospace/aerospace.toml`
-2. **Start on Login**: The app should prompt you to enable this on first launch
-3. **Accessibility Permissions**: Grant AeroSpace accessibility permissions in System Settings > Privacy & Security
+1. **Download**: Get AeroSpace from the official website
+2. **Config Location**: `~/.config/aerospace/aerospace.toml`
+3. **Permissions**: Grant accessibility permissions in System Settings > Privacy & Security
+4. **Auto-start**: Enable launch on login when prompted
 
 ## Layout Types
+
 - **Tiles**: Windows arranged in a grid (default)
 - **Accordion**: Only one window visible at a time in a split
 - **Floating**: Windows can overlap and be positioned freely
 
-## Troubleshooting
-- If keybindings don't work, check Accessibility permissions
-- Run `aerospace reload-config` after editing config
-- Check logs: `aerospace list-windows` to debug window issues
+## Workspace Organization
 
-## Useful CLI Commands
+### Default Workspace Assignments
+- **Monitor 1**: 1,2,3,Q,W,E,A,S,D
+- **Monitor 2**: 4,5,6,R,T,Y,F,G,H,V,B,N  
+- **Monitor 3**: 7,8,9,U,I,O,J,K,L,M
+
+### Best Practices
+- Use workspaces to organize different projects or contexts
+- Assign specific apps to specific workspaces for consistency
+- Use the number keys (1-9) for most frequently accessed workspaces
+
+## CLI Commands
+
 ```bash
-aerospace list-workspaces    # List all workspaces
-aerospace list-windows       # List all windows
-aerospace focus --window-id <id>  # Focus specific window
-aerospace move left/right/up/down  # Move windows via CLI
+aerospace list-workspaces              # List all workspaces
+aerospace list-windows                 # List all windows
+aerospace focus --window-id <id>       # Focus specific window
+aerospace move left/right/up/down      # Move windows via CLI
+aerospace reload-config                # Reload configuration
 ```
 
-## Pro Tips
-- Use workspaces to organize different projects or contexts
-- Combine with other tools like Raycast or Alfred for app launching
-- The service mode is great for one-off adjustments without holding modifiers
-- You can customize all keybindings in the config file
+## Configuration Tips
+
+- All keybindings can be customized in the config file
+- Use `aerospace reload-config` after making changes
+- The default modifier is Alt, but can be changed
+- You can create custom workspace assignments
+
+## Troubleshooting
+
+- **Keybindings not working**: Check accessibility permissions
+- **Windows not tiling**: Ensure the app isn't in floating mode
+- **Config changes not applying**: Run `aerospace reload-config`
+- **Debug window issues**: Use `aerospace list-windows`
+
+## Integration Tips
+
+- Combine with Raycast or Alfred for app launching
+- Use service mode for quick one-off adjustments
+- Set up workspace-specific app assignments in config
+- Consider creating custom keybindings for your workflow
+
+---
+
+**Quick shortcuts reference**: See `aerospace-shortcuts.md`

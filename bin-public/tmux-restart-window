@@ -1,0 +1,26 @@
+#!/bin/bash
+
+# Get the target from tmux (passed as argument)
+target="$1"
+
+if [[ -z "$target" ]]; then
+    echo "Usage: tmux-restart-window <session:window>"
+    exit 1
+fi
+
+# Parse session and window
+session="${target%:*}"
+window="${target#*:}"
+
+# Get window info before killing
+window_name=$(command tmux display-message -t "$target" -p '#W')
+window_path=$(command tmux display-message -t "$target" -p '#{pane_current_path}')
+
+# Kill the window
+command tmux kill-window -t "$target"
+
+# Create new window with same name and path
+command tmux new-window -t "$session" -n "$window_name" -c "$window_path"
+
+# Return to window list
+command tmux choose-tree -Zw

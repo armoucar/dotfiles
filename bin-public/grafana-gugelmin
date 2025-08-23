@@ -1,0 +1,2 @@
+#!/bin/bash
+/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome --app="https://oncall.observability.in.devneon.com.br/grafana/d/aaaa6e2c-6ad3-4a89-afba-e5e1973734db/gugelmin-service-metrics"

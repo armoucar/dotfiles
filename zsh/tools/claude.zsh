@@ -21,3 +21,6 @@ alias ccdocs='claude docs'
 alias ccsonnet='claude --model sonnet'
 alias ccopus='claude --model opus'
 alias cchaiku='claude --model claude-3-haiku-20240307'
+
+# Configuration sync alias
+alias claude-sync='~/.oh-my-zsh/custom/claude/setup.zsh'

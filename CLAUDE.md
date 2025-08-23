@@ -89,6 +89,28 @@ Scripts in `bin-public/` must:
 - `_load.zsh`: Main ZSH configuration loader
 - `cli/app/cli.py`: Click CLI entry point (imports may need fixing for missing modules)
 
+## Environment Setup
+
+### Tmux Theme Installation
+
+When setting up this environment on a new machine, install the Catppuccin tmux theme:
+
+```bash
+# Install TPM (Tmux Plugin Manager)
+git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
+
+# Install Catppuccin theme manually (more reliable)
+git clone https://github.com/catppuccin/tmux.git ~/.tmux/plugins/catppuccin
+
+# Source tmux config to apply theme
+tmux source-file ~/.oh-my-zsh/custom/config/tmux.conf
+
+# Kill and restart tmux server for theme to fully apply
+tmux kill-server
+```
+
+The tmux config already includes the necessary Catppuccin mocha theme configuration.
+
 ## Notes
 
 - The project uses `uv` for Python dependency management (not pip or poetry)

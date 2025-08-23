@@ -9,6 +9,7 @@ alias tree='tree -I "__pycache__"'
 alias showpath="echo \$PATH | tr ':' '\n' | sort"
 alias alsg="als --groups"
 alias mcp-inspector="npx @modelcontextprotocol/inspector"
+alias ff="find . \\( -name '*.pyc' -o -name '.venv' -o -name 'tmp' \\) -prune -o -type f -print"
 
 function fg() {
   ignored_folders=(.venv __pycache__ node_modules dist build)
