@@ -6,10 +6,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is a dotfiles repository for managing development tools, scripts, and configurations on macOS. The project structure is organized as a custom oh-my-zsh folder (`~/.oh-my-zsh/custom`) containing:
 
-- **bin-public/**: Executable shell scripts available in PATH
+- **bin/**: Executable shell scripts available in PATH (git-managed)
+- **bin-private/**: Private executable scripts (git-ignored)
 - **cli/**: Python Click application for advanced workflows
 - **config/**: Configuration files for various tools
-- **zsh/**: ZSH configurations organized by category (core, tools, languages, containers, personal, setup)
+- **zsh/**: ZSH configurations organized by category (core, tools, languages, containers, personal)
 - **workflow/**: Documentation for specific workflows (see [Workflow Documentation](#workflow-documentation))
 - **private/**: Git-ignored directory for secrets and private configurations
 
@@ -52,7 +53,7 @@ dot llm                # AI-powered commands
 
 ### Common Git Aliases
 
-Available through bin-public scripts:
+Available through bin scripts:
 
 - `gwip`: Git commit with "--wip-- [skip ci]" message
 - `git-branches-check`: Check status of all branches
@@ -79,7 +80,7 @@ The CLI app (`cli/app/cli.py`) is a Click application with command groups:
 
 ### Executable Scripts
 
-Scripts in `bin-public/` must:
+Scripts in `bin/` must:
 
 - Have execute permissions (`chmod +x`)
 - Use appropriate shebang (#!/bin/bash, #!/usr/bin/env python, etc.)

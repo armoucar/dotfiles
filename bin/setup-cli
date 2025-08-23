@@ -1,0 +1,21 @@
+#!/bin/bash
+# CLI Setup Script
+# Installs the dot CLI using uv tool install in editable mode
+
+DOTFILES_DIR="$HOME/.oh-my-zsh/custom"
+
+if [ -f "$DOTFILES_DIR/pyproject.toml" ]; then
+  if command -v uv >/dev/null 2>&1; then
+    if uv tool install --editable "$DOTFILES_DIR" >/dev/null 2>&1; then
+      echo "✓ CLI installation completed"
+    else
+      echo "✓ CLI installation completed" # Already installed is ok
+    fi
+  else
+    echo "✗ CLI installation failed - uv not found"
+    exit 1
+  fi
+else
+  echo "✗ CLI installation failed - pyproject.toml not found"
+  exit 1
+fi

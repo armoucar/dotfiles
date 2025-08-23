@@ -19,6 +19,7 @@ All docs in this folder should be:
 
 ## Available Guides
 
+- `setup-scripts.md` - complete guide to all dotfiles setup scripts
 - `tmux-cheatsheet.md` - tmux keybindings and commands
 - `aerospace_cheatsheet.md` - aerospace window manager shortcuts
 - `desktops_organization.md` - desktop and workspace management

@@ -1,0 +1,16 @@
+#!/bin/bash
+# ZSH Plugins Setup Script
+# Installs required ZSH plugins
+
+# Clone zsh-autosuggestions plugin if it doesn't exist
+PLUGIN_DIR="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/plugins/zsh-autosuggestions"
+if [ ! -d "$PLUGIN_DIR" ]; then
+  if git clone https://github.com/zsh-users/zsh-autosuggestions "$PLUGIN_DIR" >/dev/null 2>&1; then
+    echo "✓ ZSH plugins installation completed"
+  else
+    echo "✗ ZSH plugins installation failed - git clone error"
+    exit 1
+  fi
+else
+  echo "✓ ZSH plugins already installed"
+fi

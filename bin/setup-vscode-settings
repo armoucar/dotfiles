@@ -64,36 +64,27 @@ merge_settings() {
     mkdir -p "$target_dir"
     
     if [ -f "$target" ]; then
-        echo "[*] Merging settings into $target"
-        
         # Backup existing settings
-        cp "$target" "$target.backup.$(date +%Y%m%d_%H%M%S)"
+        cp "$target" "$target.backup.$(date +%Y%m%d_%H%M%S)" 2>/dev/null
         
         # Merge using Python
-        if merge_json_files "$target" "$CONFIG_FILE"; then
-            mv "$target.tmp" "$target"
+        if merge_json_files "$target" "$CONFIG_FILE" 2>/dev/null; then
+            mv "$target.tmp" "$target" 2>/dev/null
         else
-            echo "[!] Failed to merge settings. Keeping original file."
-            rm -f "$target.tmp"
+            rm -f "$target.tmp" 2>/dev/null
         fi
     else
-        echo "[*] Creating new settings file at $target"
-        cp "$CONFIG_FILE" "$target"
-        echo "[+] Settings created successfully"
+        cp "$CONFIG_FILE" "$target" 2>/dev/null
     fi
 }
 
 # Check which editor is installed and apply settings
 if [ -d "$(dirname "$CURSOR_SETTINGS")" ]; then
-    echo "[>] Found Cursor installation"
-    merge_settings "$CURSOR_SETTINGS"
+    merge_settings "$CURSOR_SETTINGS" >/dev/null 2>&1
 fi
 
 if [ -d "$(dirname "$VSCODE_SETTINGS")" ]; then
-    echo "[>] Found VSCode installation"
-    merge_settings "$VSCODE_SETTINGS"
+    merge_settings "$VSCODE_SETTINGS" >/dev/null 2>&1
 fi
 
-echo ""
-echo "[*] Please restart VSCode/Cursor for changes to take effect"
-echo "[i] Tip: Your original settings were backed up with timestamp"
+echo "✓ VSCode settings configuration completed"

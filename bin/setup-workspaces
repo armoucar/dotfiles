@@ -1,0 +1,26 @@
+#!/bin/bash
+# AeroSpace Workspace Setup Script
+# Distributes workspaces to preferred monitors
+
+# Save current workspace
+INITIAL_WORKSPACE=$(aerospace list-workspaces --focused)
+
+# Monitor 1: 1,2,3,4,5
+for ws in 1 2 3 4 5; do
+    aerospace workspace $ws && aerospace move-workspace-to-monitor 1 >/dev/null 2>&1
+done
+
+# Monitor 3: 6,7,8,9,0
+for ws in 6 7 8 9 0; do
+    aerospace workspace $ws && aerospace move-workspace-to-monitor 3 >/dev/null 2>&1
+done
+
+# Monitor 2: All letters
+for ws in A B D E G I M N O P Q R S T U V W Y; do
+    aerospace workspace $ws && aerospace move-workspace-to-monitor 2 >/dev/null 2>&1
+done
+
+# Return to initial workspace
+aerospace workspace "$INITIAL_WORKSPACE" >/dev/null 2>&1
+
+echo "✓ Workspace configuration completed"

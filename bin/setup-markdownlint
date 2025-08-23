@@ -1,0 +1,14 @@
+#!/bin/bash
+# Markdownlint Configuration Setup Script
+# Copies markdownlint config to user's home directory for global access
+
+DOTFILES_CONFIG="$HOME/.oh-my-zsh/custom/.markdownlint.json"
+GLOBAL_CONFIG="$HOME/.markdownlint.json"
+
+if [ -f "$DOTFILES_CONFIG" ]; then
+    cp "$DOTFILES_CONFIG" "$GLOBAL_CONFIG"
+    echo "✓ Markdownlint configuration synced"
+else
+    echo "✗ Markdownlint configuration failed - config not found"
+    exit 1
+fi

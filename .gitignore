@@ -1,8 +1,7 @@
 plugins/zsh-autosuggestions
 plugins/example
 themes/example*
-bin/tmp
-bin
+bin-private/
 private/*
 !private/keep.zsh
 navi/_*

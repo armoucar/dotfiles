@@ -1,0 +1,89 @@
+#!/bin/bash
+# Full Dotfiles Setup Script
+# Runs all available setup scripts with explanations and user confirmation
+
+set -e
+
+echo "🚀 Full Dotfiles Setup"
+echo "======================"
+echo
+echo "This script will guide you through setting up all components of your dotfiles."
+echo "Each step is optional and will ask for confirmation."
+echo
+
+# Array of setup scripts with descriptions
+declare -a SETUP_SCRIPTS=(
+    "setup-zsh-plugins:Install ZSH plugins (zsh-autosuggestions)"
+    "setup-cli:Install the 'dot' CLI command in editable mode"
+    "setup-tmux:Sync tmux configuration from dotfiles to ~/.tmux.conf"
+    "setup-claude:Configure Claude Code hooks and settings"
+    "setup-markdownlint:Copy markdownlint config to home directory"
+    "setup-chrome-profile:Configure default Chrome profile"
+    "setup-vscode-settings:Sync VSCode/Cursor settings"
+    "setup-workspaces:Configure development workspaces"
+)
+
+# Function to ask for confirmation
+confirm() {
+    local prompt="$1"
+    local response
+    
+    while true; do
+        read -p "$prompt (y/n): " response
+        case $response in
+            [Yy]* ) return 0;;
+            [Nn]* ) return 1;;
+            * ) echo "Please answer yes (y) or no (n).";;
+        esac
+    done
+}
+
+# Function to run a setup script
+run_setup() {
+    local script="$1"
+    
+    if "$script" 2>/dev/null; then
+        return 0
+    else
+        echo "❌ $script failed (exit code $?)"
+        return 1
+    fi
+}
+
+# Main setup loop
+echo "Available setup scripts:"
+echo "------------------------"
+for item in "${SETUP_SCRIPTS[@]}"; do
+    IFS=':' read -r script description <<< "$item"
+    echo "• $script - $description"
+done
+echo
+
+if ! confirm "Run all setup scripts?"; then
+    echo "Setup cancelled."
+    exit 0
+fi
+
+echo
+echo "Running setup scripts..."
+echo "========================"
+
+# Run each setup script
+failed_scripts=()
+for item in "${SETUP_SCRIPTS[@]}"; do
+    IFS=':' read -r script description <<< "$item"
+    if ! run_setup "$script"; then
+        failed_scripts+=("$script")
+    fi
+done
+
+echo
+if [ ${#failed_scripts[@]} -eq 0 ]; then
+    echo "✅ All setup scripts completed successfully"
+else
+    echo "⚠️  Setup completed with ${#failed_scripts[@]} failures: ${failed_scripts[*]}"
+fi
+echo
+echo "Next steps:"
+echo "• Restart your terminal or run 'source ~/.zshrc'"
+echo "• Run individual setup scripts anytime with: setup-<name>"

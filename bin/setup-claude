@@ -1,5 +1,5 @@
-#!/bin/zsh
-# Claude Code Configuration Sync Script
+#!/bin/bash
+# Claude Code Configuration Setup Script
 # Syncs user-specific Claude configuration from dotfiles to ~/.claude
 
 DOTFILES_CLAUDE="$HOME/.oh-my-zsh/custom/.claude"
@@ -60,4 +60,4 @@ cat > "$GLOBAL_CLAUDE/settings.json" << 'EOF'
 }
 EOF
 
-# Script completes silently unless there are errors
+echo "✓ Claude Code configuration synced"

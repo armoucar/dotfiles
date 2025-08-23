@@ -4,7 +4,7 @@ alias e="$EDITOR"
 alias docker="podman"
 
 export PATH=$PATH:$HOME/.oh-my-zsh/custom/bin
-export PATH=$PATH:$HOME/.oh-my-zsh/custom/bin-public
+export PATH=$PATH:$HOME/.oh-my-zsh/custom/bin-private
 
 # Load private files
 for file in $HOME/.oh-my-zsh/custom/private/*.zsh; do
