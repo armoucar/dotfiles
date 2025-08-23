@@ -1,7 +1,15 @@
 {
   "permissions": {
     "allow": [
-      "Bash(gh issue view:*)"
+      "Bash(gh issue view:*)",
+      "mcp__context7__resolve-library-id",
+      "Bash(markdownlint:*)",
+      "Bash(grep:*)",
+      "Bash(command tmux show-options -g bell-action)",
+      "Bash(echo:*)",
+      "Bash(pstree:*)",
+      "Bash(ps:*)",
+      "Bash(command tmux show-environment)"
     ],
     "deny": [],
     "ask": []

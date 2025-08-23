@@ -13,7 +13,8 @@
 ### Why Use Tmux?
 
 - **Persistence**: Sessions survive terminal crashes or disconnections
-- **Remote work**: Perfect for SSH sessions - they stay alive even if connection drops
+- **Remote work**: Perfect for SSH sessions - they stay alive even if
+  connection drops
 - **Portability**: Same environment on any Unix-like system
 - **Scriptability**: Automate complex workspace setups
 - **Session sharing**: Collaborate with others in real-time
@@ -21,12 +22,14 @@
 ## Key Concepts
 
 ### The Prefix Key
+
 - Default: `Ctrl-b` (written as `C-b`)
 - All tmux commands start with the prefix key
 - Press prefix, release, then press the command key
 
 ### Hierarchy
-```
+
+```text
 Server (automatically starts when you run tmux)
   └── Session (workspace for a project)
         └── Window (like browser tabs)
@@ -99,3 +102,4 @@ C-b : resize-pane -D 5         # Resize down by 5
 ---
 
 **Quick shortcuts reference**: See `tmux-shortcuts.md`
+

@@ -12,5 +12,10 @@ function _init_cli() {
   pip install -e $HOME/.oh-my-zsh/custom/cli
 }
 
+function _init_tmux() {
+  $HOME/.oh-my-zsh/custom/setup-tmux.zsh
+}
+
 alias init-dotfiles="_init_dotfiles"
 alias init-cli="_init_cli"
+alias init-tmux="_init_tmux"

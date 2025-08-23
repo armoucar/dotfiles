@@ -31,8 +31,10 @@ set -g allow-rename off
 run '~/.tmux/plugins/catppuccin/catppuccin.tmux'
 
 # Fix hostname bug - force window name display
-set -g window-status-format "#[fg=#{@thm_surface_2},bg=#{@thm_base}] #I #[fg=#{@thm_fg},bg=#{@thm_base}]#W "
-set -g window-status-current-format "#[fg=#{@thm_crust},bg=#{@thm_mauve}] #I #[fg=#{@thm_crust},bg=#{@thm_mauve}]#W "
+set -g window-status-format \
+  "#[fg=#{@thm_surface_2},bg=#{@thm_base}] #I #[fg=#{@thm_fg},bg=#{@thm_base}]#W "
+set -g window-status-current-format \
+  "#[fg=#{@thm_crust},bg=#{@thm_mauve}] #I #[fg=#{@thm_crust},bg=#{@thm_mauve}]#W "
 
 # Status modules
 set -g status-right-length 100
@@ -52,4 +54,5 @@ set -agF status-right "#{E:@catppuccin_status_battery}"
 
 ## Window Names
 
-Use `Ctrl+Space + ,` to rename windows. Names will persist (no hostname display).
+Use `Ctrl+Space + ,` to rename windows. Names will persist (no hostname
+display).

@@ -2,7 +2,9 @@
 
 ## What is AeroSpace?
 
-AeroSpace is a tiling window manager for macOS that automatically arranges windows in a grid layout. It provides keyboard-driven window management similar to i3wm on Linux.
+AeroSpace is a tiling window manager for macOS that automatically arranges
+windows in a grid layout. It provides keyboard-driven window management
+similar to i3wm on Linux.
 
 ## Key Features
 
@@ -16,7 +18,8 @@ AeroSpace is a tiling window manager for macOS that automatically arranges windo
 
 1. **Download**: Get AeroSpace from the official website
 2. **Config Location**: `~/.config/aerospace/aerospace.toml`
-3. **Permissions**: Grant accessibility permissions in System Settings > Privacy & Security
+3. **Permissions**: Grant accessibility permissions in System Settings >
+   Privacy & Security
 4. **Auto-start**: Enable launch on login when prompted
 
 ## Layout Types
@@ -29,10 +32,11 @@ AeroSpace is a tiling window manager for macOS that automatically arranges windo
 
 ### Default Workspace Assignments
 - **Monitor 1**: 1,2,3,Q,W,E,A,S,D
-- **Monitor 2**: 4,5,6,R,T,Y,F,G,H,V,B,N  
+- **Monitor 2**: 4,5,6,R,T,Y,F,G,H,V,B,N
 - **Monitor 3**: 7,8,9,U,I,O,J,K,L,M
 
 ### Best Practices
+
 - Use workspaces to organize different projects or contexts
 - Assign specific apps to specific workspaces for consistency
 - Use the number keys (1-9) for most frequently accessed workspaces
@@ -71,3 +75,4 @@ aerospace reload-config                # Reload configuration
 ---
 
 **Quick shortcuts reference**: See `aerospace-shortcuts.md`
+

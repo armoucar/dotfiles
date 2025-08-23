@@ -3,12 +3,14 @@
 **Prefix**: `C-b` (Ctrl+b)
 
 ## Sessions
+
 - `C-b d` - Detach session
 - `C-b s` - Choose session
 - `C-b $` - Rename session
 - `C-b (` / `)` - Previous/next session
 
 ## Windows
+
 - `C-b c` - Create window
 - `C-b ,` - Rename window
 - `C-b n` / `p` - Next/previous window
@@ -22,6 +24,7 @@
 - `C-b >` - Move window right
 
 ## Panes
+
 - `C-b %` - Split horizontal (left/right)
 - `C-b "` - Split vertical (top/bottom)
 - `C-b Arrow` - Navigate panes
@@ -35,6 +38,7 @@
 - `C-b Space` - Cycle layouts
 
 ## Copy Mode
+
 - `C-b [` - Enter copy mode
 - `C-b PgUp` - Enter copy mode + page up
 - `Space` - Start selection
@@ -43,6 +47,7 @@
 - `Escape` - Exit copy mode
 
 ## Custom Shortcuts
+
 - `C-b r` - Reload config
 - `C-b R` - Restart window
 - `C-b <` - Move window left

@@ -1,6 +1,7 @@
 # CLI Application
 
-This CLI application provides various commands for working with GitHub, Alfred, and Kubernetes operations.
+This CLI application provides various commands for working with GitHub, Alfred,
+and Kubernetes operations.
 
 ## Commands
 
@@ -30,4 +31,5 @@ cli [COMMAND] --help
 ## Documentation
 
 Each command group has its own README file:
+
 - [kubectl Documentation](app/command/kubectl/README.md)

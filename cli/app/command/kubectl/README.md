@@ -1,6 +1,7 @@
 # kubectl - Kubernetes CLI Commands
 
-This module provides convenient commands for interacting with Kubernetes using kubectl.
+This module provides convenient commands for interacting with Kubernetes using
+kubectl.
 
 ## Available Commands
 
@@ -16,11 +17,13 @@ This module provides convenient commands for interacting with Kubernetes using k
 The `pod` command supports two modes:
 
 1. **log** - View logs from pods:
+
    ```bash
    cli kubectl pod NAMESPACE INSTANCE log [--since DURATION]
    ```
 
 2. **exec** - Execute commands in pods:
+
    ```bash
    cli kubectl pod NAMESPACE INSTANCE exec [--command COMMAND]
    ```
