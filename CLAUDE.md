@@ -53,6 +53,7 @@ dot llm                # AI-powered commands
 ### Common Git Aliases
 
 Available through bin-public scripts:
+
 - `gwip`: Git commit with "--wip-- [skip ci]" message
 - `git-branches-check`: Check status of all branches
 - `git-branches-prune`: Clean up old branches
@@ -71,6 +72,7 @@ Available through bin-public scripts:
 ### Python CLI Structure
 
 The CLI app (`cli/app/cli.py`) is a Click application with command groups:
+
 - Commands are organized in `cli/app/command/` subdirectories
 - Each command group may have its own cheatsheet (*.cheat files)
 - Telemetry is conditionally initialized if server is available (checks `/v1/projects`)
@@ -78,6 +80,7 @@ The CLI app (`cli/app/cli.py`) is a Click application with command groups:
 ### Executable Scripts
 
 Scripts in `bin-public/` must:
+
 - Have execute permissions (`chmod +x`)
 - Use appropriate shebang (#!/bin/bash, #!/usr/bin/env python, etc.)
 - Be self-contained or properly source dependencies
@@ -116,19 +119,25 @@ The tmux config already includes the necessary Catppuccin mocha theme configurat
 The `workflow/` directory contains organized documentation for specific workflows and configurations:
 
 ### claude-code/
+
 Claude Code hooks management and configuration workflows. See `workflow/claude-code/CLAUDE.md` for:
+
 - Hook management (Notification, Command Logger, Stop hooks)
 - Audio notification configuration
 - `setup-claude.zsh` integration
 
 ### development/
+
 Development environment setup and configuration. See `workflow/development/CLAUDE.md` for:
+
 - Tmux configuration and theme setup
 - VS Code configuration
 - Development tool workflows
 
 ### tools/
+
 System-level tools and utilities configuration. See `workflow/tools/CLAUDE.md` for:
+
 - AeroSpace window manager setup
 - Desktop organization workflows
 - System productivity tools
@@ -136,7 +145,7 @@ System-level tools and utilities configuration. See `workflow/tools/CLAUDE.md` f
 ## Notes
 
 - The project uses `uv` for Python dependency management (not pip or poetry)
-- Telemetry only initializes if the OpenTelemetry server is running (http://127.0.0.1:6006)
+- Telemetry only initializes if the OpenTelemetry server is running (<http://127.0.0.1:6006>)
 - The `dot` command entry point requires proper package structure (packages = ["cli"] in pyproject.toml)
 - Private keys and secrets should only be placed in the `private/` directory
 - Claude Code configuration is managed through `.claude/` directory and `setup-claude.zsh`

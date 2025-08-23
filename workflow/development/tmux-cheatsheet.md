@@ -102,4 +102,3 @@ C-b : resize-pane -D 5         # Resize down by 5
 ---
 
 **Quick shortcuts reference**: See `tmux-shortcuts.md`
-

@@ -31,6 +31,7 @@ similar to i3wm on Linux.
 ## Workspace Organization
 
 ### Default Workspace Assignments
+
 - **Monitor 1**: 1,2,3,Q,W,E,A,S,D
 - **Monitor 2**: 4,5,6,R,T,Y,F,G,H,V,B,N
 - **Monitor 3**: 7,8,9,U,I,O,J,K,L,M
@@ -75,4 +76,3 @@ aerospace reload-config                # Reload configuration
 ---
 
 **Quick shortcuts reference**: See `aerospace-shortcuts.md`
-

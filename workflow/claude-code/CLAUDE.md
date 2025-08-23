@@ -5,7 +5,9 @@ This directory contains workflows and documentation for managing Claude Code con
 ## Available Documentation
 
 ### hooks-management.md
+
 Complete workflow for managing Claude Code hooks including:
+
 - Current hook types (Notification, Command Logger, Stop)
 - Adding new hooks step-by-step process
 - Hook script structure and best practices

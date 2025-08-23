@@ -60,4 +60,3 @@ use of available tools.
 
 - **Screen a:** None
 - **Screen b:** Spotify
-
