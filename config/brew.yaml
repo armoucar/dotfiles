@@ -1,0 +1,14 @@
+# Homebrew packages configuration
+# Managed by setup-brew script
+
+# Regular packages (brew install)
+packages:
+  - fd
+
+# Cask packages (brew install --cask)
+casks:
+  - font-meslo-lg-nerd-font
+
+# Tap repositories (brew tap)
+taps:
+  - homebrew/cask-fonts

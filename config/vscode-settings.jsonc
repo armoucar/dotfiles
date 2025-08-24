@@ -10,6 +10,9 @@
   "terminal.integrated.inheritEnv": true,
   "terminal.integrated.shellIntegration.enabled": true,
 
+  // Configure Nerd Font for terminal
+  "terminal.integrated.fontFamily": "'MesloLGL Nerd Font'",
+
   // Hide Python cache and bytecode from Explorer and Search
   "files.exclude": {
     "**/__pycache__": true,

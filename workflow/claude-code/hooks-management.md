@@ -107,7 +107,7 @@ Available system sounds in `/System/Library/Sounds/`:
 ### Voice Notifications
 
 - Generated using `generate_notification_voices.py`
-- Stored in `.claude/voice_notifications/[voice]/`
+- Stored in `~/.claude/voice_notifications/[voice]/` (copied from dotfiles)
 - Session-consistent voice mapping via hash
 
 ## Troubleshooting

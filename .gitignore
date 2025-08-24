@@ -7,7 +7,7 @@ private/*
 navi/_*
 tmp/
 config/claude/voice_notifications
-.claude/settings.local.json
+.claude/
 
 ### Python ###
 # Byte-compiled / optimized / DLL files

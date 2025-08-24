@@ -11,10 +11,7 @@ mkdir -p "$GLOBAL_CLAUDE" 2>/dev/null
 # Copy all .claude contents
 cp -r "$DOTFILES_CLAUDE/"* "$GLOBAL_CLAUDE/" 2>/dev/null || true
 
-# Copy voice notifications if they exist
-if [ ! -d "$DOTFILES_CLAUDE/voice_notifications" ]; then
-  echo "⚠️  No voice notifications found - run 'uv run ~/.claude/generate_notification_voices.py' first" >&2
-fi
+# Note: Voice notifications are generated on-demand by the notification handler
 
 # Copy settings.json configuration
 if [ -f "$DOTFILES_CLAUDE/settings.json" ]; then

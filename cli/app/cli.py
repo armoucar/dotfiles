@@ -30,6 +30,7 @@ from cli.app.command.crawl import page
 from cli.app.command.audio import audio
 from cli.app.command.llm import code
 from cli.app.command.tmux import state, claude_start
+from cli.app.command.brew import brew
 from cli.app.telemetry import initialize_telemetry
 
 
@@ -121,6 +122,9 @@ cli.add_command(llm)
 tmux.add_command(state)
 tmux.add_command(claude_start)
 cli.add_command(tmux)
+
+# Add brew command
+cli.add_command(brew)
 
 if __name__ == "__main__":
     cli()

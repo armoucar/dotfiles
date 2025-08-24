@@ -1,21 +1,66 @@
 #!/bin/bash
 # Tmux Configuration Setup Script
-# Syncs tmux configuration from dotfiles to ~/.tmux.conf
+# Syncs tmux configuration and installs theme dependencies
 
 DOTFILES_TMUX="$HOME/.oh-my-zsh/custom/config/tmux.conf"
 GLOBAL_TMUX="$HOME/.tmux.conf"
+TMUX_PLUGINS_DIR="$HOME/.tmux/plugins"
+TPM_DIR="$TMUX_PLUGINS_DIR/tpm"
+CATPPUCCIN_DIR="$TMUX_PLUGINS_DIR/catppuccin"
 
-# Copy tmux configuration
-if [ -f "$DOTFILES_TMUX" ]; then
-  cp "$DOTFILES_TMUX" "$GLOBAL_TMUX"
-  
-  # Reload tmux config if tmux is running
-  if command -v tmux &> /dev/null && tmux list-sessions &> /dev/null; then
-    tmux source-file "$GLOBAL_TMUX" 2>/dev/null
+# Check if tmux is installed
+if ! command -v tmux &> /dev/null; then
+  echo "✗ tmux is not installed"
+  if command -v brew &> /dev/null; then
+    echo "  Install with: brew install tmux"
+  else
+    echo "  Install tmux for your system"
   fi
-  
-  echo "✓ Tmux configuration synced"
-else
-  echo "✗ Tmux configuration failed - config not found"
   exit 1
 fi
+
+# Copy tmux configuration
+if [ ! -f "$DOTFILES_TMUX" ]; then
+  echo "✗ Tmux configuration failed - config not found at $DOTFILES_TMUX"
+  exit 1
+fi
+
+cp "$DOTFILES_TMUX" "$GLOBAL_TMUX" 2>/dev/null || true
+
+# Create plugins directory
+mkdir -p "$TMUX_PLUGINS_DIR"
+
+# Install TPM (Tmux Plugin Manager)
+if [ ! -d "$TPM_DIR" ]; then
+  git clone https://github.com/tmux-plugins/tpm "$TPM_DIR" 2>/dev/null
+  if [ $? -ne 0 ]; then
+    echo "✗ Failed to install TPM"
+    exit 1
+  fi
+fi
+
+# Install Catppuccin theme
+if [ ! -d "$CATPPUCCIN_DIR" ]; then
+  git clone https://github.com/catppuccin/tmux.git "$CATPPUCCIN_DIR" 2>/dev/null
+  if [ $? -ne 0 ]; then
+    echo "✗ Failed to install Catppuccin theme"
+    exit 1
+  fi
+fi
+
+# Reload tmux config if tmux is running
+if tmux list-sessions &> /dev/null; then
+  tmux source-file "$GLOBAL_TMUX" 2>/dev/null
+fi
+
+# Check for Nerd Font (this cannot be automated)
+if ! brew list --cask font-meslo-lg-nerd-font &>/dev/null; then
+  if [[ "$TERM_PROGRAM" == "iTerm.app" ]] || [[ "$TERM_PROGRAM" == "Apple_Terminal" ]]; then
+    echo "⚠️  Install a Nerd Font for proper theme icons: brew install --cask font-meslo-lg-nerd-font"
+    echo "   Then set it as your terminal font in preferences"
+  else
+    echo "⚠️  Install a Nerd Font for proper theme display"
+  fi
+fi
+
+echo "✓ Tmux setup complete"
