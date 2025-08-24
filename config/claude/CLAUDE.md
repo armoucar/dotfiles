@@ -1,0 +1,5 @@
+- Do not add coauthored with claude code to commit messages
+- Pull Requests descriptions should be concise, only with a summary of the changes. Every feature change should be listed, but we shouldn't list any files name or paths.
+- Pull Requests descriptions dont need Test Plans
+- Always execute any tmux command with: `command tmux list-sessions`
+- My aliases are stored in my 'dotfiles' project in /Users/U003877/.oh-my-zsh/custom
