@@ -4,11 +4,21 @@
 
 set -e
 
+# Parse command line arguments
+AUTO_YES=false
+if [[ "$1" == "--yes" ]]; then
+    AUTO_YES=true
+fi
+
 echo "🚀 Full Dotfiles Setup"
 echo "======================"
 echo
-echo "This script will guide you through setting up all components of your dotfiles."
-echo "Each step is optional and will ask for confirmation."
+if [[ "$AUTO_YES" == true ]]; then
+    echo "Running in auto-confirm mode (--yes flag detected)."
+else
+    echo "This script will guide you through setting up all components of your dotfiles."
+    echo "Each step is optional and will ask for confirmation."
+fi
 echo
 
 # Array of setup scripts with descriptions
@@ -59,7 +69,7 @@ for item in "${SETUP_SCRIPTS[@]}"; do
 done
 echo
 
-if ! confirm "Run all setup scripts?"; then
+if [[ "$AUTO_YES" == false ]] && ! confirm "Run all setup scripts?"; then
     echo "Setup cancelled."
     exit 0
 fi
