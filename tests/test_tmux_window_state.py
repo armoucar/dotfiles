@@ -666,45 +666,6 @@ class TestStateManagement:
         assert "Loading tmux window state" in result.output
         assert "State restored" in result.output
 
-    def test_cleanup_command(self, mock_subprocess_run, patch_claude_map_file):
-        """Test cleanup command."""
-        from click.testing import CliRunner
-        from cli.app.command.tmux.state import cleanup
-
-        # Set up some stale entries
-        content = """main-session:%1:550e8400-e29b-41d4-a716-446655440000
-stale-session:%99:550e8400-e29b-41d4-a716-446655440001"""
-        patch_claude_map_file.write_text(content)
-
-        runner = CliRunner()
-        result = runner.invoke(cleanup)
-        assert result.exit_code == 0
-        assert "Removed" in result.output
-
-    def test_show_command_no_state(self, patch_state_file):
-        """Test show command when no state exists."""
-        from click.testing import CliRunner
-        from cli.app.command.tmux.state import show
-
-        runner = CliRunner()
-        result = runner.invoke(show)
-        assert result.exit_code == 0
-        assert "No saved state" in result.output
-
-    def test_show_command_with_state(self, patch_state_file, sample_state_json):
-        """Test show command with existing state."""
-        from click.testing import CliRunner
-        from cli.app.command.tmux.state import show
-
-        patch_state_file.write_text(json.dumps(sample_state_json, indent=2))
-
-        runner = CliRunner()
-        result = runner.invoke(show)
-        assert result.exit_code == 0
-        # Should output the JSON content
-        assert "created_at" in result.output
-        assert "sessions" in result.output
-
     @patch("cli.app.command.tmux.state.datetime")
     def test_save_atomic_file_operations(
         self,

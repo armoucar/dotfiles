@@ -10,6 +10,7 @@ import click
 
 from .models import ClaudeBinding, Session, State, Window
 from .utils import (
+    CLAUDE_MAP_FILE,  # noqa: F401 - needed for test patching
     STATE_FILE,
     clean_claude_map,
     create_session_if_needed,
@@ -203,19 +204,3 @@ def load():
         if not tmux_ok("switch-client", "-t", target):
             tmux_ok("attach-session", "-t", target)
     click.echo(f"State restored from {STATE_FILE}")
-
-
-@state.command()
-def cleanup():
-    """Remove stale Claude pane mappings."""
-    removed = clean_claude_map()
-    click.echo(f"Removed {removed} stale mapping(s)")
-
-
-@state.command()
-def show():
-    """Print saved state JSON (if any)."""
-    if STATE_FILE.exists():
-        click.echo(STATE_FILE.read_text())
-    else:
-        click.echo(f"No saved state at {STATE_FILE}")
