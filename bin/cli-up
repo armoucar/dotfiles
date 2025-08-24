@@ -1,7 +1,12 @@
 #!/bin/bash
+# CLI upgrade script - uses uv tool to upgrade the dot CLI
 
-if pipx list | grep -q "cli"; then
-    pipx upgrade cli
+DOTFILES_DIR="$HOME/.oh-my-zsh/custom"
+
+if command -v uv >/dev/null 2>&1; then
+    uv tool install --editable "$DOTFILES_DIR" --force >/dev/null 2>&1
+    echo "✓ CLI upgraded successfully"
 else
-    pipx install "$HOME/.oh-my-zsh/custom" --force
+    echo "✗ uv not found - cannot upgrade CLI"
+    exit 1
 fi

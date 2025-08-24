@@ -8,7 +8,7 @@ if [ -f "$DOTFILES_DIR/pyproject.toml" ]; then
   if command -v uv >/dev/null 2>&1; then
     # Force reinstall to pick up structural changes
     uv tool uninstall dot >/dev/null 2>&1 || true
-    if uv tool install --editable "$DOTFILES_DIR" >/dev/null 2>&1; then
+    if uv tool install --editable "$DOTFILES_DIR" --force >/dev/null 2>&1; then
       echo "✓ CLI installation completed"
     else
       echo "✗ CLI installation failed - uv tool install error"
