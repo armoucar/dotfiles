@@ -3,6 +3,7 @@
 import shlex
 import subprocess
 import sys
+import time
 from datetime import datetime
 from typing import Dict, List, Tuple
 
@@ -162,9 +163,18 @@ def load():
                     "send-keys",
                     "-t",
                     f"{sess.name}:{first_index}",
+                    "clear",
+                    "Enter",
+                )
+                time.sleep(0.05)  # Small delay after clear
+                tmux(
+                    "send-keys",
+                    "-t",
+                    f"{sess.name}:{first_index}",
                     f"cd {shlex.quote(first.path)}",
                     "Enter",
                 )
+                time.sleep(0.1)  # Small delay after cd command
         except subprocess.CalledProcessError:
             pass  # Session might not exist yet or other issue
 
@@ -187,6 +197,15 @@ def load():
             # If Claude bound to this window, resume it targeting by window-id
             uuid = claude_map.get((sess.name, w.name, w.path, occ))
             if uuid:
+                time.sleep(0.1)  # Small delay before claude command
+                tmux(
+                    "send-keys",
+                    "-t",
+                    wid,
+                    "clear",
+                    "Enter",
+                )
+                time.sleep(0.05)  # Small delay after clear
                 tmux(
                     "send-keys",
                     "-t",

@@ -21,14 +21,12 @@ LETTERS="A B D E G I M N O P Q R S T U V W Y"
 case $MONITOR_COUNT in
     1)
         # Single monitor: all workspaces go to monitor 1
-        echo "Detected 1 monitor - configuring all workspaces for single display"
         for ws in $NUMBERS $LETTERS; do
             aerospace workspace $ws && aerospace move-workspace-to-monitor 1 >/dev/null 2>&1
         done
         ;;
     2)
         # Two monitors: numbers to monitor 1, letters to monitor 2  
-        echo "Detected 2 monitors - numbers to monitor 1, letters to monitor 2"
         for ws in $NUMBERS; do
             aerospace workspace $ws && aerospace move-workspace-to-monitor 1 >/dev/null 2>&1
         done
@@ -38,7 +36,6 @@ case $MONITOR_COUNT in
         ;;
     3)
         # Three monitors: 1-5 to monitor 1, 6-0 to monitor 3, letters to monitor 2
-        echo "Detected 3 monitors - using optimal 3-monitor layout"
         for ws in 1 2 3 4 5; do
             aerospace workspace $ws && aerospace move-workspace-to-monitor 1 >/dev/null 2>&1
         done
