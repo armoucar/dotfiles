@@ -36,12 +36,16 @@ def main() -> int:
     # Remove any existing mapping for this pane and add the new one
     lines = []
     if claude_map.exists():
-        for line in claude_map.read_text().splitlines():
-            if not line.strip():
-                continue
-            if line.startswith(f"{session}:{pane_id}:"):
-                continue
-            lines.append(line)
+        try:
+            for line in claude_map.read_text().splitlines():
+                if not line.strip():
+                    continue
+                if line.startswith(f"{session}:{pane_id}:"):
+                    continue
+                lines.append(line)
+        except (UnicodeDecodeError, IOError):
+            # Handle corrupted file by starting fresh
+            lines = []
     lines.append(f"{session}:{pane_id}:{uuid}")
     tmp = claude_map.with_suffix(".tmp")
     tmp.write_text("\n".join(lines) + "\n")

@@ -1,0 +1,37 @@
+#!/bin/bash
+
+# test-tmux-state - Run tests for tmux-claude state management
+# Usage: test-tmux-state [pytest-args...]
+
+set -e
+
+cd "$(dirname "$0")/.."
+
+echo "Running tmux-claude state management tests..."
+echo "=============================================="
+
+# Check if pytest is available
+if ! command -v pytest &> /dev/null; then
+    echo "❌ pytest not found. Installing dependencies..."
+    uv sync
+fi
+
+# Default args if none provided
+if [ $# -eq 0 ]; then
+    set -- "-v" "--tb=short"
+fi
+
+# Run the tests
+pytest "$@" tests/
+
+echo ""
+echo "✅ Tests completed!"
+echo ""
+echo "Available test markers:"
+echo "  -m integration  # Run integration tests (may require tmux)"
+echo "  -m \"not slow\"   # Skip slow tests"
+echo ""
+echo "Example usage:"
+echo "  test-tmux-state -v"
+echo "  test-tmux-state -k test_save_state"
+echo "  test-tmux-state -m \"not integration\""

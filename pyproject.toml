@@ -19,6 +19,8 @@ dependencies = [
   "python-dateutil<3.0.0.0,>=2.9.0.post0",
   "pandas<3.0.0,>=2.3.1",
   "httpx>=0.28.1",
+  "pytest<9.0.0,>=8.3.0",
+  "pytest-mock<4.0.0,>=3.14.0",
 ]
 readme = "cli/README.md"
 
@@ -32,3 +34,18 @@ packages = ["cli"]
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "-v",
+    "--tb=short",
+    "--strict-markers",
+]
+markers = [
+    "integration: marks tests as integration tests (may require tmux)",
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+]
