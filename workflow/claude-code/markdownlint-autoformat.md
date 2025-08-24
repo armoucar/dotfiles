@@ -64,7 +64,7 @@ This ensures:
 
 ### Project Files
 
-- **Location**: Within `/Users/U003877/.oh-my-zsh/custom/`
+- **Location**: Within `$HOME/.oh-my-zsh/custom/`
 - **Config**: Uses project's `.markdownlint.json`
 - **Example**: `workflow/claude-code/hooks-management.md`
 
@@ -72,7 +72,7 @@ This ensures:
 
 - **Location**: Outside the project (e.g., `~/.claude/commands/`)
 - **Config**: Uses `$HOME/.markdownlint.json`
-- **Example**: `/Users/U003877/.claude/commands/c-tmux-command.md`
+- **Example**: `$HOME/.claude/commands/c-tmux-command.md`
 
 ## Setup Requirements
 

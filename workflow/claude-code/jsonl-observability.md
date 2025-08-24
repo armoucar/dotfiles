@@ -16,7 +16,7 @@ Each line in `.claude/command.log` is a complete JSON object with the following 
   "session_id": "session_abc123",
   "hook_event_name": "PreToolUse",
   "tool_name": "Edit",
-  "cwd": "/Users/U003877/project",
+  "cwd": "$HOME/project",
   "transcript_path": "/path/to/transcript.md",
   "tool_input": {...},
   "metadata": {
