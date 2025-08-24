@@ -29,6 +29,7 @@ from cli.app.command.alfred import (
 from cli.app.command.crawl import page
 from cli.app.command.audio import audio
 from cli.app.command.llm import code
+from cli.app.command.tmux import state, claude_start
 from cli.app.telemetry import initialize_telemetry
 
 
@@ -72,6 +73,12 @@ def llm():
     pass
 
 
+@click.group()
+def tmux():
+    """Tmux session and window management commands."""
+    pass
+
+
 # Add git commands to git group
 git.add_command(prs_check)
 git.add_command(new_pr)
@@ -109,6 +116,11 @@ cli.add_command(audio)
 # Add all commands to the llm group
 llm.add_command(code)
 cli.add_command(llm)
+
+# Add all commands to the tmux group
+tmux.add_command(state)
+tmux.add_command(claude_start)
+cli.add_command(tmux)
 
 if __name__ == "__main__":
     cli()

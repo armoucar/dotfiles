@@ -3,7 +3,6 @@
 import json
 from pathlib import Path
 from subprocess import CompletedProcess
-from typing import Dict, List
 from unittest.mock import Mock
 
 import pytest
@@ -105,61 +104,9 @@ def mock_uuid4(mocker):
 
 
 @pytest.fixture
-def mock_datetime_now():
-    """Mock datetime.now for predictable timestamps by patching script_globals directly."""
-    # Import script_globals from the test module
-    from tests.test_tmux_window_state import script_globals
-
-    mock_datetime = Mock()
-    mock_datetime.isoformat.return_value = "2025-08-24T12:00:00"
-
-    # Create a mock datetime class with a now method
-    mock_datetime_class = Mock()
-    mock_datetime_class.now.return_value = mock_datetime
-
-    original = script_globals.get("datetime")
-    script_globals["datetime"] = mock_datetime_class
-
-    yield mock_datetime_class
-
-    # Restore original
-    if original:
-        script_globals["datetime"] = original
-
-
-@pytest.fixture
 def mock_os_environ(mocker):
     """Mock os.environ with TMUX set."""
     return mocker.patch.dict("os.environ", {"TMUX": "/tmp/tmux-1000/default,12345,0"})
-
-
-class TmuxCommandBuilder:
-    """Helper class to build complex tmux command responses."""
-
-    @staticmethod
-    def list_windows_format(sessions_data: Dict[str, List[Dict]]) -> str:
-        """Build list-windows -a output from structured data."""
-        lines = []
-        for session_name, windows in sessions_data.items():
-            for window in windows:
-                line = f"{session_name}\t{window['index']}\t{window['name']}\t{window['path']}"
-                lines.append(line)
-        return "\n".join(lines) + "\n"
-
-    @staticmethod
-    def list_panes_format(pane_data: List[Dict]) -> str:
-        """Build list-panes -a output from structured data."""
-        lines = []
-        for pane in pane_data:
-            line = f"{pane['session']}:{pane['pane_id']}"
-            lines.append(line)
-        return "\n".join(lines) + "\n"
-
-
-@pytest.fixture
-def tmux_builder():
-    """Provide TmuxCommandBuilder for tests."""
-    return TmuxCommandBuilder
 
 
 @pytest.fixture
@@ -173,18 +120,6 @@ def mock_failed_subprocess_run(mocker):
         return CompletedProcess(cmd, 0, "", "")
 
     return mocker.patch("subprocess.run", side_effect=mock_run)
-
-
-@pytest.fixture
-def claude_map_with_stale_entries(tmp_path):
-    """Create a Claude map with some stale entries."""
-    content = """main-session:%1:550e8400-e29b-41d4-a716-446655440000
-old-session:%2:550e8400-e29b-41d4-a716-446655440001
-main-session:%3:550e8400-e29b-41d4-a716-446655440002
-deleted-session:%4:550e8400-e29b-41d4-a716-446655440003"""
-    claude_map = tmp_path / ".tmux-claude-map"
-    claude_map.write_text(content)
-    return claude_map
 
 
 @pytest.fixture
@@ -204,9 +139,3 @@ def incomplete_state_json():
         "current_window_index": None,
         "claude": [],
     }
-
-
-@pytest.fixture
-def corrupted_state_json():
-    """Corrupted JSON that should trigger error handling."""
-    return '{"created_at": "2025-08-24T12:00:00", "sessions": [{'

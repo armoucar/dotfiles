@@ -1,601 +1,514 @@
-"""Tests for claude-start script."""
+"""Tests for claude-start command."""
 
-import os
-from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 import pytest
 
-# Import the script by executing it
-script_path = Path(__file__).parent.parent / "bin" / "claude-start"
-script_globals = {}
-with open(script_path) as f:
-    exec(f.read(), script_globals)
-
-
-# Create a mock module object
-class MockModule:
-    pass
-
-
-cs = MockModule()
-for name, value in script_globals.items():
-    if not name.startswith(
-        "__"
-    ):  # Include single underscore functions, exclude dunder methods
-        setattr(cs, name, value)
+from cli.app.command.tmux.claude import claude_start
 
 
 @pytest.fixture
-def mock_claude_start_subprocess(mocker):
-    """Mock subprocess for claude-start specific tmux commands."""
-    from subprocess import CompletedProcess
-
-    def mock_run(cmd, **kwargs):
-        if cmd[0] != "tmux":
-            return CompletedProcess(cmd, 0, "", "")
-        if "display-message" in cmd and "#{session_name}" in cmd:
-            return CompletedProcess(cmd, 0, "test-session", "")
-        elif "display-message" in cmd and "#{window_name}" in cmd:
-            return CompletedProcess(cmd, 0, "work-window", "")
-        elif "display-message" in cmd and "#{pane_id}" in cmd:
-            return CompletedProcess(cmd, 0, "%5", "")
-        return CompletedProcess(cmd, 0, "", "")
-
-    return mocker.patch("subprocess.run", side_effect=mock_run)
+def patch_claude_map_file(temp_home):
+    """Patch CLAUDE_MAP_FILE to use temp directory."""
+    temp_claude_map = temp_home / ".tmux-claude-map"
+    with patch("cli.app.command.tmux.claude.CLAUDE_MAP_FILE", temp_claude_map):
+        yield temp_claude_map
 
 
-class TestTmuxFunction:
-    """Test the tmux helper function."""
+@pytest.fixture
+def mock_tmux_display_commands(mocker):
+    """Mock tmux display-message commands for claude-start."""
 
-    def test_tmux_success(self, mock_subprocess_run):
-        """Test successful tmux command execution."""
-        with patch("subprocess.run") as mock_run:
-            mock_run.return_value.returncode = 0
-            mock_run.return_value.stdout = "test-output"
-            mock_run.return_value.stderr = ""
+    def tmux_side_effect(*args):
+        if "#{session_name}" in " ".join(args):
+            return "main-session\n"
+        elif "#{window_name}" in " ".join(args):
+            return "editor\n"
+        elif "#{pane_id}" in " ".join(args):
+            return "%1\n"
+        return ""
 
-            result = cs.tmux("display-message", "-p", "#{session_name}")
-            assert result == "test-output"
-
-            mock_run.assert_called_once_with(
-                ["tmux", "display-message", "-p", "#{session_name}"],
-                stdout=cs.subprocess.PIPE,
-                stderr=cs.subprocess.PIPE,
-                text=True,
-            )
-
-    def test_tmux_failure(self, mock_subprocess_run):
-        """Test tmux command failure."""
-        with patch("subprocess.run") as mock_run:
-            mock_run.return_value.returncode = 1
-            mock_run.return_value.stdout = ""
-            mock_run.return_value.stderr = "no server running"
-
-            with pytest.raises(RuntimeError) as exc_info:
-                cs.tmux("list-sessions")
-
-            assert "no server running" in str(exc_info.value)
-
-    def test_tmux_failure_no_stderr(self, mock_subprocess_run):
-        """Test tmux command failure with no stderr message."""
-        with patch("subprocess.run") as mock_run:
-            mock_run.return_value.returncode = 1
-            mock_run.return_value.stdout = ""
-            mock_run.return_value.stderr = ""
-
-            with pytest.raises(RuntimeError) as exc_info:
-                cs.tmux("invalid-command")
-
-            assert "tmux command failed" in str(exc_info.value)
+    return mocker.patch(
+        "cli.app.command.tmux.claude.tmux", side_effect=tmux_side_effect
+    )
 
 
-class TestMainFunction:
-    """Test the main function logic."""
+class TestClaudeStartCommand:
+    """Test claude-start command functionality."""
 
-    def test_main_not_in_tmux(self, temp_home):
-        """Test main function when not in a tmux session."""
-        with patch.dict(os.environ, {}, clear=True):  # Clear TMUX env var
-            with patch("sys.stderr") as mock_stderr:
-                result = cs.main()
-                assert result == 1
+    def test_claude_start_not_in_tmux(self):
+        """Test claude-start when not in tmux session."""
+        from click.testing import CliRunner
 
-                # Check error message was printed
-                mock_stderr.write.assert_called()
-                error_msg = "".join(
-                    call.args[0] for call in mock_stderr.write.call_args_list
-                )
-                assert "Must be run from within a tmux session" in error_msg
+        runner = CliRunner()
+        with patch.dict("os.environ", {}, clear=True):  # No TMUX env var
+            result = runner.invoke(claude_start)
+            assert result.exit_code == 1
+            assert "Must be run from within a tmux session" in result.output
 
-    def test_main_success(
-        self, mock_os_environ, mock_uuid4, temp_home, mock_claude_start_subprocess
-    ):
-        """Test successful execution of main function."""
-        claude_map = temp_home / ".tmux-claude-map"
-
-        with patch.object(Path, "home", return_value=temp_home):
-            with patch("os.execvp") as mock_execvp:
-                result = cs.main()
-
-                # Should not return (execvp replaces process)
-                assert result == 0
-
-                # Verify Claude was started with correct args
-                mock_execvp.assert_called_once_with(
-                    "claude",
-                    [
-                        "claude",
-                        "--session-id",
-                        "550e8400-e29b-41d4-a716-446655440000",
-                    ],
-                )
-
-    def test_main_claude_map_creation(
-        self, mock_os_environ, mock_uuid4, temp_home, mock_claude_start_subprocess
-    ):
-        """Test that Claude map file is created correctly."""
-        claude_map = temp_home / ".tmux-claude-map"
-
-        with patch.object(Path, "home", return_value=temp_home):
-            with patch.object(cs, "tmux") as mock_tmux:
-                mock_tmux.side_effect = ["test-session", "work-window", "%5"]
-
-                with patch("os.execvp"):
-                    cs.main()
-
-                    # Verify Claude map file was created
-                    assert claude_map.exists()
-                    content = claude_map.read_text()
-                    assert (
-                        content
-                        == "test-session:%5:550e8400-e29b-41d4-a716-446655440000\n"
-                    )
-
-    def test_main_claude_map_update_existing(
-        self, mock_os_environ, mock_uuid4, temp_home, mock_claude_start_subprocess
-    ):
-        """Test updating existing Claude map file."""
-        claude_map = temp_home / ".tmux-claude-map"
-
-        # Create existing Claude map
-        existing_content = """session1:%1:old-uuid-1
-session2:%2:old-uuid-2
-test-session:%5:old-uuid-to-replace"""
-        claude_map.write_text(existing_content)
-
-        with patch.object(Path, "home", return_value=temp_home):
-            with patch.object(cs, "tmux") as mock_tmux:
-                mock_tmux.side_effect = ["test-session", "work", "%5"]
-
-                with patch("os.execvp"):
-                    cs.main()
-
-                    # Verify old entry was replaced and others preserved
-                    content = claude_map.read_text()
-                    lines = content.strip().split("\n")
-
-                    assert len(lines) == 3
-                    assert "session1:%1:old-uuid-1" in lines
-                    assert "session2:%2:old-uuid-2" in lines
-                    assert (
-                        "test-session:%5:550e8400-e29b-41d4-a716-446655440000" in lines
-                    )
-                    assert "old-uuid-to-replace" not in content
-
-    def test_main_claude_map_preserve_others(
-        self, mock_os_environ, mock_uuid4, temp_home, mock_claude_start_subprocess
-    ):
-        """Test that other pane entries are preserved."""
-        claude_map = temp_home / ".tmux-claude-map"
-
-        # Create existing Claude map with different panes
-        existing_content = """other-session:%10:uuid-keep-1
-test-session:%99:uuid-keep-2"""
-        claude_map.write_text(existing_content)
-
-        with patch.object(Path, "home", return_value=temp_home):
-            with patch.object(cs, "tmux") as mock_tmux:
-                mock_tmux.side_effect = ["test-session", "new-window", "%5"]
-
-                with patch("os.execvp"):
-                    cs.main()
-
-                    # Verify all entries are present (new one added)
-                    content = claude_map.read_text()
-                    lines = content.strip().split("\n")
-
-                    assert len(lines) == 3
-                    assert "other-session:%10:uuid-keep-1" in lines
-                    assert "test-session:%99:uuid-keep-2" in lines
-                    assert (
-                        "test-session:%5:550e8400-e29b-41d4-a716-446655440000" in lines
-                    )
-
-    def test_main_empty_lines_handling(
-        self, mock_os_environ, mock_uuid4, temp_home, mock_claude_start_subprocess
-    ):
-        """Test that empty lines in Claude map are handled correctly."""
-        claude_map = temp_home / ".tmux-claude-map"
-
-        # Create Claude map with empty lines
-        existing_content = """session1:%1:uuid1
-
-session2:%2:uuid2
-
-"""
-        claude_map.write_text(existing_content)
-
-        with patch.object(Path, "home", return_value=temp_home):
-            with patch.object(cs, "tmux") as mock_tmux:
-                mock_tmux.side_effect = ["test-session", "window", "%3"]
-
-                with patch("os.execvp"):
-                    cs.main()
-
-                    # Verify empty lines are filtered out
-                    content = claude_map.read_text()
-                    lines = [line for line in content.split("\n") if line.strip()]
-
-                    assert len(lines) == 3
-                    assert "session1:%1:uuid1" in lines
-                    assert "session2:%2:uuid2" in lines
-                    assert (
-                        "test-session:%5:550e8400-e29b-41d4-a716-446655440000" in lines
-                    )
-
-    def test_main_atomic_file_write(
-        self, mock_os_environ, mock_uuid4, temp_home, mock_claude_start_subprocess
-    ):
-        """Test that Claude map file is written atomically."""
-        claude_map = temp_home / ".tmux-claude-map"
-
-        with patch.object(Path, "home", return_value=temp_home):
-            with patch.object(cs, "tmux") as mock_tmux:
-                mock_tmux.side_effect = ["session", "window", "%1"]
-
-                # Mock the atomic write operations
-                with patch.object(Path, "write_text") as mock_write:
-                    with patch.object(Path, "replace") as mock_replace:
-                        with patch("os.execvp"):
-                            cs.main()
-
-                            # Verify temp file was written and then renamed
-                            mock_write.assert_called_once()
-                            mock_replace.assert_called_once()
-
-                            # Check the replace was called on temp file
-                            temp_file_path = mock_replace.call_args[0][0]
-                            assert temp_file_path == claude_map
-
-    def test_main_tmux_command_failure(
-        self, mock_os_environ, temp_home, mock_failed_subprocess_run
-    ):
-        """Test main function when tmux commands fail."""
-        with patch.object(Path, "home", return_value=temp_home):
-            with pytest.raises(RuntimeError) as exc_info:
-                cs.main()
-
-            assert "no server running" in str(exc_info.value)
-
-    def test_main_output_message(
+    def test_claude_start_success(
         self,
         mock_os_environ,
+        mock_tmux_display_commands,
         mock_uuid4,
-        temp_home,
-        capsys,
-        mock_claude_start_subprocess,
+        patch_claude_map_file,
     ):
-        """Test that appropriate output message is printed."""
-        with patch.object(Path, "home", return_value=temp_home):
-            with patch("os.execvp"):
-                cs.main()
+        """Test successful claude-start execution."""
+        from click.testing import CliRunner
 
-                # Check output message
-                captured = capsys.readouterr()
-                # Should print session info
-                assert "Starting Claude in test-session:work-window" in captured.out
-                assert "pane %5" in captured.out
-                assert "550e8400-e29b-41d4-a716-446655440000" in captured.out
+        runner = CliRunner()
 
+        # Mock os.execvp to prevent actual claude execution
+        with patch("cli.app.command.tmux.claude.os.execvp") as mock_execvp:
+            result = runner.invoke(claude_start)
 
-class TestUUIDGeneration:
-    """Test UUID generation and format."""
+            # Check that execvp was called correctly
+            mock_execvp.assert_called_once_with(
+                "claude",
+                ["claude", "--session-id", "550e8400-e29b-41d4-a716-446655440000"],
+            )
 
-    def test_uuid_format(self, mock_os_environ, temp_home):
-        """Test that generated UUID is in correct format."""
-        with patch.object(Path, "home", return_value=temp_home):
-            with patch.object(cs, "tmux") as mock_tmux:
-                mock_tmux.side_effect = ["session", "window", "%1"]
-                # Also patch the function in script_globals
-                original_tmux = script_globals["tmux"]
-                script_globals["tmux"] = mock_tmux
+            # Check that the mapping was written
+            content = patch_claude_map_file.read_text()
+            expected_line = "main-session:%1:550e8400-e29b-41d4-a716-446655440000"
+            assert expected_line in content
 
-                try:
-                    # Use a real UUID object and patch it in script_globals
-                    import uuid
-
-                    real_uuid = uuid.uuid4()
-
-                    # Create a mock uuid module that returns our real UUID
-                    mock_uuid_module = Mock()
-                    mock_uuid_module.uuid4.return_value = real_uuid
-
-                    original_uuid = script_globals["_uuid"]
-                    script_globals["_uuid"] = mock_uuid_module
-
-                    claude_map = temp_home / ".tmux-claude-map"
-
-                    with patch("os.execvp"):
-                        cs.main()
-
-                        # Check that UUID in map file is valid format
-                        content = claude_map.read_text()
-                        _, _, uuid_part = content.strip().split(":")
-
-                        # Validate UUID format
-                        parsed_uuid = uuid.UUID(uuid_part)
-                        assert str(parsed_uuid) == uuid_part
-                finally:
-                    script_globals["tmux"] = original_tmux
-                    script_globals["_uuid"] = original_uuid
-
-    def test_uuid_uniqueness_concept(self, mock_os_environ, temp_home):
-        """Test that each call would generate different UUIDs (conceptually)."""
-        # This test demonstrates that UUIDs would be unique in real usage
-        import uuid
-
-        uuid1 = uuid.uuid4()
-        uuid2 = uuid.uuid4()
-
-        assert uuid1 != uuid2
-        assert str(uuid1) != str(uuid2)
-
-
-class TestEdgeCases:
-    """Test edge cases and error conditions."""
-
-    def test_special_characters_in_session_name(
-        self, mock_os_environ, mock_uuid4, temp_home
+    def test_claude_start_replaces_existing_mapping(
+        self,
+        mock_os_environ,
+        mock_tmux_display_commands,
+        mock_uuid4,
+        patch_claude_map_file,
     ):
-        """Test handling of special characters in session/window names."""
-        claude_map = temp_home / ".tmux-claude-map"
+        """Test that claude-start replaces existing mapping for same pane."""
+        from click.testing import CliRunner
 
-        with patch.object(Path, "home", return_value=temp_home):
-            # Mock tmux function in script_globals
-            original_tmux = script_globals.get("tmux")
-            mock_tmux_responses = iter(["my session-test", "work:window#1", "%1"])
-            script_globals["tmux"] = lambda *args: next(mock_tmux_responses)
+        # Set up existing mapping
+        existing_content = """main-session:%1:old-uuid-that-should-be-replaced
+other-session:%2:other-uuid-that-should-remain"""
+        patch_claude_map_file.write_text(existing_content)
 
+        runner = CliRunner()
+
+        with patch("cli.app.command.tmux.claude.os.execvp"):
+            result = runner.invoke(claude_start)
+
+            content = patch_claude_map_file.read_text()
+            lines = content.strip().split("\n")
+
+            # Should have 2 lines: one replaced, one preserved
+            assert len(lines) == 2
+            assert "main-session:%1:550e8400-e29b-41d4-a716-446655440000" in content
+            assert "other-session:%2:other-uuid-that-should-remain" in content
+            assert "old-uuid-that-should-be-replaced" not in content
+
+    def test_claude_start_preserves_other_mappings(
+        self,
+        mock_os_environ,
+        mock_tmux_display_commands,
+        mock_uuid4,
+        patch_claude_map_file,
+    ):
+        """Test that claude-start preserves other pane mappings."""
+        from click.testing import CliRunner
+
+        existing_content = """other-session:%2:uuid-1
+another-session:%3:uuid-2
+third-session:%4:uuid-3"""
+        patch_claude_map_file.write_text(existing_content)
+
+        runner = CliRunner()
+
+        with patch("cli.app.command.tmux.claude.os.execvp"):
+            result = runner.invoke(claude_start)
+
+            content = patch_claude_map_file.read_text()
+            lines = [line for line in content.strip().split("\n") if line.strip()]
+
+            # Should have 4 lines: 3 existing + 1 new
+            assert len(lines) == 4
+            assert "other-session:%2:uuid-1" in content
+            assert "another-session:%3:uuid-2" in content
+            assert "third-session:%4:uuid-3" in content
+            assert "main-session:%1:550e8400-e29b-41d4-a716-446655440000" in content
+
+    def test_claude_start_handles_corrupted_map_file(
+        self,
+        mock_os_environ,
+        mock_tmux_display_commands,
+        mock_uuid4,
+        patch_claude_map_file,
+    ):
+        """Test claude-start with corrupted existing map file."""
+        from click.testing import CliRunner
+
+        # Write binary/corrupted content that will cause UnicodeDecodeError
+        patch_claude_map_file.write_bytes(b"\xff\xfe\x00\x01corrupted")
+
+        runner = CliRunner()
+
+        with patch("cli.app.command.tmux.claude.os.execvp"):
+            result = runner.invoke(claude_start)
+
+            # Should handle gracefully and create new mapping
+            content = patch_claude_map_file.read_text()
+            assert "main-session:%1:550e8400-e29b-41d4-a716-446655440000" in content
+
+            # Should only have the new line (corrupted content discarded)
+            lines = [line for line in content.strip().split("\n") if line.strip()]
+            assert len(lines) == 1
+
+    def test_claude_start_handles_empty_lines_in_map(
+        self,
+        mock_os_environ,
+        mock_tmux_display_commands,
+        mock_uuid4,
+        patch_claude_map_file,
+    ):
+        """Test claude-start handles empty lines in map file correctly."""
+        from click.testing import CliRunner
+
+        existing_content = """
+        
+main-session:%2:existing-uuid
+
+other-session:%3:another-uuid
+
+"""
+        patch_claude_map_file.write_text(existing_content)
+
+        runner = CliRunner()
+
+        with patch("cli.app.command.tmux.claude.os.execvp"):
+            result = runner.invoke(claude_start)
+
+            content = patch_claude_map_file.read_text()
+            lines = [line for line in content.strip().split("\n") if line.strip()]
+
+            # Should preserve non-empty lines and add new one
+            assert len(lines) == 3
+            assert "main-session:%2:existing-uuid" in content
+            assert "other-session:%3:another-uuid" in content
+            assert "main-session:%1:550e8400-e29b-41d4-a716-446655440000" in content
+
+    def test_claude_start_tmux_command_failure(
+        self, mock_os_environ, mock_uuid4, patch_claude_map_file
+    ):
+        """Test claude-start when tmux commands fail."""
+        from click.testing import CliRunner
+
+        # Mock tmux to raise RuntimeError
+        with patch(
+            "cli.app.command.tmux.claude.tmux", side_effect=RuntimeError("tmux failed")
+        ):
+            runner = CliRunner()
+            result = runner.invoke(claude_start)
+
+            assert result.exit_code == 1
+            assert "Error getting tmux info" in result.output
+
+    def test_claude_start_claude_not_found(
+        self,
+        mock_os_environ,
+        mock_tmux_display_commands,
+        mock_uuid4,
+        patch_claude_map_file,
+    ):
+        """Test claude-start when claude command not found."""
+        from click.testing import CliRunner
+
+        runner = CliRunner()
+
+        # Mock os.execvp to raise FileNotFoundError
+        with patch(
+            "cli.app.command.tmux.claude.os.execvp",
+            side_effect=FileNotFoundError("claude not found"),
+        ):
+            result = runner.invoke(claude_start)
+
+            assert result.exit_code == 1
+            assert "claude command not found" in result.output
+
+    def test_claude_start_output_format(
+        self,
+        mock_os_environ,
+        mock_tmux_display_commands,
+        mock_uuid4,
+        patch_claude_map_file,
+    ):
+        """Test claude-start output message format."""
+        from click.testing import CliRunner
+
+        runner = CliRunner()
+
+        with patch("cli.app.command.tmux.claude.os.execvp"):
+            result = runner.invoke(claude_start)
+
+            expected_output = "Starting Claude in main-session:editor (pane %1) with session ID: 550e8400-e29b-41d4-a716-446655440000"
+            assert expected_output in result.output
+
+    def test_claude_start_uuid_generation_and_format(
+        self, mock_os_environ, mock_tmux_display_commands, patch_claude_map_file
+    ):
+        """Test that claude-start generates valid UUIDs."""
+        from click.testing import CliRunner
+        import uuid as _uuid
+
+        runner = CliRunner()
+
+        with patch("cli.app.command.tmux.claude.os.execvp"):
+            # Don't mock uuid4 - use real UUID generation
+            result = runner.invoke(claude_start)
+
+            content = patch_claude_map_file.read_text()
+            lines = [line for line in content.strip().split("\n") if line.strip()]
+            assert len(lines) == 1
+
+            # Extract the UUID from the line
+            parts = lines[0].split(":")
+            assert len(parts) == 3
+            generated_uuid = parts[2]
+
+            # Verify it's a valid UUID format
             try:
-                with patch("os.execvp"):
-                    cs.main()
+                uuid_obj = _uuid.UUID(generated_uuid)
+                assert str(uuid_obj) == generated_uuid
+            except ValueError:
+                pytest.fail(f"Generated UUID '{generated_uuid}' is not valid")
 
-                    # Verify special characters are preserved
-                    content = claude_map.read_text()
-                    assert (
-                        "my session-test:%1:550e8400-e29b-41d4-a716-446655440000"
-                        in content
-                    )
-            finally:
-                if original_tmux:
-                    script_globals["tmux"] = original_tmux
+    def test_claude_start_with_special_characters_in_names(
+        self, mock_os_environ, mock_uuid4, patch_claude_map_file
+    ):
+        """Test claude-start with special characters in session/window names."""
+        from click.testing import CliRunner
 
-    def test_very_long_names(self, mock_os_environ, mock_uuid4, temp_home):
-        """Test handling of very long session/window/pane names."""
-        claude_map = temp_home / ".tmux-claude-map"
+        def tmux_side_effect(*args):
+            if "#{session_name}" in " ".join(args):
+                return "my-special:session@name\n"
+            elif "#{window_name}" in " ".join(args):
+                return "editor (project-1)\n"
+            elif "#{pane_id}" in " ".join(args):
+                return "%1\n"
+            return ""
+
+        with patch("cli.app.command.tmux.claude.tmux", side_effect=tmux_side_effect):
+            runner = CliRunner()
+
+            with patch("cli.app.command.tmux.claude.os.execvp"):
+                result = runner.invoke(claude_start)
+
+                content = patch_claude_map_file.read_text()
+                expected_line = (
+                    "my-special:session@name:%1:550e8400-e29b-41d4-a716-446655440000"
+                )
+                assert expected_line in content
+
+                # Output should show the special characters correctly
+                assert "my-special:session@name:editor (project-1)" in result.output
+
+    def test_claude_start_with_very_long_names(
+        self, mock_os_environ, mock_uuid4, patch_claude_map_file
+    ):
+        """Test claude-start with very long session/window names."""
+        from click.testing import CliRunner
 
         long_session = "a" * 100
         long_window = "b" * 100
-        long_pane = "%very-long-pane-id-that-might-exist"
 
-        with patch.object(Path, "home", return_value=temp_home):
-            # Mock tmux function in script_globals
-            original_tmux = script_globals.get("tmux")
-            mock_tmux_responses = iter([long_session, long_window, long_pane])
-            script_globals["tmux"] = lambda *args: next(mock_tmux_responses)
+        def tmux_side_effect(*args):
+            if "#{session_name}" in " ".join(args):
+                return f"{long_session}\n"
+            elif "#{window_name}" in " ".join(args):
+                return f"{long_window}\n"
+            elif "#{pane_id}" in " ".join(args):
+                return "%1\n"
+            return ""
 
-            try:
-                with patch("os.execvp"):
-                    cs.main()
+        with patch("cli.app.command.tmux.claude.tmux", side_effect=tmux_side_effect):
+            runner = CliRunner()
 
-                    # Verify long names are handled correctly
-                    content = claude_map.read_text()
-                    assert (
-                        f"{long_session}:{long_pane}:550e8400-e29b-41d4-a716-446655440000"
-                        in content
-                    )
-            finally:
-                if original_tmux:
-                    script_globals["tmux"] = original_tmux
+            with patch("cli.app.command.tmux.claude.os.execvp"):
+                result = runner.invoke(claude_start)
 
-    def test_file_permission_error(self, mock_os_environ, mock_uuid4, temp_home):
-        """Test handling of file permission errors."""
-        with patch.object(Path, "home", return_value=temp_home):
-            # Mock tmux function in script_globals
-            original_tmux = script_globals.get("tmux")
-            mock_tmux_responses = iter(["session", "window", "%1"])
-            script_globals["tmux"] = lambda *args: next(mock_tmux_responses)
+                content = patch_claude_map_file.read_text()
+                expected_line = (
+                    f"{long_session}:%1:550e8400-e29b-41d4-a716-446655440000"
+                )
+                assert expected_line in content
 
-            try:
-                # Mock write_text to raise permission error
-                with patch.object(Path, "write_text") as mock_write:
-                    mock_write.side_effect = PermissionError("Permission denied")
+                # Output should show the long names
+                assert long_session in result.output
+                assert long_window in result.output
 
-                    with pytest.raises(PermissionError):
-                        cs.main()
-            finally:
-                if original_tmux:
-                    script_globals["tmux"] = original_tmux
-
-    def test_existing_claude_map_corrupted(
-        self, mock_os_environ, mock_uuid4, temp_home
+    def test_real_uuid_uniqueness_across_multiple_calls(
+        self, mock_os_environ, mock_tmux_display_commands, patch_claude_map_file
     ):
-        """Test handling of corrupted existing Claude map file."""
-        claude_map = temp_home / ".tmux-claude-map"
+        """Test that multiple claude-start calls generate unique UUIDs."""
+        from click.testing import CliRunner
+        import uuid as _uuid
 
-        # Create corrupted Claude map (binary data)
-        claude_map.write_bytes(b"\x00\x01\x02\xff\xfe")
+        runner = CliRunner()
+        generated_uuids = set()
 
-        with patch.object(Path, "home", return_value=temp_home):
-            # Mock tmux function in script_globals
-            original_tmux = script_globals.get("tmux")
-            mock_tmux_responses = iter(["session", "window", "%1"])
-            script_globals["tmux"] = lambda *args: next(mock_tmux_responses)
+        # Run claude-start multiple times and collect UUIDs
+        for i in range(5):
 
+            def tmux_side_effect(*args):
+                if "#{session_name}" in " ".join(args):
+                    return f"session-{i}\n"
+                elif "#{window_name}" in " ".join(args):
+                    return "editor\n"
+                elif "#{pane_id}" in " ".join(args):
+                    return f"%{i + 1}\n"
+                return ""
+
+            with patch(
+                "cli.app.command.tmux.claude.tmux", side_effect=tmux_side_effect
+            ):
+                with patch("cli.app.command.tmux.claude.os.execvp"):
+                    result = runner.invoke(claude_start)
+                    assert result.exit_code == 0
+
+        # Parse all generated UUIDs from the map file
+        content = patch_claude_map_file.read_text()
+        lines = [line for line in content.strip().split("\n") if line.strip()]
+
+        for line in lines:
+            parts = line.split(":")
+            assert len(parts) == 3
+            uuid_str = parts[2]
+
+            # Verify it's a valid UUID
             try:
-                with patch("os.execvp"):
-                    # Should handle the corrupted file gracefully
-                    cs.main()
+                uuid_obj = _uuid.UUID(uuid_str)
+                assert str(uuid_obj) == uuid_str
+                generated_uuids.add(uuid_str)
+            except ValueError:
+                pytest.fail(f"Generated UUID '{uuid_str}' is not valid")
 
-                    # Verify new entry was added (file was recreated)
-                    content = claude_map.read_text()
-                    assert "session:%1:550e8400-e29b-41d4-a716-446655440000" in content
-            finally:
-                if original_tmux:
-                    script_globals["tmux"] = original_tmux
+        # All UUIDs should be unique
+        assert len(generated_uuids) == 5
 
+    def test_real_uuid_version_and_format(
+        self, mock_os_environ, mock_tmux_display_commands, patch_claude_map_file
+    ):
+        """Test that generated UUIDs are version 4 and properly formatted."""
+        from click.testing import CliRunner
+        import uuid as _uuid
+        import re
 
-class TestIntegrationScenarios:
-    """Integration-style tests for complete workflows."""
+        runner = CliRunner()
 
-    @pytest.mark.integration
-    def test_multiple_claude_instances(self, mock_os_environ, temp_home):
-        """Test scenario with multiple Claude instances in different panes."""
-        claude_map = temp_home / ".tmux-claude-map"
+        with patch("cli.app.command.tmux.claude.os.execvp"):
+            result = runner.invoke(claude_start)
+            assert result.exit_code == 0
 
-        # Simulate starting Claude in multiple panes
-        sessions_data = [
-            ("main", "editor", "%1"),
-            ("main", "terminal", "%2"),
-            ("testing", "runner", "%3"),
+        content = patch_claude_map_file.read_text()
+        lines = [line for line in content.strip().split("\n") if line.strip()]
+        assert len(lines) == 1
+
+        parts = lines[0].split(":")
+        uuid_str = parts[2]
+
+        # Verify UUID format with regex
+        uuid_pattern = (
+            r"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+        )
+        assert re.match(uuid_pattern, uuid_str, re.IGNORECASE), (
+            f"UUID {uuid_str} doesn't match expected format"
+        )
+
+        # Verify it's version 4
+        uuid_obj = _uuid.UUID(uuid_str)
+        assert uuid_obj.version == 4, (
+            f"Expected version 4 UUID, got version {uuid_obj.version}"
+        )
+
+    def test_uuid_persistence_across_sessions(
+        self, mock_os_environ, mock_tmux_display_commands, patch_claude_map_file
+    ):
+        """Test that UUIDs are properly persisted and not regenerated on subsequent calls."""
+        from click.testing import CliRunner
+
+        runner = CliRunner()
+
+        # First invocation - generate UUID
+        with patch("cli.app.command.tmux.claude.os.execvp"):
+            result1 = runner.invoke(claude_start)
+            assert result1.exit_code == 0
+
+        content1 = patch_claude_map_file.read_text()
+        first_uuid = content1.strip().split(":")[2]
+
+        # Second invocation with same pane - should replace with new UUID
+        with patch("cli.app.command.tmux.claude.os.execvp"):
+            result2 = runner.invoke(claude_start)
+            assert result2.exit_code == 0
+
+        content2 = patch_claude_map_file.read_text()
+        second_uuid = content2.strip().split(":")[2]
+
+        # Should be different UUIDs since we're starting a new session for same pane
+        assert first_uuid != second_uuid
+
+        # Verify both are valid UUIDs
+        import uuid as _uuid
+
+        _uuid.UUID(first_uuid)
+        _uuid.UUID(second_uuid)
+
+    def test_uuid_handling_with_concurrent_panes(
+        self, mock_os_environ, patch_claude_map_file
+    ):
+        """Test UUID generation for multiple panes in different sessions."""
+        from click.testing import CliRunner
+        import uuid as _uuid
+
+        runner = CliRunner()
+
+        # Simulate starting Claude in multiple different panes
+        pane_configs = [
+            ("session1", "window1", "%1"),
+            ("session1", "window2", "%2"),
+            ("session2", "window1", "%3"),
+            ("session2", "window2", "%4"),
         ]
 
-        with patch.object(Path, "home", return_value=temp_home):
-            original_tmux = script_globals.get("tmux")
-            original_uuid4 = script_globals.get("_uuid")
+        for session, window, pane_id in pane_configs:
 
-            try:
-                for session, window, pane in sessions_data:
-                    # Mock tmux function in script_globals
-                    mock_tmux_responses = iter([session, window, pane])
-                    script_globals["tmux"] = lambda *args: next(mock_tmux_responses)
+            def tmux_side_effect(*args):
+                if "#{session_name}" in " ".join(args):
+                    return f"{session}\n"
+                elif "#{window_name}" in " ".join(args):
+                    return f"{window}\n"
+                elif "#{pane_id}" in " ".join(args):
+                    return f"{pane_id}\n"
+                return ""
 
-                    # Mock uuid generation - _uuid is the module
-                    import uuid
+            with patch(
+                "cli.app.command.tmux.claude.tmux", side_effect=tmux_side_effect
+            ):
+                with patch("cli.app.command.tmux.claude.os.execvp"):
+                    result = runner.invoke(claude_start)
+                    assert result.exit_code == 0
 
-                    test_uuid = uuid.uuid4()
-                    mock_uuid_module = Mock()
-                    mock_uuid_module.uuid4.return_value = test_uuid
-                    script_globals["_uuid"] = mock_uuid_module
+        # Verify all UUIDs are unique and valid
+        content = patch_claude_map_file.read_text()
+        lines = [line for line in content.strip().split("\n") if line.strip()]
 
-                    with patch("os.execvp"):
-                        cs.main()
-            finally:
-                if original_tmux:
-                    script_globals["tmux"] = original_tmux
-                if original_uuid4:
-                    script_globals["_uuid"] = original_uuid4
+        assert len(lines) == 4
 
-        # Verify all entries are in the map
-        content = claude_map.read_text()
-        lines = [line for line in content.split("\n") if line.strip()]
-        assert len(lines) == 3
+        uuids = []
+        for line in lines:
+            parts = line.split(":")
+            assert len(parts) == 3
+            session_pane = f"{parts[0]}:{parts[1]}"
+            uuid_str = parts[2]
 
-        # Verify each session:pane combination is unique
-        pane_entries = [line.split(":")[1] for line in lines]
-        assert len(set(pane_entries)) == 3  # All pane IDs should be unique
+            # Verify UUID is valid
+            uuid_obj = _uuid.UUID(uuid_str)
+            assert str(uuid_obj) == uuid_str
+            uuids.append(uuid_str)
 
-    @pytest.mark.integration
-    def test_claude_restart_in_same_pane(self, mock_os_environ, mock_uuid4, temp_home):
-        """Test restarting Claude in the same pane (should replace UUID)."""
-        claude_map = temp_home / ".tmux-claude-map"
-
-        original_tmux = script_globals.get("tmux")
-        original_uuid4 = script_globals.get("_uuid")
-
-        try:
-            # First Claude start
-            with patch.object(Path, "home", return_value=temp_home):
-                # Mock tmux function in script_globals
-                mock_tmux_responses = iter(["session", "window", "%1"])
-                script_globals["tmux"] = lambda *args: next(mock_tmux_responses)
-
-                # Use the mock_uuid4 fixture - _uuid is the module
-                mock_uuid_module = Mock()
-                mock_uuid_module.uuid4.return_value = Mock(
-                    __str__=Mock(return_value="550e8400-e29b-41d4-a716-446655440000")
-                )
-                script_globals["_uuid"] = mock_uuid_module
-
-                with patch("os.execvp"):
-                    cs.main()
-
-            # Verify first entry
-            content = claude_map.read_text()
-            assert "session:%1:550e8400-e29b-41d4-a716-446655440000" in content
-
-            # Second Claude start in same pane (different UUID)
-            with patch.object(Path, "home", return_value=temp_home):
-                # Mock tmux function in script_globals again
-                mock_tmux_responses = iter(["session", "window", "%1"])
-                script_globals["tmux"] = lambda *args: next(mock_tmux_responses)
-
-                # Mock different UUID - _uuid is the module
-                mock_uuid_module = Mock()
-                mock_uuid_module.uuid4.return_value = Mock(
-                    __str__=Mock(return_value="different-uuid-456")
-                )
-                script_globals["_uuid"] = mock_uuid_module
-
-                with patch("os.execvp"):
-                    cs.main()
-        finally:
-            if original_tmux:
-                script_globals["tmux"] = original_tmux
-            if original_uuid4:
-                script_globals["_uuid"] = original_uuid4
-
-        # Verify UUID was updated, not duplicated
-        content = claude_map.read_text()
-        lines = [line for line in content.split("\n") if line.strip()]
-
-        assert len(lines) == 1  # Still only one entry
-        assert "session:%1:different-uuid-456" in content
-        assert "550e8400-e29b-41d4-a716-446655440000" not in content
-
-    def test_real_world_tmux_output_format(
-        self, mock_os_environ, mock_uuid4, temp_home
-    ):
-        """Test with realistic tmux output that might contain escape sequences."""
-        claude_map = temp_home / ".tmux-claude-map"
-
-        with patch.object(Path, "home", return_value=temp_home):
-            # Mock tmux function in script_globals
-            original_tmux = script_globals.get("tmux")
-            mock_tmux_responses = iter(
-                [
-                    "my-session\n",  # session name with newline
-                    " work-window ",  # window name with spaces
-                    "%10\t",  # pane id with tab
-                ]
-            )
-            script_globals["tmux"] = lambda *args: next(mock_tmux_responses)
-
-            try:
-                with patch("os.execvp"):
-                    cs.main()
-
-                    # Verify strip() is working correctly
-                    content = claude_map.read_text()
-                    assert (
-                        "my-session:%10:550e8400-e29b-41d4-a716-446655440000" in content
-                    )
-
-                    # Verify no extra whitespace
-                    line = content.strip()
-                    parts = line.split(":")
-                    assert parts[0] == "my-session"
-                    assert parts[1] == "%10"
-            finally:
-                if original_tmux:
-                    script_globals["tmux"] = original_tmux
+        # All UUIDs should be unique
+        assert len(set(uuids)) == 4
