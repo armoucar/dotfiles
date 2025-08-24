@@ -7,6 +7,7 @@ alias ccv='claude --verbose'
 alias ccskip='claude --dangerously-skip-permissions'
 alias ccu='claude update'
 alias ccm='claude mcp'
+alias ccs='claude-start'
 
 # Git-related aliases
 alias cccommit='claude commit'

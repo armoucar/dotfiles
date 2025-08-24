@@ -1,0 +1,56 @@
+#!/usr/bin/env python3
+
+"""
+claude-start - Start Claude Code with UUID tracking for tmux window state management
+Usage: claude-start
+"""
+
+import os
+import subprocess
+import sys
+import uuid as _uuid
+from pathlib import Path
+
+
+def tmux(*args: str) -> str:
+    cp = subprocess.run(["tmux", *args], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    if cp.returncode != 0:
+        raise RuntimeError(cp.stderr.strip() or "tmux command failed")
+    return cp.stdout
+
+
+def main() -> int:
+    if not os.environ.get("TMUX"):
+        print("Error: Must be run from within a tmux session", file=sys.stderr)
+        return 1
+
+    claude_map = Path.home() / ".tmux-claude-map"
+    uuid = str(_uuid.uuid4())
+
+    session = tmux("display-message", "-p", "#{session_name}").strip()
+    window = tmux("display-message", "-p", "#{window_name}").strip()
+    pane_id = tmux("display-message", "-p", "#{pane_id}").strip()
+
+    print(f"Starting Claude in {session}:{window} (pane {pane_id}) with session ID: {uuid}")
+
+    # Remove any existing mapping for this pane and add the new one
+    lines = []
+    if claude_map.exists():
+        for line in claude_map.read_text().splitlines():
+            if not line.strip():
+                continue
+            if line.startswith(f"{session}:{pane_id}:"):
+                continue
+            lines.append(line)
+    lines.append(f"{session}:{pane_id}:{uuid}")
+    tmp = claude_map.with_suffix(".tmp")
+    tmp.write_text("\n".join(lines) + "\n")
+    tmp.replace(claude_map)
+
+    # Start Claude with the specific session ID
+    os.execvp("claude", ["claude", "--session-id", uuid])
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

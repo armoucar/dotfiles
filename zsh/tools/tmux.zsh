@@ -14,6 +14,9 @@ alias tl='command tmux list-sessions'      # List sessions
 alias tmuxconf='$EDITOR ~/.tmux.conf'      # Edit tmux config
 alias tds='_tmux_directory_session'        # Create/attach to dir-based session
 
+# Tmux window state management
+alias tload='tmux-window-state load'       # Load saved tmux state
+
 # Tmux attach/session aliases with smart command handling
 # Attach to session
 function ta() {

@@ -1,0 +1,371 @@
+#!/usr/bin/env python3
+
+import argparse
+import dataclasses as dc
+import json
+import os
+import shlex
+import subprocess
+import sys
+from datetime import datetime
+from pathlib import Path
+from typing import Dict, List, Optional, Tuple
+
+STATE_FILE = Path.home() / ".tmux-window-state.json"
+CLAUDE_MAP_FILE = Path.home() / ".tmux-claude-map"
+
+
+def run(cmd: List[str], check: bool = True) -> subprocess.CompletedProcess:
+    return subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=check)
+
+
+def tmux(*args: str, check: bool = True) -> str:
+    cp = run(["tmux", *args], check=check)
+    return cp.stdout
+
+
+def tmux_ok(*args: str) -> bool:
+    try:
+        run(["tmux", *args])
+        return True
+    except subprocess.CalledProcessError:
+        return False
+
+
+@dc.dataclass
+class Window:
+    index: int
+    name: str
+    path: str
+    ordinal: int  # nth occurrence of (name, path) within the session
+
+
+@dc.dataclass
+class Session:
+    name: str
+    windows: List[Window]
+
+
+@dc.dataclass
+class ClaudeBinding:
+    session: str
+    window_name: str
+    path: str
+    ordinal: int
+    uuid: str
+
+
+@dc.dataclass
+class State:
+    created_at: str
+    sessions: List[Session]
+    current_session: Optional[str]
+    current_window_index: Optional[int]
+    claude: List[ClaudeBinding]
+
+    def to_json(self) -> str:
+        return json.dumps(dc.asdict(self), indent=2)
+
+    @staticmethod
+    def from_json(data: str) -> "State":
+        obj = json.loads(data)
+        sessions = []
+        for s in obj.get("sessions", []):
+            windows = [Window(**w) for w in s.get("windows", [])]
+            sessions.append(Session(name=s["name"], windows=windows))
+        claude = [ClaudeBinding(**c) for c in obj.get("claude", [])]
+        return State(
+            created_at=obj.get("created_at"),
+            sessions=sessions,
+            current_session=obj.get("current_session"),
+            current_window_index=obj.get("current_window_index"),
+            claude=claude,
+        )
+
+
+def _list_sessions() -> List[str]:
+    try:
+        out = tmux("list-sessions", "-F", "#{session_name}")
+    except subprocess.CalledProcessError:
+        return []
+    return [l.strip() for l in out.splitlines() if l.strip()]
+
+
+def _list_windows_all() -> List[Tuple[str, int, str, str]]:
+    # session, index, name, path (active pane path)
+    fmt = "#{session_name}\t#{window_index}\t#{window_name}\t#{pane_current_path}"
+    out = tmux("list-windows", "-a", "-F", fmt)
+    res = []
+    for line in out.splitlines():
+        if not line.strip():
+            continue
+        s, idx, name, path = line.split("\t", 3)
+        res.append((s, int(idx), name, path))
+    return res
+
+
+def _current_session_and_window() -> Tuple[Optional[str], Optional[int]]:
+    try:
+        out = tmux("display-message", "-p", "#{session_name}\t#{window_index}")
+        s, w = out.strip().split("\t", 1)
+        return s, int(w)
+    except Exception:
+        return None, None
+
+
+def _read_claude_map() -> List[Tuple[str, str, str]]:
+    if not CLAUDE_MAP_FILE.exists():
+        return []
+    entries = []
+    for line in CLAUDE_MAP_FILE.read_text().splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        parts = line.split(":", 2)
+        if len(parts) != 3:
+            continue
+        session, pane_id, uuid = parts
+        entries.append((session, pane_id, uuid))
+    return entries
+
+
+def _clean_claude_map() -> int:
+    entries = _read_claude_map()
+    kept: List[str] = []
+    removed = 0
+    # Build a set of existing panes: "session:pane_id"
+    try:
+        existing = set(
+            l.strip()
+            for l in tmux("list-panes", "-a", "-F", "#{session_name}:#{pane_id}").splitlines()
+            if l.strip()
+        )
+    except subprocess.CalledProcessError:
+        existing = set()
+    for session, pane_id, uuid in entries:
+        key = f"{session}:{pane_id}"
+        if key in existing:
+            kept.append(f"{session}:{pane_id}:{uuid}")
+        else:
+            removed += 1
+    # Atomic write
+    tmp = CLAUDE_MAP_FILE.with_suffix(".tmp")
+    tmp.write_text("\n".join(kept) + ("\n" if kept else ""))
+    tmp.replace(CLAUDE_MAP_FILE)
+    return removed
+
+
+def save_state() -> None:
+    sessions = _list_sessions()
+    if not sessions:
+        print("No tmux sessions running")
+        sys.exit(1)
+
+    # Gather windows and compute ordinals per (session, name, path)
+    win_all = _list_windows_all()
+    counts: Dict[Tuple[str, str, str], int] = {}
+    sess_map: Dict[str, List[Window]] = {s: [] for s in sessions}
+    for s, idx, name, path in win_all:
+        key = (s, name, path)
+        counts[key] = counts.get(key, 0) + 1
+        ordinal = counts[key] - 1  # zero-based occurrence within (name,path)
+        sess_map[s].append(Window(index=idx, name=name, path=path, ordinal=ordinal))
+
+    # Current focus
+    cur_s, cur_w = _current_session_and_window()
+
+    # Map Claude bindings: resolve pane -> (session, window_name, path, ordinal)
+    bindings: List[ClaudeBinding] = []
+    for session, pane_id, uuid in _read_claude_map():
+        # Ensure pane exists and fetch its window context
+        try:
+            out = tmux(
+                "display-message",
+                "-p",
+                "-t",
+                pane_id,
+                "#{session_name}\t#{window_name}\t#{pane_current_path}\t#{window_index}",
+            ).strip()
+        except subprocess.CalledProcessError:
+            continue
+        
+        # Handle panes with incomplete information (empty fields)
+        parts = out.split("\t")
+        if len(parts) != 4:
+            continue
+        s2, wname, path, windex_str = parts
+        
+        # Skip panes with empty/null session, window name, or path
+        if not s2 or not wname or not path or not windex_str:
+            continue
+            
+        try:
+            windex = int(windex_str)
+        except ValueError:
+            continue
+            
+        if s2 != session:
+            # Session was renamed or pane moved; still use actual session
+            session = s2
+        # Compute ordinal among windows with same (name,path) in this session up to this index
+        ordinal = 0
+        for w in sorted(sess_map.get(session, []), key=lambda x: x.index):
+            if w.index >= windex:
+                break
+            if w.name == wname and w.path == path:
+                ordinal += 1
+        bindings.append(ClaudeBinding(session=session, window_name=wname, path=path, ordinal=ordinal, uuid=uuid))
+
+    state = State(
+        created_at=datetime.now().isoformat(timespec="seconds"),
+        sessions=[Session(name=s, windows=sorted(sess_map[s], key=lambda w: w.index)) for s in sessions],
+        current_session=cur_s,
+        current_window_index=cur_w,
+        claude=bindings,
+    )
+
+    # Write state atomically
+    tmp = STATE_FILE.with_suffix(".tmp")
+    tmp.write_text(state.to_json() + "\n")
+    tmp.replace(STATE_FILE)
+
+    # Also cleanup stale entries
+    removed = _clean_claude_map()
+    print(f"State saved to {STATE_FILE}")
+    if removed:
+        print(f"Cleaned {removed} stale Claude mapping(s)")
+
+
+def _create_session_if_needed(name: str, first_win: Window) -> None:
+    # If session exists, do nothing
+    if tmux_ok("has-session", "-t", name):
+        return
+    # Create with the first window name/path; print created window id (unused here)
+    tmux(
+        "new-session",
+        "-d",
+        "-s",
+        name,
+        "-n",
+        first_win.name,
+        "-c",
+        first_win.path,
+        "-P",
+        "-F",
+        "#{window_id}",
+    )
+
+
+def _window_id_for(session: str, index: int) -> Optional[str]:
+    try:
+        out = tmux("list-windows", "-t", session, "-F", "#{window_index}\t#{window_id}")
+    except subprocess.CalledProcessError:
+        return None
+    for line in out.splitlines():
+        i_str, wid = line.split("\t", 1)
+        if int(i_str) == index:
+            return wid.strip()
+    return None
+
+
+def _new_window_get_id(session: str, name: str, path: str) -> str:
+    out = tmux(
+        "new-window",
+        "-t",
+        session,
+        "-n",
+        name,
+        "-c",
+        path,
+        "-P",
+        "-F",
+        "#{window_id}",
+    )
+    return out.strip()
+
+
+def load_state() -> None:
+    if not STATE_FILE.exists():
+        print(f"No saved state found at {STATE_FILE}")
+        sys.exit(1)
+    state = State.from_json(STATE_FILE.read_text())
+    print("Loading tmux window state with Claude sessions...")
+
+    # Build quick lookup for Claude bindings per session keyed by (name, path, ordinal)
+    claude_map: Dict[Tuple[str, str, str, int], str] = {}
+    for c in state.claude:
+        claude_map[(c.session, c.window_name, c.path, c.ordinal)] = c.uuid
+
+    for sess in state.sessions:
+        if not sess.windows:
+            continue
+        # Ensure session exists (create with first window)
+        first = sorted(sess.windows, key=lambda w: w.index)[0]
+        _create_session_if_needed(sess.name, first)
+
+        # For existing sessions, ensure the first window has correct name/path
+        # Get the actual first window index (might not be 0)
+        try:
+            existing_windows = tmux("list-windows", "-t", sess.name, "-F", "#{window_index}").strip().split()
+            if existing_windows:
+                first_index = min(int(w) for w in existing_windows)
+                tmux("rename-window", "-t", f"{sess.name}:{first_index}", first.name)
+                tmux("send-keys", "-t", f"{sess.name}:{first_index}", f"cd {shlex.quote(first.path)}", "Enter")
+        except subprocess.CalledProcessError:
+            pass  # Session might not exist yet or other issue
+
+        # Collect created/adjusted window IDs by (name, path) occurrence
+        occurrence: Dict[Tuple[str, str], int] = {}
+
+        # Process windows in ascending index order
+        first_window_processed = False
+        for w in sorted(sess.windows, key=lambda w: w.index):
+            if not first_window_processed:
+                # First window was already created/renamed above, just get its ID
+                wid = _window_id_for(sess.name, w.index)
+                first_window_processed = True
+            else:
+                wid = _new_window_get_id(sess.name, w.name, w.path)
+            key = (w.name, w.path)
+            occ = occurrence.get(key, 0)
+            occurrence[key] = occ + 1
+
+            # If Claude bound to this window, resume it targeting by window-id
+            uuid = claude_map.get((sess.name, w.name, w.path, occ))
+            if uuid:
+                tmux("send-keys", "-t", wid, f"claude --resume {shlex.quote(uuid)}", "Enter")
+
+    # Switch to previously active session/window
+    if state.current_session is not None and state.current_window_index is not None:
+        target = f"{state.current_session}:{state.current_window_index}"
+        if not tmux_ok("switch-client", "-t", target):
+            tmux_ok("attach-session", "-t", target)
+    print(f"State restored from {STATE_FILE}")
+
+
+def main(argv: Optional[List[str]] = None) -> int:
+    p = argparse.ArgumentParser(description="Save and restore tmux window organization with Claude bindings")
+    sub = p.add_subparsers(dest="cmd", required=True)
+    sub.add_parser("save", help="Save current tmux layout and Claude bindings")
+    sub.add_parser("load", help="Restore tmux layout and resume Claude sessions")
+    sub.add_parser("cleanup", help="Remove stale Claude pane mappings")
+    sub.add_parser("show", help="Print saved state JSON (if any)")
+    args = p.parse_args(argv)
+
+    if args.cmd == "save":
+        save_state()
+    elif args.cmd == "load":
+        load_state()
+    elif args.cmd == "cleanup":
+        removed = _clean_claude_map()
+        print(f"Removed {removed} stale mapping(s)")
+    elif args.cmd == "show":
+        if STATE_FILE.exists():
+            print(STATE_FILE.read_text())
+        else:
+            print(f"No saved state at {STATE_FILE}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
