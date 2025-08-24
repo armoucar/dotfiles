@@ -16,48 +16,12 @@ if [ ! -d "$DOTFILES_CLAUDE/voice_notifications" ]; then
   echo "⚠️  No voice notifications found - run 'uv run ~/.claude/generate_notification_voices.py' first" >&2
 fi
 
-# Update global settings.json with user hooks configuration
-
-# Create the settings content
-cat > "$GLOBAL_CLAUDE/settings.json" << 'EOF'
-{
-  "model": "opusplan",
-  "hooks": {
-    "Notification": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/notification_handler.py"
-          }
-        ]
-      }
-    ],
-    "PreToolUse": [
-      {
-        "matcher": "*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/command_logger.py"
-          }
-        ]
-      }
-    ],
-    "Stop": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/stop_notification_handler.py"
-          }
-        ]
-      }
-    ]
-  }
-}
-EOF
+# Copy settings.json configuration
+if [ -f "$DOTFILES_CLAUDE/settings.json" ]; then
+  cp "$DOTFILES_CLAUDE/settings.json" "$GLOBAL_CLAUDE/settings.json"
+else
+  echo "⚠️  No settings.json found in $DOTFILES_CLAUDE" >&2
+  exit 1
+fi
 
 echo "✓ Claude Code configuration synced"

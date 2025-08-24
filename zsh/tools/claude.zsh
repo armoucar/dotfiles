@@ -4,6 +4,7 @@ alias ccp='claude -p'
 alias ccc='claude -c'
 alias ccr='claude -r'
 alias ccv='claude --verbose'
+alias ccskip='claude --dangerously-skip-permissions'
 alias ccu='claude update'
 alias ccm='claude mcp'
 

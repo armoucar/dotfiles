@@ -36,9 +36,12 @@ def find_markdownlint_config(start_dir):
     return str(home_dir / ".markdownlint.json")
 
 
-def get_modified_files():
-    """Get list of files modified by Claude during this session from command.log."""
+def get_modified_files_from_session(session_id):
+    """Get list of files modified by Claude during this session from JSONL command.log."""
     try:
+        if not session_id:
+            return []
+
         project_dir = os.environ.get("CLAUDE_PROJECT_DIR", os.getcwd())
         log_file = os.path.join(project_dir, ".claude", "command.log")
 
@@ -46,17 +49,34 @@ def get_modified_files():
             return []
 
         modified_files = []
-        # Read recent entries from command.log to find file modifications
+        # Parse JSONL format - each line is a JSON object
         with open(log_file, "r", encoding="utf-8") as f:
             for line in f:
-                # Look for Edit, MultiEdit, Write tool calls with file paths
-                if any(tool in line for tool in ["EDIT:", "MULTIEDIT:", "WRITE:"]):
-                    # Extract file path from log entry
-                    match = re.search(r"(EDIT|MULTIEDIT|WRITE):\s*(.+)$", line)
-                    if match:
-                        file_path = match.group(2).strip()
-                        if os.path.exists(file_path):
-                            modified_files.append(file_path)
+                line = line.strip()
+                if not line:
+                    continue
+
+                try:
+                    log_entry = json.loads(line)
+
+                    # Only process entries from current session
+                    if log_entry.get("session_id") != session_id:
+                        continue
+
+                    # Extract file paths from metadata
+                    metadata = log_entry.get("metadata", {})
+                    file_paths = metadata.get("file_paths", [])
+                    file_operation = metadata.get("file_operation")
+
+                    # Only include file modification operations
+                    if file_operation in ["create", "overwrite", "update", "insert"]:
+                        for file_path in file_paths:
+                            if file_path and os.path.exists(file_path):
+                                modified_files.append(file_path)
+
+                except json.JSONDecodeError:
+                    # Skip malformed JSON lines (might be old format)
+                    continue
 
         return list(set(modified_files))  # Remove duplicates
     except Exception:
@@ -99,9 +119,10 @@ def trigger_tmux_bell():
 try:
     input_data = json.load(sys.stdin)
     current_dir = os.getcwd()
+    current_session_id = input_data.get("session_id")
 
     # Get files modified by Claude during this session
-    modified_files = get_modified_files()
+    modified_files = get_modified_files_from_session(current_session_id)
 
     # Filter for markdown and Python files
     md_files = [f for f in modified_files if f.endswith(".md")]
@@ -115,8 +136,17 @@ try:
 
             # Run markdownlint --fix on only the modified markdown files
             for md_file in md_files:
+                # Handle files outside current directory by changing to the file's directory
+                file_path = Path(md_file)
+                file_dir = file_path.parent
+                file_name = file_path.name
+
+                # Find markdownlint config relative to the file location
+                file_config = find_markdownlint_config(str(file_dir))
+
                 result = subprocess.run(
-                    ["markdownlint", "-c", config_file, "--fix", md_file],
+                    ["markdownlint", "-c", file_config, "--fix", file_name],
+                    cwd=str(file_dir),
                     capture_output=True,
                     text=True,
                 )

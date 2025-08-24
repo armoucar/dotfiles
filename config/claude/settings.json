@@ -1,0 +1,42 @@
+{
+  "model": "opusplan",
+  "hooks": {
+    "Notification": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/notification_handler.py"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/command_logger.py"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/stop_autoformat.py"
+          },
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/stop_sound.py"
+          }
+        ]
+      }
+    ]
+  }
+}

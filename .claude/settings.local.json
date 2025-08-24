@@ -3,7 +3,9 @@
     "allow": [
       "WebSearch",
       "mcp__context7__resolve-library-id",
-      "mcp__context7__get-library-docs"
+      "mcp__context7__get-library-docs",
+      "Read(//Users/U003877/.claude/hooks/**)",
+      "Read(//Users/U003877/.claude/commands/**)"
     ],
     "deny": [],
     "ask": []
