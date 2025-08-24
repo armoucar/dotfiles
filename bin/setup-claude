@@ -11,6 +11,17 @@ mkdir -p "$GLOBAL_CLAUDE" 2>/dev/null
 # Copy all .claude contents
 cp -r "$DOTFILES_CLAUDE/"* "$GLOBAL_CLAUDE/" 2>/dev/null || true
 
+# Ensure commands and plugins directories are copied
+if [ -d "$DOTFILES_CLAUDE/commands" ]; then
+  mkdir -p "$GLOBAL_CLAUDE/commands"
+  cp -r "$DOTFILES_CLAUDE/commands/"* "$GLOBAL_CLAUDE/commands/" 2>/dev/null || true
+fi
+
+if [ -d "$DOTFILES_CLAUDE/plugins" ]; then
+  mkdir -p "$GLOBAL_CLAUDE/plugins"
+  cp -r "$DOTFILES_CLAUDE/plugins/"* "$GLOBAL_CLAUDE/plugins/" 2>/dev/null || true
+fi
+
 # Note: Voice notifications are generated on-demand by the notification handler
 
 # Copy settings.json configuration
