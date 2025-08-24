@@ -1,24 +1,34 @@
 #!/bin/bash
 # Claude Code Configuration Setup Script
-# Syncs user-specific Claude configuration from dotfiles to ~/.claude
+# Links user-specific Claude configuration from dotfiles to ~/.claude
 
 DOTFILES_CLAUDE="$HOME/.oh-my-zsh/custom/config/claude"
 GLOBAL_CLAUDE="$HOME/.claude"
 
-# Ensure global ~/.claude directory exists
-mkdir -p "$GLOBAL_CLAUDE" 2>/dev/null
+# Check if dotfiles config exists
+if [ ! -d "$DOTFILES_CLAUDE" ]; then
+  echo "✗ Claude configuration failed - config not found at $DOTFILES_CLAUDE" >&2
+  exit 1
+fi
 
-# Copy all .claude contents
-cp -r "$DOTFILES_CLAUDE/"* "$GLOBAL_CLAUDE/" 2>/dev/null || true
-
-# Note: Voice notifications are generated on-demand by the notification handler
-
-# Copy settings.json configuration
-if [ -f "$DOTFILES_CLAUDE/settings.json" ]; then
-  cp "$DOTFILES_CLAUDE/settings.json" "$GLOBAL_CLAUDE/settings.json"
-else
+# Check if settings.json exists in dotfiles
+if [ ! -f "$DOTFILES_CLAUDE/settings.json" ]; then
   echo "⚠️  No settings.json found in $DOTFILES_CLAUDE" >&2
   exit 1
 fi
 
-echo "✓ Claude Code configuration synced"
+# Remove existing ~/.claude if it's a regular directory or broken symlink
+if [ -e "$GLOBAL_CLAUDE" ] && [ ! -L "$GLOBAL_CLAUDE" ]; then
+  # Backup existing directory
+  mv "$GLOBAL_CLAUDE" "$GLOBAL_CLAUDE.backup.$(date +%Y%m%d_%H%M%S)" 2>/dev/null
+elif [ -L "$GLOBAL_CLAUDE" ] && [ ! -e "$GLOBAL_CLAUDE" ]; then
+  # Remove broken symlink
+  rm "$GLOBAL_CLAUDE"
+fi
+
+# Create symlink if it doesn't exist or points to wrong location
+if [ ! -L "$GLOBAL_CLAUDE" ] || [ "$(readlink "$GLOBAL_CLAUDE")" != "$DOTFILES_CLAUDE" ]; then
+  ln -sfn "$DOTFILES_CLAUDE" "$GLOBAL_CLAUDE"
+fi
+
+echo "✓ Claude Code configuration linked"

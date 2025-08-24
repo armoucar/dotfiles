@@ -1,14 +1,28 @@
 #!/bin/bash
 # Markdownlint Configuration Setup Script
-# Copies markdownlint config to user's home directory for global access
+# Links markdownlint config to user's home directory for global access
 
 DOTFILES_CONFIG="$HOME/.oh-my-zsh/custom/.markdownlint.json"
 GLOBAL_CONFIG="$HOME/.markdownlint.json"
 
-if [ -f "$DOTFILES_CONFIG" ]; then
-    cp "$DOTFILES_CONFIG" "$GLOBAL_CONFIG"
-    echo "✓ Markdownlint configuration synced"
-else
-    echo "✗ Markdownlint configuration failed - config not found"
+# Check if dotfiles config exists
+if [ ! -f "$DOTFILES_CONFIG" ]; then
+    echo "✗ Markdownlint configuration failed - config not found at $DOTFILES_CONFIG"
     exit 1
 fi
+
+# Remove existing config if it's a regular file or broken symlink
+if [ -f "$GLOBAL_CONFIG" ] && [ ! -L "$GLOBAL_CONFIG" ]; then
+    # Backup existing file
+    mv "$GLOBAL_CONFIG" "$GLOBAL_CONFIG.backup.$(date +%Y%m%d_%H%M%S)" 2>/dev/null
+elif [ -L "$GLOBAL_CONFIG" ] && [ ! -e "$GLOBAL_CONFIG" ]; then
+    # Remove broken symlink
+    rm "$GLOBAL_CONFIG"
+fi
+
+# Create symlink if it doesn't exist or points to wrong location
+if [ ! -L "$GLOBAL_CONFIG" ] || [ "$(readlink "$GLOBAL_CONFIG")" != "$DOTFILES_CONFIG" ]; then
+    ln -sfn "$DOTFILES_CONFIG" "$GLOBAL_CONFIG"
+fi
+
+echo "✓ Markdownlint configuration linked"

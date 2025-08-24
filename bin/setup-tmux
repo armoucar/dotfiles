@@ -1,9 +1,12 @@
 #!/bin/bash
 # Tmux Configuration Setup Script
-# Syncs tmux configuration and installs theme dependencies
+# Links tmux configuration using XDG_CONFIG_HOME and installs theme dependencies
 
 DOTFILES_TMUX="$HOME/.oh-my-zsh/custom/config/tmux.conf"
-GLOBAL_TMUX="$HOME/.tmux.conf"
+XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
+XDG_TMUX_DIR="$XDG_CONFIG_HOME/tmux"
+XDG_TMUX_CONF="$XDG_TMUX_DIR/tmux.conf"
+LEGACY_TMUX="$HOME/.tmux.conf"
 TMUX_PLUGINS_DIR="$HOME/.tmux/plugins"
 TPM_DIR="$TMUX_PLUGINS_DIR/tpm"
 CATPPUCCIN_DIR="$TMUX_PLUGINS_DIR/catppuccin"
@@ -19,13 +22,25 @@ if ! command -v tmux &> /dev/null; then
   exit 1
 fi
 
-# Copy tmux configuration
+# Check if dotfiles config exists
 if [ ! -f "$DOTFILES_TMUX" ]; then
   echo "✗ Tmux configuration failed - config not found at $DOTFILES_TMUX"
   exit 1
 fi
 
-cp "$DOTFILES_TMUX" "$GLOBAL_TMUX" 2>/dev/null || true
+# Create XDG config directory
+mkdir -p "$XDG_TMUX_DIR"
+
+# Remove legacy config if it exists and isn't a symlink to our dotfiles
+if [ -f "$LEGACY_TMUX" ] && [ ! -L "$LEGACY_TMUX" ]; then
+  # Backup legacy config
+  mv "$LEGACY_TMUX" "$LEGACY_TMUX.backup.$(date +%Y%m%d_%H%M%S)" 2>/dev/null
+fi
+
+# Create symlink at XDG location if it doesn't exist or points to wrong location
+if [ ! -L "$XDG_TMUX_CONF" ] || [ "$(readlink "$XDG_TMUX_CONF")" != "$DOTFILES_TMUX" ]; then
+  ln -sfn "$DOTFILES_TMUX" "$XDG_TMUX_CONF"
+fi
 
 # Create plugins directory
 mkdir -p "$TMUX_PLUGINS_DIR"
@@ -50,7 +65,7 @@ fi
 
 # Reload tmux config if tmux is running
 if tmux list-sessions &> /dev/null; then
-  tmux source-file "$GLOBAL_TMUX" 2>/dev/null
+  tmux source-file "$XDG_TMUX_CONF" 2>/dev/null
 fi
 
 # Check for Nerd Font (this cannot be automated)

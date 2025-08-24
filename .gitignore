@@ -7,6 +7,11 @@ private/*
 navi/_*
 tmp/
 config/claude/voice_notifications
+config/claude/plugins/
+config/claude/projects/
+config/claude/shell-snapshots/
+config/claude/statsig/
+config/claude/todos/
 .claude/
 
 ### Python ###
