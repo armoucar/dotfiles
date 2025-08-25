@@ -1,0 +1,178 @@
+{
+  // =============================================================================
+  // VSCode/Cursor Settings - Centralized Configuration
+  // =============================================================================
+  // This file manages settings for both VSCode and Cursor through symlinks.
+  // Settings are organized by category for easy maintenance.
+
+  // =============================================================================
+  // EDITOR SETTINGS
+  // =============================================================================
+  
+  // Basic editor configuration
+  "editor.accessibilitySupport": "off",
+  "editor.minimap.enabled": false,
+  "editor.tabSize": 2,
+  "editor.wordWrap": "on",
+  "editor.stickyScroll.enabled": false,
+  "editor.enablePreview": false,
+
+  // Font configuration
+  "editor.fontFamily": "'MesloLGL Nerd Font'",
+
+  // Emmet configuration for HTML in other languages
+  "emmet.includeLanguages": {
+    "markdown": "html",
+    "typescript": "html"
+  },
+
+  // =============================================================================
+  // TERMINAL SETTINGS
+  // =============================================================================
+  
+  // Terminal environment and behavior fixes
+  "terminal.integrated.enablePersistentSessions": false,
+  "terminal.integrated.environmentChangesRelaunch": false,
+  "terminal.integrated.inheritEnv": true,
+  "terminal.integrated.shellIntegration.enabled": true,
+  
+  // Terminal appearance
+  "terminal.integrated.fontFamily": "'MesloLGL Nerd Font'",
+  "terminal.integrated.fontSize": 12,
+  
+  // Terminal behavior
+  "terminal.integrated.scrollback": 10000,
+  "terminal.integrated.suggest.enabled": false,
+  "terminal.integrated.allowChords": false,
+  "terminal.integrated.sendKeybindingsToShell": true,
+  
+  // Terminal profiles
+  "terminal.integrated.defaultProfile.linux": "zsh",
+  "terminal.external.osxExec": "iTerm.app",
+
+  // Commands to skip shell processing
+  "terminal.integrated.commandsToSkipShell": [
+    "workbench.action.files.newUntitledFile",
+    "workbench.action.toggleSidebarVisibility",
+    "workbench.action.debug.selectandstart"
+  ],
+
+  // =============================================================================
+  // WORKBENCH & UI SETTINGS
+  // =============================================================================
+  
+  // Workbench behavior
+  "workbench.editor.enablePreview": false,
+  "workbench.startupEditor": "none",
+  "workbench.colorTheme": "Default Dark Modern",
+  "workbench.layoutControl.enabled": false,
+  "workbench.tree.enableStickyScroll": false,
+
+  // Explorer settings
+  "explorer.compactFolders": false,
+  "explorer.confirmDelete": false,
+
+  // =============================================================================
+  // FILE MANAGEMENT
+  // =============================================================================
+  
+  // File behavior
+  "files.trimTrailingWhitespace": true,
+
+  // Hide Python cache and bytecode files
+  "files.exclude": {
+    "**/__pycache__": true,
+    "**/*.pyc": true,
+    "**/*.pyo": true
+  },
+
+  // Search exclusions
+  "search.exclude": {
+    "**/__pycache__": true,
+    "**/*.pyc": true,
+    "**/*.pyo": true
+  },
+
+  // =============================================================================
+  // DEVELOPMENT LANGUAGE SETTINGS
+  // =============================================================================
+  
+  // JavaScript/TypeScript
+  "javascript.updateImportsOnFileMove.enabled": "always",
+  "typescript.preferences.importModuleSpecifier": "relative",
+
+  // Python configuration
+  "python.analysis.packageIndexDepths": [
+    {
+      "name": "",
+      "depth": 10
+    }
+  ],
+  "python.defaultInterpreterPath": "/Users/U003877/dev/xp/python/bedrock-xp/.venv",
+  "python.terminal.activateEnvInCurrentTerminal": true,
+
+  // Jupyter settings
+  "jupyter.askForKernelRestart": false,
+  "jupyter.debugJustMyCode": false,
+  "notebook.output.wordWrap": true,
+  "notebook.lineNumbers": "on",
+
+  // Debugging
+  "debugpy.debugJustMyCode": false,
+  "debug.inlineValues": "off",
+
+  // =============================================================================
+  // GIT & VERSION CONTROL
+  // =============================================================================
+  
+  "git.autofetch": true,
+  "git.openRepositoryInParentFolders": "never",
+
+  // GitHub Pull Requests
+  "githubPullRequests.pullBranch": "never",
+  "githubPullRequests.pushBranch": "always",
+  "githubPullRequests.terminalLinksHandler": "github",
+
+  // GitLens configuration
+  "gitlens.blame.ignoreWhitespace": true,
+  "gitlens.views.branches.branches.layout": "list",
+  "gitlens.views.branches.files.layout": "tree",
+  "gitlens.views.scm.grouped.views": {
+    "commits": false,
+    "branches": false,
+    "remotes": false,
+    "stashes": false,
+    "tags": false,
+    "worktrees": false,
+    "contributors": false,
+    "repositories": false,
+    "searchAndCompare": false,
+    "launchpad": false
+  },
+
+  // =============================================================================
+  // SECURITY & TRUST
+  // =============================================================================
+  
+  "security.workspace.trust.untrustedFiles": "open",
+
+  // =============================================================================
+  // APPLICATION SETTINGS
+  // =============================================================================
+  
+  "application.shellEnvironmentResolutionTimeout": 20,
+  "update.releaseTrack": "prerelease",
+  "json.schemaDownload.enable": true,
+
+  // =============================================================================
+  // CURSOR-SPECIFIC SETTINGS
+  // =============================================================================
+  
+  // Cursor AI features
+  "cursor.cpp.disabledLanguages": [
+    "scminput"
+  ],
+  "cursor-retrieval.canAttemptGithubLogin": false,
+  "cursor.general.disableHttp2": true,
+  "cursor.composer.shouldChimeAfterChatFinishes": true
+}

@@ -1,0 +1,25 @@
+[user]
+name = Arthur Moura Carvalho
+email = {{GIT_USER_EMAIL}}
+
+[color]
+status = auto
+branch = auto
+interactive = auto
+diff = auto
+
+[alias]
+l = log --color --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev
+undo = reset --soft HEAD^
+undo-tag = !git tag -d $(git describe --tags --abbrev=0)
+
+[core]
+	excludesfile = /Users/U003877/.gitignore_global
+editor = vim
+pager = less -F -X
+
+[init]
+defaultBranch = main
+
+[oh-my-zsh]
+git-commit-alias = b9e73b44811becbdf24cff54441c73839a29c523

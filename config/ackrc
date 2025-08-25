@@ -1,0 +1,14 @@
+--ignore-dir=.history
+--ignore-dir=dist
+--ignore-dir=.angular/cache
+--ignore-dir=node_modules
+--ignore-dir=.venv
+--ignore-dir=llama-index-legacy
+--type-add
+css=.sass,.scss
+--type-add
+kt=.kt
+--type-add
+jup=.ipynb
+--type-set
+make:is:Makefile

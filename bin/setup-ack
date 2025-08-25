@@ -1,0 +1,19 @@
+#!/bin/bash
+
+# Setup Ack configuration
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CUSTOM_DIR="$(dirname "$SCRIPT_DIR")"
+CONFIG_FILE="$CUSTOM_DIR/config/ackrc"
+HOME_ACKRC="$HOME/.ackrc"
+
+# Backup existing ackrc if it exists and isn't a symlink
+if [ -f "$HOME_ACKRC" ] && [ ! -L "$HOME_ACKRC" ]; then
+    cp "$HOME_ACKRC" "${HOME_ACKRC}.backup.$(date +%Y%m%d_%H%M%S)"
+fi
+
+# Create symlink
+rm -f "$HOME_ACKRC"
+ln -sf "$CONFIG_FILE" "$HOME_ACKRC"
+
+echo "Ack configuration setup complete!"

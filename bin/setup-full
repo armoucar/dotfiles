@@ -23,6 +23,9 @@ echo
 
 # Array of setup scripts with descriptions
 declare -a SETUP_SCRIPTS=(
+    "setup-git:Configure Git with email selection"
+    "setup-zsh:Setup ZSH configuration"
+    "setup-ack:Setup Ack search configuration"
     "setup-zsh-plugins:Install ZSH plugins (zsh-autosuggestions)"
     "setup-cli:Install the 'dot' CLI command in editable mode"
     "setup-tmux:Sync tmux configuration from dotfiles to ~/.tmux.conf"

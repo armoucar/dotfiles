@@ -1,0 +1,19 @@
+#!/bin/bash
+
+# Setup ZSH configuration
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CUSTOM_DIR="$(dirname "$SCRIPT_DIR")"
+CONFIG_FILE="$CUSTOM_DIR/config/zsh/zshrc"
+HOME_ZSHRC="$HOME/.zshrc"
+
+# Backup existing zshrc if it exists and isn't a symlink
+if [ -f "$HOME_ZSHRC" ] && [ ! -L "$HOME_ZSHRC" ]; then
+    cp "$HOME_ZSHRC" "${HOME_ZSHRC}.backup.$(date +%Y%m%d_%H%M%S)"
+fi
+
+# Create symlink
+rm -f "$HOME_ZSHRC"
+ln -sf "$CONFIG_FILE" "$HOME_ZSHRC"
+
+echo "ZSH configuration setup complete!"

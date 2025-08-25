@@ -1,0 +1,45 @@
+#!/bin/bash
+
+# Setup Git configuration with email selection
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CUSTOM_DIR="$(dirname "$SCRIPT_DIR")"
+CONFIG_DIR="$CUSTOM_DIR/config/git"
+TEMPLATE_FILE="$CONFIG_DIR/gitconfig.template"
+EMAIL_FILE="$CONFIG_DIR/user.email"
+TARGET_FILE="$CONFIG_DIR/gitconfig"
+HOME_GITCONFIG="$HOME/.gitconfig"
+
+# Backup existing gitconfig if it exists and isn't a symlink
+if [ -f "$HOME_GITCONFIG" ] && [ ! -L "$HOME_GITCONFIG" ]; then
+    cp "$HOME_GITCONFIG" "${HOME_GITCONFIG}.backup.$(date +%Y%m%d_%H%M%S)"
+fi
+
+# Get email from file or prompt user
+if [ -f "$EMAIL_FILE" ]; then
+    EMAIL=$(cat "$EMAIL_FILE")
+    echo "Using email from $EMAIL_FILE: $EMAIL"
+else
+    echo "Email file not found at $EMAIL_FILE"
+    echo "Please enter your Git email address:"
+    echo "  - Work: arthur.moura@neon.com.br"
+    echo "  - Personal: your-personal@email.com"
+    read -p "Email: " EMAIL
+    
+    if [ -n "$EMAIL" ]; then
+        echo "$EMAIL" > "$EMAIL_FILE"
+        echo "Email saved to $EMAIL_FILE"
+    else
+        echo "No email provided. Exiting."
+        exit 1
+    fi
+fi
+
+# Generate gitconfig from template
+sed "s/{{GIT_USER_EMAIL}}/$EMAIL/g" "$TEMPLATE_FILE" > "$TARGET_FILE"
+
+# Create symlink
+rm -f "$HOME_GITCONFIG"
+ln -sf "$TARGET_FILE" "$HOME_GITCONFIG"
+
+echo "Git configuration setup complete!"

@@ -12,8 +12,13 @@ config/claude/projects/
 config/claude/shell-snapshots/
 config/claude/statsig/
 config/claude/todos/
+config/claude/ide/
 config/claude/command.log
 .claude/
+
+# Git configuration
+config/git/user.email
+config/git/gitconfig
 
 ### Python ###
 # Byte-compiled / optimized / DLL files
