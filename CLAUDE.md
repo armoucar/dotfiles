@@ -208,3 +208,9 @@ All hooks are managed in `config/claude/` and synchronized using `setup-claude`:
 - Private keys and secrets should only be placed in the `private/` directory
 - Claude Code configuration is managed through `config/claude/` directory and `setup-claude`
 - Markdownlint configuration in `.markdownlint.json` enables auto-formatting via Claude stop hook
+
+## Coding Standards
+
+- **NEVER use `Path(__file__).parent` constructions** - These create brittle location-dependent code that breaks when files are moved or imported from different contexts
+- Use environment variables, configuration files, or pass paths as parameters instead
+- Prefer conventional import strategies and dependency injection over file-system path calculations

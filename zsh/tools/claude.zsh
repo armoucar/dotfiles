@@ -26,3 +26,15 @@ alias cchaiku='claude --model claude-3-haiku-20240307'
 
 # Configuration sync alias
 alias claude-sync='~/.oh-my-zsh/custom/claude/setup.zsh'
+
+# Short aliases for permission modes (using claude-start for proper tmux integration)
+alias ccsa="claude-start --permission-mode acceptEdits"
+alias ccss="claude-start --permission-mode default"
+alias ccsp="claude-start --permission-mode plan"
+alias ccsb="claude-start --dangerously-skip-permissions"
+
+# Permission management aliases (using dot CLI)
+alias dcp="dot claude permissions"
+alias dcpa="dot claude permissions apply"
+alias dcps="dot claude permissions show"
+alias dcpl="dot claude permissions list"

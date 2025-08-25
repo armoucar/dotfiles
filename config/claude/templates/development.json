@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "defaultMode": "acceptEdits",
+    "allow": [
+      "Read",
+      "Edit",
+      "MultiEdit",
+      "Write", 
+      "LS",
+      "Glob",
+      "Grep",
+      "Bash(npm *)",
+      "Bash(yarn *)",
+      "Bash(pnpm *)",
+      "Bash(uv *)",
+      "Bash(pip *)",
+      "Bash(git *)",
+      "Bash(ls*)",
+      "Bash(pwd*)",
+      "Bash(cd*)",
+      "Bash(echo*)",
+      "Bash(cat*)",
+      "Bash(head*)",
+      "Bash(tail*)",
+      "Bash(grep*)",
+      "Bash(find*)",
+      "Bash(which*)",
+      "Bash(chmod*)",
+      "Bash(mkdir*)",
+      "Bash(cp*)",
+      "Bash(mv*)",
+      "Bash(ln*)",
+      "Bash(docker build*)",
+      "Bash(docker run*)",
+      "Bash(docker exec*)",
+      "Bash(docker logs*)",
+      "Bash(podman build*)",
+      "Bash(podman run*)",
+      "Bash(podman exec*)",
+      "Bash(podman logs*)",
+      "WebSearch",
+      "WebFetch"
+    ],
+    "ask": [
+      "Bash(rm -rf*)",
+      "Bash(sudo*)",
+      "Bash(docker rm*)",
+      "Bash(docker rmi*)",
+      "Bash(podman rm*)",
+      "Bash(podman rmi*)",
+      "Bash(kubectl delete*)",
+      "Bash(terraform destroy*)"
+    ]
+  },
+  "env": {
+    "CLAUDE_PROJECT_TYPE": "development"
+  }
+}

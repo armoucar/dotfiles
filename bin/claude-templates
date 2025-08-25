@@ -1,0 +1,7 @@
+#!/usr/bin/env uv run python3
+"""List Claude permission templates."""
+
+import subprocess
+
+# Execute dot claude permissions list
+subprocess.run(["uv", "run", "python3", "-c", "from cli.app.cli import cli; cli()", "claude", "permissions", "list"])

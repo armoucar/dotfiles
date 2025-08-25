@@ -9,8 +9,9 @@ import click
 from .utils import CLAUDE_MAP_FILE, tmux
 
 
-@click.command(name="claude-start")
-def claude_start():
+@click.command(name="claude-start", context_settings={"ignore_unknown_options": True})
+@click.argument("claude_args", nargs=-1, type=click.UNPROCESSED)
+def claude_start(claude_args):
     """Start Claude Code with UUID tracking for tmux window state management."""
     if not os.environ.get("TMUX"):
         click.echo("Error: Must be run from within a tmux session", err=True)
@@ -49,9 +50,10 @@ def claude_start():
     tmp.write_text("\n".join(lines) + "\n")
     tmp.replace(CLAUDE_MAP_FILE)
 
-    # Start Claude with the specific session ID
+    # Start Claude with the specific session ID and any additional arguments
     try:
-        os.execvp("claude", ["claude", "--session-id", uuid])
+        claude_cmd = ["claude", "--session-id", uuid] + list(claude_args)
+        os.execvp("claude", claude_cmd)
     except FileNotFoundError:
         click.echo(
             "Error: claude command not found. Make sure Claude Code is installed.",

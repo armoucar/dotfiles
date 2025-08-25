@@ -83,14 +83,18 @@
   "files.exclude": {
     "**/__pycache__": true,
     "**/*.pyc": true,
-    "**/*.pyo": true
+    "**/*.pyo": true,
+    "**/.pytest_cache": true,
+    "**/.ruff_cache": true
   },
 
   // Search exclusions
   "search.exclude": {
     "**/__pycache__": true,
     "**/*.pyc": true,
-    "**/*.pyo": true
+    "**/*.pyo": true,
+    "**/.pytest_cache": true,
+    "**/.ruff_cache": true
   },
 
   // =============================================================================

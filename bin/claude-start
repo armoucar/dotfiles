@@ -1,3 +1,4 @@
 #!/bin/bash
 # Wrapper script for Claude start CLI command
-exec uv run dot tmux claude-start
+# Passes all arguments through to the underlying claude-start command
+exec uv run dot tmux claude-start "$@"

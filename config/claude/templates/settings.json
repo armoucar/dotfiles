@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "defaultMode": "acceptEdits",
+    "allow": [
+      "Read",
+      "LS", 
+      "Glob",
+      "Grep",
+      "Bash(npm run *)",
+      "Bash(yarn *)",
+      "Bash(pnpm *)",
+      "Bash(uv *)",
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git add*)",
+      "Bash(git commit*)",
+      "Bash(ls*)",
+      "Bash(pwd*)",
+      "Bash(cd*)",
+      "Bash(echo*)",
+      "Bash(cat*)",
+      "Bash(grep*)",
+      "Bash(find*)",
+      "Bash(mkdir*)",
+      "Bash(cp*)",
+      "Bash(mv*)",
+      "WebSearch",
+      "WebFetch"
+    ],
+    "ask": [
+      "Bash(rm*)",
+      "Bash(sudo*)",
+      "Bash(kubectl delete*)",
+      "Bash(docker rm*)",
+      "Bash(podman rm*)",
+      "Bash(*--force*)"
+    ],
+    "additionalDirectories": []
+  },
+  "env": {},
+  "hooks": {}
+}
