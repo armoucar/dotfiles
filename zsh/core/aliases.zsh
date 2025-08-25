@@ -11,18 +11,6 @@ alias alsg="als --groups"
 alias mcp-inspector="npx @modelcontextprotocol/inspector"
 alias ff="find . \\( -name '*.pyc' -o -name '.venv' -o -name 'tmp' \\) -prune -o -type f -print"
 
-function fg() {
-  ignored_folders=(.venv __pycache__ node_modules dist build)
-
-  find_command="find ."
-  for folder in "${ignored_folders[@]}"; do
-    find_command+=" -path \"*/$folder\" -prune -o"
-  done
-
-  find_command+=" -print | grep \"$1\""
-
-  eval $find_command
-}
 
 function gopen() {
   git remote -v | head -n 1 | awk -F "@" '{print $2}' | awk -F " " '{print $1}' | sed 's/:/\//g' | sed 's/.git//g' | awk '{print "http://"$1}' | xargs open
