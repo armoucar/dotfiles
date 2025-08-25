@@ -4,6 +4,14 @@
 --ignore-dir=node_modules
 --ignore-dir=.venv
 --ignore-dir=llama-index-legacy
+--ignore-dir=config/claude/voice_notifications
+--ignore-dir=config/claude/plugins
+--ignore-dir=config/claude/projects
+--ignore-dir=config/claude/shell-snapshots
+--ignore-dir=config/claude/statsig
+--ignore-dir=config/claude/todos
+--ignore-dir=config/claude/ide
+--ignore-file=match:command.log
 --type-add
 css=.sass,.scss
 --type-add

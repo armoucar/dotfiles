@@ -32,6 +32,7 @@ alias ccsa="claude-start --permission-mode acceptEdits"
 alias ccss="claude-start --permission-mode default"
 alias ccsp="claude-start --permission-mode plan"
 alias ccsb="claude-start --dangerously-skip-permissions"
+alias ccsr="claude-resume"
 
 # Permission management aliases (using dot CLI)
 alias dcp="dot claude permissions"

@@ -1,0 +1,4 @@
+#!/bin/bash
+# Wrapper script for Claude resume CLI command
+# Passes all arguments through to the underlying claude-resume command
+exec uv run dot tmux claude-resume "$@"
