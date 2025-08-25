@@ -2,11 +2,9 @@ import click
 
 from cli.app.command.git import (
     prs_check,
-    new_pr,
     project_stats,
     changes_check,
     auth_check,
-    commit,
     approve,
     analyze_prs,
 )
@@ -83,11 +81,9 @@ def tmux():
 
 # Add git commands to git group
 git.add_command(prs_check)
-git.add_command(new_pr)
 git.add_command(project_stats)
 git.add_command(changes_check)
 git.add_command(auth_check)
-git.add_command(commit)
 git.add_command(approve)
 git.add_command(analyze_prs)
 cli.add_command(git)
