@@ -63,6 +63,7 @@ if [ ! -d "$CATPPUCCIN_DIR" ]; then
   fi
 fi
 
+
 # Reload tmux config if tmux is running
 if tmux list-sessions &> /dev/null; then
   tmux source-file "$XDG_TMUX_CONF" 2>/dev/null
