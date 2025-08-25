@@ -40,4 +40,4 @@ if [ -d "$(dirname "$VSCODE_SETTINGS")" ]; then
     create_settings_symlink "$VSCODE_SETTINGS" >/dev/null 2>&1
 fi
 
-echo "✓ VSCode settings symlinks created"
+echo "✓ VSCode settings setup complete"

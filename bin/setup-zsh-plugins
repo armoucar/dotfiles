@@ -6,11 +6,11 @@
 PLUGIN_DIR="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/plugins/zsh-autosuggestions"
 if [ ! -d "$PLUGIN_DIR" ]; then
   if git clone https://github.com/zsh-users/zsh-autosuggestions "$PLUGIN_DIR" >/dev/null 2>&1; then
-    echo "✓ ZSH plugins installation completed"
+    echo "✓ ZSH plugins setup complete"
   else
     echo "✗ ZSH plugins installation failed - git clone error"
     exit 1
   fi
 else
-  echo "✓ ZSH plugins already installed"
+  echo "✓ ZSH plugins setup complete"
 fi

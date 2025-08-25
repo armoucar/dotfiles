@@ -16,4 +16,4 @@ fi
 rm -f "$HOME_ZSHRC"
 ln -sf "$CONFIG_FILE" "$HOME_ZSHRC"
 
-echo "ZSH configuration setup complete!"
+echo "✓ ZSH configuration setup complete"

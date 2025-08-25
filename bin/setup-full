@@ -21,19 +21,26 @@ else
 fi
 echo
 
-# Array of setup scripts with descriptions
+# Array of setup scripts with descriptions (grouped logically)
 declare -a SETUP_SCRIPTS=(
+    # Core shell configuration
     "setup-git:Configure Git with email selection"
     "setup-zsh:Setup ZSH configuration"
-    "setup-ack:Setup Ack search configuration"
     "setup-zsh-plugins:Install ZSH plugins (zsh-autosuggestions)"
+    "setup-ack:Setup Ack search configuration"
+    
+    # Development tools
     "setup-cli:Install the 'dot' CLI command in editable mode"
     "setup-tmux:Sync tmux configuration from dotfiles to ~/.tmux.conf"
     "setup-claude:Configure Claude Code hooks and settings"
+    
+    # Editor and formatting
     "setup-markdownlint:Copy markdownlint config to home directory"
-    "setup-chrome-profile:Configure default Chrome profile"
     "setup-vscode-settings:Sync VSCode/Cursor settings"
-    "setup-workspaces:Configure development workspaces"
+    
+    # System configuration
+    "setup-chrome-profile:Configure default Chrome profile"
+    "setup-workspaces:Configure AeroSpace workspaces"
 )
 
 # Function to ask for confirmation
