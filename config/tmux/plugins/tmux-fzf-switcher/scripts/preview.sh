@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Tmux window content preview script for fzf
-# Usage: tmux-window-preview "session:window" or "session: (description)"
+# Tmux FZF Switcher Plugin - Preview Script
+# Usage: preview.sh "session:window" or "session: (description)"
 
 selection="$1"
 
