@@ -19,6 +19,8 @@ alias gwip='git add -A; git rm $(git ls-files --deleted) 2> /dev/null; git commi
 alias inctag="_increment_tag"
 alias gk='\gitk --all --branches 2> >(grep -v "IMKClient\|IMKInputSession" >&2) &!'
 
+alias gf='git ls-files | grep'
+
 # Function to automate git tagging
 _increment_tag() {
   # Get the last git tag

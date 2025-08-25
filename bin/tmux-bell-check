@@ -1,0 +1,21 @@
+#!/bin/bash
+# Cross-session tmux bell detection script
+# Returns formatted bell indicator when any window has bells, empty otherwise
+
+# Check if tmux is running
+if ! command -v tmux >/dev/null 2>&1; then
+    exit 0
+fi
+
+# Check if any tmux sessions exist
+if ! tmux list-sessions >/dev/null 2>&1; then
+    exit 0
+fi
+
+# Count windows with bell flags across all sessions
+bell_count=$(tmux list-windows -a -F '#{window_bell_flag}' 2>/dev/null | grep -c '^1$' || true)
+
+# If bells exist, output the formatted indicator
+if [ "$bell_count" -gt 0 ]; then
+    echo "#[fg=#{@thm_crust},bg=#{@thm_yellow},bold] 🔔 NEW #[default]"
+fi
