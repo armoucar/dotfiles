@@ -7,7 +7,7 @@
       "Read(**.txt)",
       "Read(**.json)",
       "Read(**.yaml)",
-      "Read(**.yml)", 
+      "Read(**.yml)",
       "LS",
       "Glob",
       "Grep",
@@ -20,15 +20,15 @@
     ],
     "ask": [
       "Edit",
-      "MultiEdit", 
+      "MultiEdit",
       "Write",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(npm *)",
-      "Bash(yarn *)",
-      "Bash(docker *)",
-      "Bash(podman *)",
-      "Bash(kubectl *)"
+      "Bash(npm:*)",
+      "Bash(yarn:*)",
+      "Bash(docker:*)",
+      "Bash(podman:*)",
+      "Bash(kubectl:*)"
     ],
     "deny": [
       "Read(./.env*)",
