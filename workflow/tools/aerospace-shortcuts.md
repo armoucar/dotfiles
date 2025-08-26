@@ -14,9 +14,34 @@
 
 ## Workspaces
 
-- `alt + 1-9` - Go to workspace
-- `alt + shift + 1-9` - Move window to workspace
+### Navigation
+
+- `alt + 1-9,0` - Go to numbered workspace
+- `alt + A,B,D,E,G,I,M,N,O,P,Q,R,S,T,U,V,W,Y` - Go to lettered workspace
+- `alt + shift + [key]` - Move window to workspace
 - `alt + shift + tab` - Move workspace to next monitor
+
+### My Organization
+
+**Built-in Display:** 1-5 | **External Monitor:** A,B,D,E,G,I,M,N,O,P,Q,R,S,T,U,V,W,Y
+
+- **0**: Spotify (music)
+- **1**: Google Chrome (email - Neon Mail, Work Chrome Profile)
+- **2**: Slack (team communication)
+- **3**: Google Meet + TextEdit (meetings/notes)
+- **6**: Google Chrome (Grafana - metrics, Chrome App Mode, no omnisearch)
+- **7**: Google Chrome (Mixpanel - usage analytics, Chrome App Mode, no omnisearch)
+- **8**: Google Chrome (Gen.te authentication, Personal account chrome)
+- **9**: Podman Desktop (containers)
+- **A**: Google Chrome (ChatGPT Profile 1, Chrome App Mode, no omnisearch)
+- **B**: Google Chrome (Context7 documentation, Browser Instance in the letters screen)
+- **D**: DBeaver (database)
+- **E**: Cursor (code editor)
+- **G**: MongoDB Compass (database GUI)
+- **M**: Preview (PDF documents)
+- **N**: Finder (file management)
+- **S**: Claude (AI assistant)
+- **T**: iTerm2 (terminal)
 
 ## Layout Management
 

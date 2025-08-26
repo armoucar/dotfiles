@@ -27,6 +27,7 @@
       "Bash(mkdir:*)",
       "Bash(cp:*)",
       "Bash(mv:*)",
+      "Bash(aerospace:*)",
       "WebSearch",
       "WebFetch"
     ],

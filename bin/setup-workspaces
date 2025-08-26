@@ -1,6 +1,6 @@
 #!/bin/bash
 # AeroSpace Workspace Setup Script
-# Dynamically distributes workspaces based on monitor count
+# Dynamically distributes workspaces based on monitor count, organizes apps, and configures layouts
 
 # Check if aerospace is available
 if ! command -v aerospace &> /dev/null; then
@@ -138,16 +138,172 @@ retry_misplaced_workspaces() {
     return 1  # Still have misplaced workspaces after max retries
 }
 
+# Function to determine target workspace for an app
+get_app_target_workspace() {
+    local app_name="$1"
+    local window_title="$2"
+    
+    case "$app_name" in
+        "Spotify")
+            echo "0"
+            ;;
+        "Slack")
+            echo "2"
+            ;;
+        "Google Meet")
+            echo "3"
+            ;;
+        "TextEdit")
+            echo "3"
+            ;;
+        "Podman Desktop")
+            echo "9"
+            ;;
+        "Claude")
+            echo "S"
+            ;;
+        "DBeaver")
+            echo "D"
+            ;;
+        "Cursor")
+            echo "E"
+            ;;
+        "MongoDB Compass")
+            echo "G"
+            ;;
+        "Preview")
+            echo "M"
+            ;;
+        "Finder")
+            echo "N"
+            ;;
+        "iTerm2")
+            echo "T"
+            ;;
+        "Google Chrome")
+            # Chrome with special title detection
+            if [[ "$window_title" =~ ChatGPT ]]; then
+                echo "A"
+            elif [[ "$window_title" =~ Grafana ]]; then
+                echo "6"
+            elif [[ "$window_title" =~ Mixpanel ]]; then
+                echo "7"
+            else
+                # Default fallback for all other Chrome windows
+                echo "1"
+            fi
+            ;;
+        *)
+            # Unknown apps go to workspace 1
+            echo "1"
+            ;;
+    esac
+}
+
+# Function to move an app to its target workspace
+move_app_to_workspace() {
+    local window_id="$1"
+    local target_workspace="$2"
+    
+    aerospace move-node-to-workspace --window-id "$window_id" "$target_workspace" >/dev/null 2>&1
+}
+
+# Function to get apps that are in wrong workspaces
+get_misplaced_apps() {
+    local misplaced=""
+    
+    # Get all windows with format: window-id|workspace|app-name|window-title
+    while IFS='|' read -r window_id current_workspace app_name window_title; do
+        # Skip empty lines
+        [[ -z "$window_id" ]] && continue
+        
+        # Determine target workspace for this app
+        local target_workspace=$(get_app_target_workspace "$app_name" "$window_title")
+        
+        # Check if app is in wrong workspace
+        if [[ "$current_workspace" != "$target_workspace" ]]; then
+            misplaced="$misplaced $window_id:$target_workspace"
+        fi
+    done < <(aerospace list-windows --all --format '%{window-id}|%{workspace}|%{app-name}|%{window-title}' 2>/dev/null)
+    
+    echo "$misplaced"
+}
+
+# Retry misplaced apps up to 5 times
+retry_misplaced_apps() {
+    local max_retries=5
+    local retry_count=0
+    
+    while [ $retry_count -lt $max_retries ]; do
+        local misplaced=$(get_misplaced_apps)
+        
+        if [ -z "$misplaced" ]; then
+            return 0  # All apps correctly placed
+        fi
+        
+        retry_count=$((retry_count + 1))
+        
+        # Retry each misplaced app
+        for item in $misplaced; do
+            local window_id=$(echo "$item" | cut -d':' -f1)
+            local target_workspace=$(echo "$item" | cut -d':' -f2)
+            move_app_to_workspace "$window_id" "$target_workspace"
+        done
+    done
+    
+    return 1  # Still have misplaced apps after max retries
+}
+
+# Function to configure workspace layouts
+configure_workspace_layouts() {
+    # Configure workspace 3 (Google Meet + TextEdit) - horizontal split with Meet taking more space
+    if aerospace list-windows --workspace 3 --format '%{app-name}' 2>/dev/null | grep -q "Google Meet"; then
+        aerospace workspace 3 >/dev/null 2>&1
+        aerospace flatten-workspace-tree --workspace 3 >/dev/null 2>&1
+        aerospace layout horizontal >/dev/null 2>&1
+        
+        # Resize Google Meet to take more space (approximately 80%)
+        local meet_window_id=$(aerospace list-windows --workspace 3 --format '%{window-id}|%{app-name}' 2>/dev/null | grep "Google Meet" | cut -d'|' -f1 | head -n1)
+        if [[ -n "$meet_window_id" ]]; then
+            aerospace resize --window-id "$meet_window_id" width +400 >/dev/null 2>&1
+        fi
+    fi
+    
+    # Configure workspace A (ChatGPT windows) - horizontal split
+    if aerospace list-windows --workspace A --format '%{app-name}' 2>/dev/null | grep -q "Google Chrome"; then
+        aerospace workspace A >/dev/null 2>&1
+        aerospace flatten-workspace-tree --workspace A >/dev/null 2>&1
+        aerospace layout horizontal >/dev/null 2>&1
+    fi
+}
+
 
 # Verify and retry configuration for multi-monitor setups
+WORKSPACE_SUCCESS=true
 if [ $MONITOR_COUNT -gt 1 ]; then
-    if retry_misplaced_workspaces; then
-        echo "✓ AeroSpace setup complete"
-    else
-        echo "⚠️  AeroSpace setup complete (some workspaces may need manual adjustment)"
+    if ! retry_misplaced_workspaces; then
+        WORKSPACE_SUCCESS=false
     fi
-else
+fi
+
+# Organize apps into their designated workspaces
+APP_SUCCESS=true
+if ! retry_misplaced_apps; then
+    APP_SUCCESS=false
+fi
+
+# Configure workspace layouts
+configure_workspace_layouts
+
+# Single output line based on results
+if [ "$WORKSPACE_SUCCESS" = true ] && [ "$APP_SUCCESS" = true ]; then
     echo "✓ AeroSpace setup complete"
+elif [ "$WORKSPACE_SUCCESS" = false ] && [ "$APP_SUCCESS" = false ]; then
+    echo "⚠️  AeroSpace setup complete (workspaces and apps may need manual adjustment)"
+elif [ "$WORKSPACE_SUCCESS" = false ]; then
+    echo "⚠️  AeroSpace setup complete (some workspaces may need manual adjustment)"
+else
+    echo "⚠️  AeroSpace setup complete (some apps may need manual adjustment)"
 fi
 
 # Return to initial workspace (very last step)

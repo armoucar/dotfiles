@@ -39,6 +39,7 @@
       "Bash(podman run:*)",
       "Bash(podman exec:*)",
       "Bash(podman logs:*)",
+      "Bash(aerospace:*)",
       "WebSearch",
       "WebFetch"
     ],

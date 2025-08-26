@@ -35,7 +35,13 @@ Add the provided Claude Code tool command pattern to the appropriate permission 
    - Ensure no duplicates
    - Maintain JSON formatting
 
-6. **Re-apply current template to project**:
+6. **Update current project settings**:
+   - Check if there's a `.claude/settings.json` in the current project
+   - If it exists, also add the command pattern to the current project's settings file
+   - **Always update** `$HOME/.oh-my-zsh/custom/config/claude/settings.json` (dotfiles main settings)
+   - This ensures the updated permissions are immediately available without reapplying templates
+   
+7. **Re-apply current template to project** (fallback):
    - Check what template is currently applied by reading `.claude/settings.json` and looking at the `CLAUDE_PROJECT_TYPE` env variable
    - Automatically re-apply the same template using `dot claude permissions apply <current-template>`
    - This ensures the updated permissions are immediately available in the current project
