@@ -4,6 +4,10 @@ alias e="$EDITOR"
 alias docker="podman"
 
 export PATH=$PATH:$HOME/.oh-my-zsh/custom/bin
+# Add all bin subdirectories to PATH
+for dir in $HOME/.oh-my-zsh/custom/bin/*/; do
+  [ -d "$dir" ] && export PATH=$PATH:$dir
+done
 export PATH=$PATH:$HOME/.oh-my-zsh/custom/bin-private
 
 # Load private files
