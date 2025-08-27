@@ -1,0 +1,3 @@
+[submodule "docs-external/claude-code-docs"]
+	path = docs-external/claude-code-docs
+	url = https://github.com/ericbuess/claude-code-docs.git
