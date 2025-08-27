@@ -4,9 +4,10 @@
 # Usage: switcher.sh <mode>
 #   mode: all|sessions|windows
 
-# Get the directory of this script
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PLUGIN_DIR="$(dirname "$SCRIPT_DIR")"
+# Fixed paths - this project always exists at ~/.oh-my-zsh/custom
+CUSTOM_DIR="$HOME/.oh-my-zsh/custom"
+PLUGIN_DIR="$CUSTOM_DIR/config/tmux/plugins/tmux-fzf-switcher"
+SCRIPT_DIR="$PLUGIN_DIR/scripts"
 
 mode="${1:-all}"
 

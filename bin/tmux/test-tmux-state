@@ -5,7 +5,7 @@
 
 set -e
 
-cd "$(dirname "$0")/.."
+cd "$HOME/.oh-my-zsh/custom"
 
 echo "Running tmux-claude state management tests..."
 echo "=============================================="

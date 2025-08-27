@@ -1,0 +1,18 @@
+#!/bin/bash
+# Python virtual environment detection script for tmux status bar
+# Returns formatted venv indicator only in Python project directories
+
+# Check if we're in a Python project directory
+# Look for common Python project files
+if ! ([ -f "pyproject.toml" ] || [ -f "requirements.txt" ] || [ -f "setup.py" ] || [ -f "Pipfile" ] || [ -f "poetry.lock" ] || [ -f ".python-version" ] || ls *.py >/dev/null 2>&1); then
+    exit 0
+fi
+
+# Check virtual environment status
+# if [ -n "$VIRTUAL_ENV" ]; then
+#     # In a virtual environment - following Catppuccin pattern exactly like bell check
+#     echo "#[fg=#a6e3a1]#[fg=#11111b,bg=#a6e3a1,bold]◆ #[bg=#313244,fg=#a6e3a1] VENV #[fg=#313244]"
+# else
+#     # Using global Python - using blue background like bell uses yellow
+#     echo "#[fg=#89b4fa]#[fg=#11111b,bg=#89b4fa,bold]◇ GLOBAL #[fg=#313244]"
+# fi

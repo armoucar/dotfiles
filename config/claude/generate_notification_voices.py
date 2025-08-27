@@ -64,7 +64,14 @@ async def generate_voice_file(
 async def generate_voices(target_voice=None):
     """Generate voice notifications for specified voice or all voices."""
     # Create base directory for voice files in dotfiles structure
-    base_dir = Path(__file__).parent / "voice_notifications"
+    base_dir = (
+        Path.home()
+        / ".oh-my-zsh"
+        / "custom"
+        / "config"
+        / "claude"
+        / "voice_notifications"
+    )
     base_dir.mkdir(parents=True, exist_ok=True)
 
     # Determine which voices to generate

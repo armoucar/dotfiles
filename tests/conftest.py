@@ -17,14 +17,28 @@ def temp_home(tmp_path):
 @pytest.fixture
 def sample_state_json():
     """Load sample state JSON for testing."""
-    fixture_path = Path(__file__).parent / "fixtures" / "sample_state.json"
+    fixture_path = (
+        Path.home()
+        / ".oh-my-zsh"
+        / "custom"
+        / "tests"
+        / "fixtures"
+        / "sample_state.json"
+    )
     return json.loads(fixture_path.read_text())
 
 
 @pytest.fixture
 def sample_claude_map_content():
     """Load sample Claude map content for testing."""
-    fixture_path = Path(__file__).parent / "fixtures" / "sample_claude_map"
+    fixture_path = (
+        Path.home()
+        / ".oh-my-zsh"
+        / "custom"
+        / "tests"
+        / "fixtures"
+        / "sample_claude_map"
+    )
     return fixture_path.read_text()
 
 

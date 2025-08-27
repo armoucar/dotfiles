@@ -21,6 +21,9 @@ dependencies = [
   "httpx>=0.28.1",
   "pytest<9.0.0,>=8.3.0",
   "pytest-mock<4.0.0,>=3.14.0",
+  "dspy>=3.0.2",
+  "openinference-instrumentation-dspy>=0.1.28",
+  "openinference-instrumentation-litellm>=0.1.25",
 ]
 readme = "cli/README.md"
 

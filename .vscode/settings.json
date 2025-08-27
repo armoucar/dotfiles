@@ -1,6 +1,6 @@
 {
   // Project-specific settings for dotfiles repository
-  
+
   // Hide Claude auto-generated directories from explorer
   "files.exclude": {
     "config/claude/ide": true,

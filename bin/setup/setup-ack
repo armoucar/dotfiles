@@ -2,8 +2,7 @@
 
 # Setup Ack configuration
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CUSTOM_DIR="$(dirname "$SCRIPT_DIR")"
+CUSTOM_DIR="$HOME/.oh-my-zsh/custom"
 CONFIG_FILE="$CUSTOM_DIR/config/ackrc"
 HOME_ACKRC="$HOME/.ackrc"
 

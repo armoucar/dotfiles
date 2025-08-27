@@ -39,9 +39,19 @@
       "Bash(podman run:*)",
       "Bash(podman exec:*)",
       "Bash(podman logs:*)",
+      "Bash(kubectl config current-context*)",
+      "Bash(kubectl config get-clusters*)",
+      "Bash(kubectl config get-contexts*)",
+      "Bash(kubectl config get-users*)",
+      "Bash(kubectl config view*)",
+      "Bash(command tmux:*)",
+      "Bash(tmux:*)",
       "Bash(aerospace:*)",
+      "Bash(gh workflow:*)",
       "WebSearch",
-      "WebFetch"
+      "WebFetch",
+      "mcp__context7__resolve-library-id(*)",
+      "mcp__context7__get-library-docs(*)"
     ],
     "ask": [
       "Bash(rm -rf*)",

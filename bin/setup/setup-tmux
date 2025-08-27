@@ -2,7 +2,7 @@
 # Tmux Configuration Setup Script
 # Links tmux configuration using XDG_CONFIG_HOME and installs theme dependencies
 
-DOTFILES_TMUX="$HOME/.oh-my-zsh/custom/config/tmux.conf"
+DOTFILES_TMUX="$HOME/.oh-my-zsh/custom/config/tmux/tmux.conf"
 XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
 XDG_TMUX_DIR="$XDG_CONFIG_HOME/tmux"
 XDG_TMUX_CONF="$XDG_TMUX_DIR/tmux.conf"

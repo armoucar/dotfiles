@@ -24,16 +24,7 @@ def get_templates_dir() -> Path:
     if templates_dir:
         return Path(templates_dir)
 
-    # Default: look in the config directory within the oh-my-zsh custom folder
-    # This assumes we're running from within the dotfiles project structure
-    custom_dir = os.getenv("DOTFILES_ROOT") or Path.cwd()
-    while custom_dir != custom_dir.parent:  # Walk up until we find the right structure
-        candidate = custom_dir / "config" / "claude" / "templates"
-        if candidate.exists():
-            return candidate
-        custom_dir = custom_dir.parent
-
-    # Fallback to a standard location if nothing found
+    # Default: use fixed location - this project always exists at ~/.oh-my-zsh/custom
     return Path.home() / ".oh-my-zsh" / "custom" / "config" / "claude" / "templates"
 
 

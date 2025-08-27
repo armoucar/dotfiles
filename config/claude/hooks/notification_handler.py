@@ -33,7 +33,14 @@ AVAILABLE_VOICES = [
 
 def load_notification_config():
     """Load notification configuration from JSON file."""
-    config_path = Path(__file__).parent.parent / "notification_config.json"
+    config_path = (
+        Path.home()
+        / ".oh-my-zsh"
+        / "custom"
+        / "config"
+        / "claude"
+        / "notification_config.json"
+    )
 
     # Default configuration
     default_config = {
@@ -63,7 +70,15 @@ def get_session_voice(session_id: str) -> str:
 
 def get_random_audio_file(voice: str) -> Path:
     """Get a random audio file for the given voice."""
-    voice_dir = Path(__file__).parent.parent / "voice_notifications" / voice
+    voice_dir = (
+        Path.home()
+        / ".oh-my-zsh"
+        / "custom"
+        / "config"
+        / "claude"
+        / "voice_notifications"
+        / voice
+    )
 
     if not voice_dir.exists():
         return None

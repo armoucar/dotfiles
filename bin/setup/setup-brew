@@ -1,4 +1,4 @@
 #!/bin/bash
 # Homebrew package management wrapper
-cd "$(dirname "$0")/.."
+cd "$HOME/.oh-my-zsh/custom"
 exec uv run dot brew "$@"

@@ -3,8 +3,9 @@
 # Tmux FZF Switcher Plugin
 # A self-contained tmux plugin providing fzf-powered window and session switching
 
-# Get the directory of this script
-PLUGIN_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Fixed paths - this project always exists at ~/.oh-my-zsh/custom
+CUSTOM_DIR="$HOME/.oh-my-zsh/custom"
+PLUGIN_DIR="$CUSTOM_DIR/config/tmux/plugins/tmux-fzf-switcher"
 SCRIPTS_DIR="$PLUGIN_DIR/scripts"
 
 # Set up key bindings for the switcher using popup dialogs
