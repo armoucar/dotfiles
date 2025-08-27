@@ -44,7 +44,7 @@
   "terminal.integrated.scrollback": 10000,
   "terminal.integrated.suggest.enabled": false,
   "terminal.integrated.allowChords": false,
-  "terminal.integrated.sendKeybindingsToShell": true,
+  "terminal.integrated.sendKeybindingsToShell": false,
   
   // Terminal profiles
   "terminal.integrated.defaultProfile.linux": "zsh",
@@ -54,7 +54,8 @@
   "terminal.integrated.commandsToSkipShell": [
     "workbench.action.files.newUntitledFile",
     "workbench.action.toggleSidebarVisibility",
-    "workbench.action.debug.selectandstart"
+    "workbench.action.debug.selectandstart",
+    "workbench.action.terminal.sendSequence"
   ],
 
   // =============================================================================

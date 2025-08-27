@@ -8,5 +8,11 @@
     "config/claude/shell-snapshots": true,
     "config/claude/statsig": true,
     "config/claude/todos": true
-  }
+  },
+
+  // Fix Alt+arrow keys for word navigation in terminal
+  "terminal.integrated.sendKeybindingsToShell": false,
+  "terminal.integrated.commandsToSkipShell": [
+    "workbench.action.terminal.sendSequence"
+  ]
 }

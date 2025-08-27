@@ -11,37 +11,38 @@ packages:
   - glow            # Markdown renderer
   - navi            # Interactive cheatsheet
   - ack             # Grep-like text finder
-  
+
   # Development essentials
   - git             # Version control
   - vim             # Text editor
   - tmux            # Terminal multiplexer
   - gh              # GitHub CLI
-  
+
   # System tools
   - coreutils       # GNU core utilities
   - curl            # HTTP client
   - wget            # File downloader
-  
+
   # Cloud & DevOps
   - awscli          # AWS command line
   - helm            # Kubernetes package manager
   - k9s             # Kubernetes TUI
   - kubernetes-cli  # kubectl
   - grpcurl         # gRPC testing
-  
+
   # Container tools
   - podman-compose  # Docker-compose for Podman
-  
+
   # Database clients
   - mongosh         # MongoDB shell
-  
+
   # AI/ML
   - llm             # LLM CLI tool
   - ollama          # Local LLM runner
-  
+
   # Media
   - ffmpeg          # Media processing
+  - yt-dlp          # YouTube downloader
 
 # Cask packages (brew install --cask)
 casks:
@@ -49,45 +50,44 @@ casks:
   - visual-studio-code      # Primary IDE
   - iterm2                  # Terminal emulator
   - insomnia                # API testing
-  
+
   # Database GUIs
   - mongodb-compass         # MongoDB GUI
   - dbeaver-community       # Universal DB client
   - another-redis-desktop-manager  # Redis GUI
-  
+
   # Container management
   - podman-desktop          # Podman GUI
-  
+
   # Productivity
   - alfred                  # Launcher & automation
   - bitwarden               # Password manager
-  
+
   # Window management
   - aerospace               # Tiling window manager
   - divvy                   # Window organizer
-  
+
   # Utilities
   - flux-app                # Blue light filter (f.lux)
   - bluesnooze              # Bluetooth sleep manager
   - omnidisksweeper         # Disk cleanup
   - scroll-reverser         # Trackpad/mouse scroll
-  
+
   # Media
   - vlc                     # Media player
   - spotify                 # Music streaming
-  
+
   # Communication
   - zoom                    # Video conferencing
-  
+
   # AI
   - jan                     # AI assistant
-  
+
   # Development Tools
   - postman                 # API platform
-  
+
   # Fonts
   - font-meslo-lg-nerd-font # Terminal font
 
 # Tap repositories (brew tap)
 taps:
-  - homebrew/cask-fonts

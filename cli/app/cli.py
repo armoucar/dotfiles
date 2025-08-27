@@ -30,6 +30,7 @@ from cli.app.command.llm import code
 from cli.app.command.tmux import state, claude_start, claude_resume
 from cli.app.command.brew import brew
 from cli.app.command.claude import claude
+from cli.app.command.video import video
 from cli.app.telemetry import initialize_telemetry
 
 
@@ -126,6 +127,9 @@ cli.add_command(brew)
 
 # Add claude command group
 cli.add_command(claude)
+
+# Add video command group
+cli.add_command(video)
 
 if __name__ == "__main__":
     cli()

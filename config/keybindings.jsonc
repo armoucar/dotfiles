@@ -1,0 +1,454 @@
+// Place your key bindings in this file to override the defaults
+[
+  {
+    "key": "alt+cmd+, a",
+    "command": "workbench.debug.viewlet.action.enableAllBreakpoints"
+  },
+  {
+    "key": "alt+cmd+, d",
+    "command": "workbench.debug.viewlet.action.disableAllBreakpoints"
+  },
+  {
+    "key": "alt+cmd+, w",
+    "command": "editor.debug.action.selectionToWatch"
+  },
+  {
+    "key": "alt+cmd+'",
+    "command": "editor.emmet.action.wrapWithAbbreviation"
+  },
+  {
+    "key": "alt+cmd+m",
+    "command": "editor.emmet.action.matchTag"
+  },
+  {
+    "key": "alt+cmd+u",
+    "command": "cursorRedo"
+  },
+  {
+    "key": "alt+f1 1",
+    "command": "workbench.files.action.showActiveFileInExplorer"
+  },
+  {
+    "key": "cmd+r cmd+c",
+    "command": "workbench.files.action.collapseExplorerFolders"
+  },
+  {
+    "key": "cmd+r cmd+c",
+    "command": "search.action.collapseSearchResults",
+    "when": "hasSearchResult && searchViewletFocus"
+  },
+  {
+    "key": "cmd+r cmd+h",
+    "command": "editor.action.triggerParameterHints",
+    "when": "editorHasSignatureHelpProvider && editorTextFocus"
+  },
+  {
+    "key": "cmd+r cmd+u",
+    "command": "editor.action.moveSelectionToPreviousFindMatch"
+  },
+  {
+    "key": "cmd+r cmd+v",
+    "command": "editor.debug.action.selectionToRepl"
+  },
+  {
+    "key": "ctrl+z f",
+    "command": "git.openFile"
+  },
+  {
+    "key": "ctrl+z g",
+    "command": "git.openChange"
+  },
+  {
+    "key": "cmd+m s",
+    "command": "jupyter.selectJupyterInterpreter"
+  },
+  {
+    "key": "cmd+q cmd+q",
+    "command": "workbench.action.quit"
+  },
+  {
+    "key": "ctrl+`",
+    "command": "workbench.action.terminal.focus"
+  },
+  {
+    "key": "ctrl+`",
+    "command": "workbench.action.focusActiveEditorGroup",
+    "when": "terminalFocus"
+  },
+  {
+    "key": "ctrl+z l",
+    "command": "workbench.view.extension.gitlens"
+  },
+  {
+    "key": "ctrl+alt+cmd+o",
+    "command": "typescript.organizeImports"
+  },
+  {
+    "key": "ctrl+alt+cmd+r",
+    "command": "workbench.action.reloadWindow"
+  },
+  {
+    "key": "ctrl ctrl",
+    "command": "workbench.action.openRecent"
+  },
+  {
+    "key": "ctrl+l",
+    "command": "workbench.debug.panel.action.clearReplAction",
+    "when": "inDebugRepl"
+  },
+  {
+    "key": "ctrl+shift+.",
+    "command": "workbench.action.terminal.rename"
+  },
+  {
+    "key": "ctrl+shift+cmd+c",
+    "command": "copy-relative-path-and-line-numbers.both",
+    "when": "editorTextFocus"
+  },
+  {
+    "key": "ctrl+shift+j",
+    "command": "workbench.action.terminal.focusNext",
+    "when": "terminalFocus && terminalHasBeenCreated && !terminalEditorFocus || terminalFocus && terminalProcessSupported && !terminalEditorFocus"
+  },
+  {
+    "key": "ctrl+shift+k",
+    "command": "workbench.action.terminal.focusPrevious",
+    "when": "terminalFocus && terminalHasBeenCreated && !terminalEditorFocus || terminalFocus && terminalProcessSupported && !terminalEditorFocus"
+  },
+  {
+    "key": "ctrl+shift+q",
+    "command": "workbench.action.toggleMaximizedPanel"
+  },
+  {
+    "key": "ctrl+shift+x",
+    "command": "workbench.action.terminal.kill"
+  },
+  {
+    "key": "shift+cmd+f8",
+    "command": "workbench.debug.viewlet.action.toggleBreakpointsActivatedAction"
+  },
+  {
+    "key": "cmd+r cmd+u",
+    "command": "-editor.action.removeCommentLine",
+    "when": "editorTextFocus && !editorReadonly"
+  },
+  {
+    "key": "cmd+r f",
+    "command": "-workbench.action.closeFolder",
+    "when": "emptyWorkspaceSupport && workbenchState != 'empty'"
+  },
+  {
+    "key": "cmd+q",
+    "command": "-workbench.action.quit"
+  },
+  {
+    "key": "cmd+r",
+    "command": "-workbench.action.reloadWindow",
+    "when": "isDevelopment"
+  },
+  {
+    "key": "ctrl+l",
+    "command": "-copy-relative-path-and-line-numbers.both",
+    "when": "editorTextFocus"
+  },
+  {
+    "key": "ctrl+r",
+    "command": "-workbench.action.openRecent"
+  },
+  {
+    "key": "ctrl+shift+q",
+    "command": "-workbench.action.quickOpenNavigatePreviousInViewPicker",
+    "when": "inQuickOpen && inViewsPicker"
+  },
+  {
+    "key": "shift+alt+o",
+    "command": "-editor.action.organizeImports",
+    "when": "textInputFocus && !editorReadonly && supportedCodeAction =~ /(\\s|^)source\\.organizeImports\\b/"
+  },
+  {
+    "key": "shift+cmd+[",
+    "command": "-workbench.action.terminal.focusPrevious",
+    "when": "terminalFocus && terminalHasBeenCreated && !terminalEditorFocus || terminalFocus && terminalProcessSupported && !terminalEditorFocus"
+  },
+  {
+    "key": "shift+cmd+]",
+    "command": "-workbench.action.terminal.focusNext",
+    "when": "terminalFocus && terminalHasBeenCreated && !terminalEditorFocus || terminalFocus && terminalProcessSupported && !terminalEditorFocus"
+  },
+  {
+    "key": "shift+cmd+c",
+    "command": "-workbench.action.terminal.openNativeConsole",
+    "when": "!terminalFocus"
+  },
+  {
+    "key": "shift+cmd+space",
+    "command": "-editor.action.triggerParameterHints",
+    "when": "editorHasSignatureHelpProvider && editorTextFocus"
+  },
+  {
+    "key": "f7",
+    "command": "-editor.action.accessibleDiffViewer.next",
+    "when": "isInDiffEditor"
+  },
+  {
+    "key": "cmd+b",
+    "command": "workbench.action.toggleSidebarVisibility"
+  },
+  {
+    "key": "cmd+b",
+    "command": "-workbench.action.toggleSidebarVisibility"
+  },
+  {
+    "key": "ctrl+escape",
+    "command": "noop"
+  },
+  {
+    "key": "ctrl+l",
+    "command": "workbench.action.terminal.clear",
+    "when": "terminalFocus && terminalHasBeenCreated && !accessibilityModeEnabled || terminalFocus && terminalProcessSupported && !accessibilityModeEnabled || accessibilityModeEnabled && accessibleViewIsShown && terminalHasBeenCreated && accessibleViewCurrentProviderId == 'terminal' || accessibilityModeEnabled && accessibleViewIsShown && terminalProcessSupported && accessibleViewCurrentProviderId == 'terminal'"
+  },
+  {
+    "key": "cmd+r",
+    "command": "-workbench.action.terminal.clear",
+    "when": "terminalFocus && terminalHasBeenCreated && !accessibilityModeEnabled || terminalFocus && terminalProcessSupported && !accessibilityModeEnabled || accessibilityModeEnabled && accessibleViewIsShown && terminalHasBeenCreated && accessibleViewCurrentProviderId == 'terminal' || accessibilityModeEnabled && accessibleViewIsShown && terminalProcessSupported && accessibleViewCurrentProviderId == 'terminal'"
+  },
+  {
+    "key": "shift+alt+cmd+c",
+    "command": "copyRelativeFilePath"
+  },
+  {
+    "key": "shift+alt+cmd+c",
+    "command": "-copyRelativeFilePath",
+    "when": "!editorFocus"
+  },
+  {
+    "key": "ctrl+alt+cmd+t",
+    "command": "workbench.view.extension.test"
+  },
+  {
+    "key": "cmd+r j",
+    "command": "ipynb.newUntitledIpynb"
+  },
+  {
+    "key": "alt+cmd+f5",
+    "command": "workbench.action.debug.selectandstart"
+  },
+  {
+    "key": "alt+a",
+    "command": "-go-to-next-change.go-to-previous-scm-change"
+  },
+  {
+    "key": "alt+cmd+j",
+    "command": "go-to-next-change.go-to-next-scm-change"
+  },
+  {
+    "key": "alt+z",
+    "command": "-go-to-next-change.go-to-next-scm-change"
+  },
+  {
+    "key": "ctrl+alt+cmd+i",
+    "command": "workbench.panel.chat.view.copilot.focus"
+  },
+  {
+    "key": "cmd+p",
+    "command": "workbench.action.quickOpen"
+  },
+  {
+    "key": "cmd+r v",
+    "command": "markdown.showPreviewToSide",
+    "when": "!notebookEditorFocused && editorLangId == 'markdown'"
+  },
+  {
+    "key": "cmd+k v",
+    "command": "-markdown.showPreviewToSide",
+    "when": "!notebookEditorFocused && editorLangId == 'markdown'"
+  },
+  {
+    "key": "ctrl+enter",
+    "command": "-github.copilot.generate",
+    "when": "editorTextFocus && github.copilot.activated && !commentEditorFocused && !inInteractiveInput && !interactiveEditorFocused"
+  },
+  {
+    "key": "ctrl+z [",
+    "command": "workbench.action.collapseAllComments"
+  },
+  {
+    "key": "ctrl+z ]",
+    "command": "workbench.action.expandAllComments"
+  },
+  {
+    "key": "ctrl+shift+p",
+    "command": "workbench.view.extension.github-pull-requests"
+  },
+  {
+    "key": "ctrl+z o",
+    "command": "pr.openPullRequestOnGitHub"
+  },
+  {
+    "key": "ctrl+z d",
+    "command": "pr.exit"
+  },
+  {
+    "key": "ctrl+z p",
+    "command": "workbench.profiles.actions.switchProfile"
+  },
+  {
+    "key": "ctrl+z 0",
+    "command": "workbench.profiles.actions.manageProfiles"
+  },
+  {
+    "key": "cmd+r l",
+    "command": "aichat.close-sidebar"
+  },
+  {
+    "key": "alt+cmd+g h",
+    "command": "-gitlens.showQuickFileHistory",
+    "when": "!gitlens:disabled && config.gitlens.keymap == 'chorded'"
+  },
+  {
+    "key": "alt+cmd+g h",
+    "command": "gitlens.openFileHistory"
+  },
+  {
+    "key": "alt+cmd+r",
+    "command": "revealFileInOS",
+    "when": "!editorFocus && explorerViewletFocus"
+  },
+  {
+    "key": "alt+cmd+r",
+    "command": "-revealFileInOS",
+    "when": "!editorFocus"
+  },
+  {
+    "key": "ctrl+tab",
+    "command": "-composer.selectPreviousComposer",
+    "when": "view == 'workbench.panel.composerViewPane2.view'"
+  },
+  {
+    "key": "ctrl+tab",
+    "command": "-composer.selectPreviousComposerChat",
+    "when": "view == 'workbench.panel.aichat.view'"
+  },
+  {
+    "key": "ctrl+shift+'",
+    "command": "workbench.action.terminal.relaunch",
+    "when": "terminalProcessSupported"
+  },
+  {
+    "key": "ctrl+tab",
+    "command": "-composer.selectNextComposer",
+    "when": "view =~ /^workbench.panel.aichat.view/"
+  },
+  {
+    "key": "cmd+i",
+    "command": "composerMode.agent"
+  },
+  {
+    "key": "cmd+l",
+    "command": "composerMode.chat"
+  },
+  {
+    "key": "cmd+t",
+    "command": "-composer.createNewComposerTab",
+    "when": "composerFocused || focusedView =~ /^workbench.panel.aichat.view/"
+  },
+  {
+    "key": "ctrl+z c",
+    "command": "git.checkout"
+  },
+  {
+    "key": "shift+enter",
+    "command": "workbench.action.terminal.sendSequence",
+    "args": {
+      "text": "\\\r\n"
+    },
+    "when": "terminalFocus"
+  },
+  {
+    "key": "cmd+e",
+    "command": "composerMode.background"
+  },
+  {
+    "key": "ctrl+space",
+    "command": "-workbench.action.terminal.requestCompletions",
+    "when": "config.terminal.integrated.suggest.enabled && terminalFocus && terminalProcessSupported && !terminalSuggestWidgetVisible"
+  },
+  {
+    "key": "ctrl+space",
+    "command": "-workbench.action.terminal.sendSequence",
+    "when": "terminalFocus && terminalShellIntegrationEnabled && !accessibilityModeEnabled && terminalShellType == 'pwsh'"
+  },
+  {
+    "key": "ctrl+space",
+    "command": "-workbench.action.terminal.sendSequence",
+    "when": "config.terminal.integrated.suggest.enabled && terminalFocus && terminalShellIntegrationEnabled && !accessibilityModeEnabled && terminalShellType == 'pwsh'"
+  },
+  {
+    "key": "ctrl+space",
+    "command": "-workbench.action.terminal.requestCompletions",
+    "when": "config.terminal.integrated.suggest.enabled && terminalFocus && terminalProcessSupported && !terminalSuggestWidgetVisible"
+  },
+  {
+    "key": "ctrl+space",
+    "command": "-workbench.action.terminal.sendSequence",
+    "when": "terminalFocus && terminalShellIntegrationEnabled && !accessibilityModeEnabled && terminalShellType == 'pwsh'"
+  },
+  {
+    "key": "ctrl+space",
+    "command": "-workbench.action.terminal.sendSequence",
+    "when": "config.terminal.integrated.suggest.enabled && terminalFocus && terminalShellIntegrationEnabled && !accessibilityModeEnabled && terminalShellType == 'pwsh'"
+  },
+  {
+    "key": "ctrl+space",
+    "command": "-workbench.action.terminal.suggestToggleDetails",
+    "when": "simpleSuggestWidgetHasFocusedSuggestion && terminalFocus && terminalHasBeenCreated && terminalIsOpen && terminalSuggestWidgetVisible || simpleSuggestWidgetHasFocusedSuggestion && terminalFocus && terminalIsOpen && terminalProcessSupported && terminalSuggestWidgetVisible"
+  },
+  {
+    "key": "ctrl+a",
+    "command": "workbench.action.terminal.sendSequence",
+    "args": {
+      "text": "\u0001"
+    },
+    "when": "terminalFocus"
+  },
+  {
+    "key": "ctrl+alt+t",
+    "command": "workbench.action.terminal.sendSequence",
+    "args": {
+      "text": "echo 'test-ctrl-sequence'\r"
+    },
+    "when": "terminalFocus"
+  },
+  {
+    "key": "ctrl+alt+n",
+    "command": "workbench.action.terminal.sendSequence",
+    "args": {
+      "text": "cat > /tmp/test_null.txt\r"
+    },
+    "when": "terminalFocus"
+  },
+  {
+    "key": "ctrl+alt+d",
+    "command": "workbench.action.terminal.sendSequence",
+    "args": {
+      "text": "xxd -l 1\r"
+    },
+    "when": "terminalFocus"
+  },
+  {
+    "key": "alt+left",
+    "command": "workbench.action.terminal.sendSequence",
+    "args": {
+      "text": "\u001bb"
+    },
+    "when": "terminalFocus"
+  },
+  {
+    "key": "alt+right",
+    "command": "workbench.action.terminal.sendSequence",
+    "args": {
+      "text": "\u001bf"
+    },
+    "when": "terminalFocus"
+  }
+]

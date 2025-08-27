@@ -5,20 +5,26 @@
 set -e
 
 CONFIG_FILE="$HOME/.oh-my-zsh/custom/config/settings.jsonc"
+KEYBINDINGS_FILE="$HOME/.oh-my-zsh/custom/config/keybindings.jsonc"
 
 # VSCode settings paths
 VSCODE_SETTINGS="$HOME/Library/Application Support/Code/User/settings.json"
 CURSOR_SETTINGS="$HOME/Library/Application Support/Cursor/User/settings.json"
 
-# Function to create symlink for settings
-create_settings_symlink() {
-    local target="$1"
+# VSCode keybindings paths
+VSCODE_KEYBINDINGS="$HOME/Library/Application Support/Code/User/keybindings.json"
+CURSOR_KEYBINDINGS="$HOME/Library/Application Support/Cursor/User/keybindings.json"
+
+# Function to create symlink for settings or keybindings
+create_symlink() {
+    local source_file="$1"
+    local target="$2"
     local target_dir=$(dirname "$target")
     
     # Create directory if it doesn't exist
     mkdir -p "$target_dir"
     
-    # Backup existing settings if they exist and are not already symlinks
+    # Backup existing file if it exists and is not already a symlink
     if [ -f "$target" ] && [ ! -L "$target" ]; then
         cp "$target" "$target.backup.$(date +%Y%m%d_%H%M%S)" 2>/dev/null
         rm "$target"
@@ -28,16 +34,18 @@ create_settings_symlink() {
     fi
     
     # Create symlink to centralized config
-    ln -s "$CONFIG_FILE" "$target" 2>/dev/null
+    ln -s "$source_file" "$target" 2>/dev/null
 }
 
 # Check which editor is installed and create symlinks
 if [ -d "$(dirname "$CURSOR_SETTINGS")" ]; then
-    create_settings_symlink "$CURSOR_SETTINGS" >/dev/null 2>&1
+    create_symlink "$CONFIG_FILE" "$CURSOR_SETTINGS" >/dev/null 2>&1
+    create_symlink "$KEYBINDINGS_FILE" "$CURSOR_KEYBINDINGS" >/dev/null 2>&1
 fi
 
 if [ -d "$(dirname "$VSCODE_SETTINGS")" ]; then
-    create_settings_symlink "$VSCODE_SETTINGS" >/dev/null 2>&1
+    create_symlink "$CONFIG_FILE" "$VSCODE_SETTINGS" >/dev/null 2>&1
+    create_symlink "$KEYBINDINGS_FILE" "$VSCODE_KEYBINDINGS" >/dev/null 2>&1
 fi
 
 echo "✓ VSCode settings setup complete"
