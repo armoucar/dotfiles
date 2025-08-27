@@ -1,0 +1,54 @@
+#!/bin/bash
+# Documentation Auto-Update Setup Script
+# Sets up automated daily updates for external documentation submodules
+
+CUSTOM_DIR="$HOME/.oh-my-zsh/custom"
+PLIST_SOURCE="$CUSTOM_DIR/config/launchd/com.dotfiles.docs-external-update.plist"
+PLIST_TARGET="$HOME/Library/LaunchAgents/com.dotfiles.docs-external-update.plist"
+UPDATE_SCRIPT="$CUSTOM_DIR/bin/system/docs-external-update"
+LABEL="com.dotfiles.docs-external-update"
+
+# Check if source plist exists
+if [ ! -f "$PLIST_SOURCE" ]; then
+    echo "✗ Documentation automation setup failed - plist not found"
+    exit 1
+fi
+
+# Check if update script exists and is executable
+if [ ! -x "$UPDATE_SCRIPT" ]; then
+    echo "✗ Documentation automation setup failed - update script not found or not executable"
+    exit 1
+fi
+
+# Create LaunchAgents directory if it doesn't exist
+mkdir -p "$HOME/Library/LaunchAgents"
+
+# Stop and unload existing service if it exists
+if launchctl list | grep -q "$LABEL"; then
+    launchctl unload "$PLIST_TARGET" 2>/dev/null || true
+fi
+
+# Copy plist to LaunchAgents directory
+if cp "$PLIST_SOURCE" "$PLIST_TARGET" 2>/dev/null; then
+    # Set proper permissions
+    chmod 644 "$PLIST_TARGET"
+    
+    # Load the service
+    if launchctl load "$PLIST_TARGET" 2>/dev/null; then
+        # Verify it's loaded
+        if launchctl list | grep -q "$LABEL"; then
+            echo "✓ Documentation automation setup complete"
+        else
+            echo "✗ Documentation automation setup failed - service not loaded"
+            rm -f "$PLIST_TARGET"
+            exit 1
+        fi
+    else
+        echo "✗ Documentation automation setup failed - could not load service"
+        rm -f "$PLIST_TARGET"
+        exit 1
+    fi
+else
+    echo "✗ Documentation automation setup failed - could not copy plist"
+    exit 1
+fi

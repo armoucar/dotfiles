@@ -1,0 +1,73 @@
+#!/bin/bash
+# Automated Documentation Submodules Update Script
+# Updates all external documentation submodules and commits changes
+
+set -e
+
+DOTFILES_DIR="$HOME/.oh-my-zsh/custom"
+LOG_FILE="$HOME/Library/Logs/dotfiles-docs-update.log"
+TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
+
+# Function to log messages
+log() {
+    echo "[$TIMESTAMP] $1" | tee -a "$LOG_FILE"
+}
+
+# Ensure log directory exists
+mkdir -p "$(dirname "$LOG_FILE")"
+
+log "Starting external documentation update"
+
+# Navigate to dotfiles directory
+if [ ! -d "$DOTFILES_DIR" ]; then
+    log "ERROR: Dotfiles directory not found at $DOTFILES_DIR"
+    exit 1
+fi
+
+cd "$DOTFILES_DIR"
+
+# Check if we're in a git repository
+if [ ! -d ".git" ]; then
+    log "ERROR: Not in a git repository"
+    exit 1
+fi
+
+# Check if there are any submodules
+if [ ! -f ".gitmodules" ]; then
+    log "INFO: No submodules found, nothing to update"
+    exit 0
+fi
+
+# Update all submodules
+log "Updating submodules..."
+if git submodule update --init --recursive --remote >/dev/null 2>&1; then
+    log "Submodules updated successfully"
+else
+    log "ERROR: Failed to update submodules"
+    exit 1
+fi
+
+# Check if there are any changes to commit
+if git diff --quiet --exit-code && git diff --cached --quiet --exit-code; then
+    log "INFO: No changes to commit"
+    exit 0
+fi
+
+# Stage and commit changes
+git add .gitmodules docs-external/ >/dev/null 2>&1
+
+if git commit -m "chore: Update external documentation submodules [auto]
+
+$(git submodule status | grep -E '^\+' | awk '{print "- " $2 ": updated to " substr($1,2,7)}' || echo '- Updated submodules')" >/dev/null 2>&1; then
+    log "SUCCESS: Changes committed successfully"
+    
+    # Log which submodules were updated
+    git show --name-only --pretty="" | grep -E '^docs-external/' | while read -r file; do
+        log "  Updated: $file"
+    done
+else
+    log "ERROR: Failed to commit changes"
+    exit 1
+fi
+
+log "External documentation update completed"

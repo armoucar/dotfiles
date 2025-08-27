@@ -33,6 +33,8 @@ declare -a SETUP_SCRIPTS=(
     "setup-cli:Install the 'dot' CLI command in editable mode"
     "setup-tmux:Sync tmux configuration from dotfiles to ~/.tmux.conf"
     "setup-claude:Configure Claude Code hooks and settings"
+    "setup-docs-external:Sync external documentation repositories"
+    "setup-docs-automation:Setup automated daily updates for external docs"
     
     # Editor and formatting
     "setup-markdownlint:Copy markdownlint config to home directory"

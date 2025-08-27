@@ -1,0 +1,42 @@
+#!/bin/bash
+# External Documentation Setup Script
+# Manages git submodules for external documentation repositories
+
+CUSTOM_DIR="$HOME/.oh-my-zsh/custom"
+DOCS_DIR="$CUSTOM_DIR/docs-external"
+
+# Check if we're in a git repository
+if [ ! -d "$CUSTOM_DIR/.git" ]; then
+  echo "✗ External docs setup failed - not in a git repository"
+  exit 1
+fi
+
+# Create docs-external directory if it doesn't exist
+mkdir -p "$DOCS_DIR"
+
+# Initialize submodules if .gitmodules doesn't exist
+if [ ! -f "$CUSTOM_DIR/.gitmodules" ]; then
+  # Add the first submodule if it doesn't exist
+  if [ ! -d "$DOCS_DIR/claude-code-docs" ]; then
+    if git submodule add https://github.com/ericbuess/claude-code-docs.git docs-external/claude-code-docs >/dev/null 2>&1; then
+      echo "✓ External documentation setup complete"
+      exit 0
+    else
+      echo "✗ External docs setup failed - could not add submodule"
+      exit 1
+    fi
+  fi
+else
+  # Initialize and update all submodules
+  if git submodule init >/dev/null 2>&1 && git submodule update >/dev/null 2>&1; then
+    # Pull latest changes for all submodules
+    if git submodule foreach git pull origin main >/dev/null 2>&1; then
+      echo "✓ External documentation setup complete"
+    else
+      echo "⚠️  External docs updated but some repositories may not have 'main' branch"
+    fi
+  else
+    echo "✗ External docs setup failed - submodule update error"
+    exit 1
+  fi
+fi

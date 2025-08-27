@@ -20,6 +20,7 @@ alias inctag="_increment_tag"
 alias gk='\gitk --all --branches 2> >(grep -v "IMKClient\|IMKInputSession" >&2) &!'
 
 alias gf='git ls-files | grep'
+alias gfcc='git -C docs-external/claude-code-docs ls-files | grep'
 
 # Function to automate git tagging
 _increment_tag() {
