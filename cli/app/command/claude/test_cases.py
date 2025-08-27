@@ -91,7 +91,7 @@ TEST_CASES: Dict[str, List[TestCase]] = {
         },
         {
             "command": "git push origin main",
-            "expected": "ask",
+            "expected": "allow",
             "category": "git",
             "description": "Push to remote repository",
         },

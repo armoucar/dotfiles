@@ -95,11 +95,14 @@ def random(
     click.echo("Validation method: LLM (GPT-5 mini)")
 
     with click.progressbar(length=len(selected_tests), label="Running tests") as bar:
-        # We'll update the progress bar manually since asyncio doesn't play well with click's progressbar
-        # For now, just run all tests and show results at the end
+
+        def progress_callback(completed, total):
+            # Update progress bar as tests complete
+            bar.pos = completed
+            bar.render_progress()
+
         try:
-            results = asyncio.run(runner.run_tests(selected_tests))
-            bar.update(len(selected_tests))
+            results = asyncio.run(runner.run_tests(selected_tests, progress_callback))
         except KeyboardInterrupt:
             click.secho("\nTests interrupted by user", fg="yellow")
             sys.exit(1)
@@ -227,9 +230,14 @@ def all(model: str, parallel: int, timeout: float, verbose: bool):
     click.echo("Validation method: LLM (GPT-5 mini)")
 
     with click.progressbar(length=len(all_tests), label="Running all tests") as bar:
+
+        def progress_callback(completed, total):
+            # Update progress bar as tests complete
+            bar.pos = completed
+            bar.render_progress()
+
         try:
-            results = asyncio.run(runner.run_tests(all_tests))
-            bar.update(len(all_tests))
+            results = asyncio.run(runner.run_tests(all_tests, progress_callback))
         except KeyboardInterrupt:
             click.secho("\nTests interrupted by user", fg="yellow")
             sys.exit(1)

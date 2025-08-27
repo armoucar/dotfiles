@@ -153,24 +153,37 @@ class PermissionTestRunner:
             click.echo(f"LLM validation failed: {e}", err=True)
             return "error", False, 0.0
 
-    async def run_tests(self, test_cases: List[TestCase]) -> List[TestResult]:
-        """Run multiple tests in parallel."""
+    async def run_tests(
+        self, test_cases: List[TestCase], progress_callback=None
+    ) -> List[TestResult]:
+        """Run multiple tests in parallel with optional progress callback."""
         if not test_cases:
             return []
 
         # Create semaphore to limit concurrent tests
         semaphore = asyncio.Semaphore(self.parallel)
+        completed_count = 0
+        results_lock = asyncio.Lock()
+        final_results = []
 
-        async def run_with_semaphore(test_case: TestCase) -> TestResult:
+        async def run_with_semaphore_and_progress(test_case: TestCase) -> TestResult:
+            nonlocal completed_count
             async with semaphore:
-                return await self.run_single_test(test_case)
+                result = await self.run_single_test(test_case)
+
+                # Update progress
+                async with results_lock:
+                    completed_count += 1
+                    if progress_callback:
+                        progress_callback(completed_count, len(test_cases))
+
+                return result
 
         # Run all tests concurrently
-        tasks = [run_with_semaphore(test_case) for test_case in test_cases]
+        tasks = [run_with_semaphore_and_progress(test_case) for test_case in test_cases]
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
         # Handle any exceptions that occurred
-        final_results = []
         for i, result in enumerate(results):
             if isinstance(result, Exception):
                 final_results.append(
