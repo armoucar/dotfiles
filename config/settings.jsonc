@@ -8,7 +8,7 @@
   // =============================================================================
   // EDITOR SETTINGS
   // =============================================================================
-  
+
   // Basic editor configuration
   "editor.accessibilitySupport": "off",
   "editor.minimap.enabled": false,
@@ -29,23 +29,23 @@
   // =============================================================================
   // TERMINAL SETTINGS
   // =============================================================================
-  
+
   // Terminal environment and behavior fixes
   "terminal.integrated.enablePersistentSessions": false,
   "terminal.integrated.environmentChangesRelaunch": false,
   "terminal.integrated.inheritEnv": true,
   "terminal.integrated.shellIntegration.enabled": true,
-  
+
   // Terminal appearance
   "terminal.integrated.fontFamily": "'MesloLGL Nerd Font'",
   "terminal.integrated.fontSize": 12,
-  
+
   // Terminal behavior
   "terminal.integrated.scrollback": 10000,
   "terminal.integrated.suggest.enabled": false,
   "terminal.integrated.allowChords": false,
   "terminal.integrated.sendKeybindingsToShell": false,
-  
+
   // Terminal profiles
   "terminal.integrated.defaultProfile.linux": "zsh",
   "terminal.external.osxExec": "iTerm.app",
@@ -61,7 +61,7 @@
   // =============================================================================
   // WORKBENCH & UI SETTINGS
   // =============================================================================
-  
+
   // Workbench behavior
   "workbench.editor.enablePreview": false,
   "workbench.startupEditor": "none",
@@ -76,7 +76,7 @@
   // =============================================================================
   // FILE MANAGEMENT
   // =============================================================================
-  
+
   // File behavior
   "files.trimTrailingWhitespace": true,
 
@@ -101,7 +101,7 @@
   // =============================================================================
   // DEVELOPMENT LANGUAGE SETTINGS
   // =============================================================================
-  
+
   // JavaScript/TypeScript
   "javascript.updateImportsOnFileMove.enabled": "always",
   "typescript.preferences.importModuleSpecifier": "relative",
@@ -129,7 +129,7 @@
   // =============================================================================
   // GIT & VERSION CONTROL
   // =============================================================================
-  
+
   "git.autofetch": true,
   "git.openRepositoryInParentFolders": "never",
 
@@ -158,13 +158,13 @@
   // =============================================================================
   // SECURITY & TRUST
   // =============================================================================
-  
+
   "security.workspace.trust.untrustedFiles": "open",
 
   // =============================================================================
   // APPLICATION SETTINGS
   // =============================================================================
-  
+
   "application.shellEnvironmentResolutionTimeout": 20,
   "update.releaseTrack": "prerelease",
   "json.schemaDownload.enable": true,
@@ -172,12 +172,13 @@
   // =============================================================================
   // CURSOR-SPECIFIC SETTINGS
   // =============================================================================
-  
+
   // Cursor AI features
   "cursor.cpp.disabledLanguages": [
     "scminput"
   ],
   "cursor-retrieval.canAttemptGithubLogin": false,
   "cursor.general.disableHttp2": true,
-  "cursor.composer.shouldChimeAfterChatFinishes": true
+  "cursor.composer.shouldChimeAfterChatFinishes": true,
+  "explorer.confirmPasteNative": false
 }

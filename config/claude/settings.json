@@ -15,6 +15,7 @@
       "WebFetch",
       "mcp__context7__resolve-library-id(*)",
       "mcp__context7__get-library-docs(*)",
+      "mcp__ide__getDiagnostics",
 
       "Bash(npm run:*)",
       "Bash(npm ci)",
@@ -109,7 +110,12 @@
       "Bash(helm list:*)",
       "Bash(helm repo update:*)",
 
+      "Bash(ack:*)",
+      "Bash(docker stats:*)",
+      "Bash(gh issue view:*)",
+      "Bash(gh pr list:*)",
       "Bash(gh workflow:*)",
+      "Bash(launchctl:*)",
 
       "Bash(aerospace:*)",
 

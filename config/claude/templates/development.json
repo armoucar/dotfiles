@@ -47,11 +47,19 @@
       "Bash(command tmux:*)",
       "Bash(tmux:*)",
       "Bash(aerospace:*)",
+      "Bash(ack:*)",
+      "Bash(docker stats:*)",
+      "Bash(gh issue view:*)",
+      "Bash(gh pr list:*)",
       "Bash(gh workflow:*)",
+      "Bash(pytest:*)",
+      "Bash(python:*)",
+      "Bash(launchctl:*)",
       "WebSearch",
       "WebFetch",
       "mcp__context7__resolve-library-id(*)",
-      "mcp__context7__get-library-docs(*)"
+      "mcp__context7__get-library-docs(*)",
+      "mcp__ide__getDiagnostics"
     ],
     "ask": [
       "Bash(rm -rf*)",
