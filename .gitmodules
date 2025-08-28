@@ -4,3 +4,6 @@
 [submodule "docs-external/dspy"]
 	path = docs-external/dspy
 	url = https://github.com/stanfordnlp/dspy.git
+[submodule "docs-external/aerospace"]
+	path = docs-external/aerospace
+	url = https://github.com/nikitabobko/AeroSpace.git
