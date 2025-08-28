@@ -1,6 +1,6 @@
 #!/bin/bash
 # Documentation Auto-Update Setup Script
-# Sets up automated daily updates for external documentation submodules
+# Sets up automated hourly updates for external documentation submodules
 
 CUSTOM_DIR="$HOME/.oh-my-zsh/custom"
 PLIST_SOURCE="$CUSTOM_DIR/config/launchd/com.dotfiles.docs-external-update.plist"

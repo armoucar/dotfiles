@@ -36,3 +36,22 @@ Documentation for automatic markdown formatting in the stop hook:
 - Troubleshooting formatting issues
 
 This ensures consistent markdown formatting across all Claude-modified files.
+
+### Command Naming Convention
+
+All Claude slash commands follow the standardized `c-[group]-[action]` naming pattern:
+
+**Available Command Groups:**
+
+- **git**: Git and GitHub operations (`c-git-commit`, `c-git-pr`, `c-git-analyze-branch`, etc.)
+- **doc**: Documentation generation (`c-doc-feature`, `c-doc-workflow`, `c-doc-spec`, etc.)
+- **study**: Learning and explanation (`c-study-plan`, `c-study-explain-pt`)
+- **config**: Configuration management (`c-config-tmux`, `c-config-claude-permissions`, etc.)
+- **meta**: Command creation and management (`c-meta-create-command`)
+
+This naming convention provides:
+
+- Alphabetical grouping by functionality
+- Predictable command discovery
+- Clear separation of concerns
+- Extensible pattern for new command groups

@@ -35,7 +35,4 @@ alias ccsb="claude-start --dangerously-skip-permissions"
 alias ccsr="claude-resume"
 
 # Permission management aliases (using dot CLI)
-alias dcp="dot claude permissions"
-alias dcpa="dot claude permissions apply"
-alias dcps="dot claude permissions show"
-alias dcpl="dot claude permissions list"
+alias dcpa="dot claude permissions-apply"
