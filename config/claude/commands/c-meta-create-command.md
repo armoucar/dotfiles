@@ -11,7 +11,7 @@ Create a new user command named `/c-$ARGUMENTS` in the ~/.claude/commands/ direc
 ## Process
 
 1. First, read the official documentation to understand best practices:
-   - Fetch details from <https://docs.anthropic.com/en/docs/claude-code/slash-commands>
+   - Read @docs-external/claude-code-docs/docs/slash-commands.md
    - Review custom slash command features and syntax
 
 2. Create the command following these guidelines:
