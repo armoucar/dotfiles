@@ -1,8 +1,7 @@
 """Claude Code management commands."""
 
 import click
-from .permissions import permissions
-from .test_permissions import test
+from .single import single
 
 
 @click.group()
@@ -11,6 +10,5 @@ def claude():
     pass
 
 
-# Add subcommand groups
-claude.add_command(permissions)
-claude.add_command(test)
+# Add the single command
+claude.add_command(single)

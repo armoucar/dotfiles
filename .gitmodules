@@ -1,3 +1,6 @@
 [submodule "docs-external/claude-code-docs"]
 	path = docs-external/claude-code-docs
 	url = https://github.com/ericbuess/claude-code-docs.git
+[submodule "docs-external/dspy"]
+	path = docs-external/dspy
+	url = https://github.com/stanfordnlp/dspy.git

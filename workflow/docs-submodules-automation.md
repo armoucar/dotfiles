@@ -8,7 +8,8 @@ Automated system to keep external documentation repositories fresh via git submo
 
 ```
 docs-external/
-└── claude-code-docs/           # GitHub: ericbuess/claude-code-docs
+├── claude-code-docs/           # GitHub: ericbuess/claude-code-docs
+└── dspy/                       # GitHub: stanfordnlp/dspy
 ```
 
 ## Components
@@ -52,4 +53,30 @@ docs-external-update
 chore: Update external documentation submodules [auto]
 
 - docs-external/claude-code-docs: updated to abc1234
+- docs-external/dspy: updated to def5678
 ```
+
+## Integration with Documentation Search
+
+The submodules automatically integrate with Claude Code's documentation search system:
+
+### Subagent Search (summaries only)
+
+```
+Use the docs-search agent to find information about [topic]
+```
+
+### Command Search (full content)
+
+```
+/c-docs-search claude [query]    # Search Claude Code docs
+/c-docs-search dspy [query]      # Search DSPy docs  
+/c-docs-search all [query]       # Search all documentation
+```
+
+### Available Documentation Sources
+
+- **claude**: Claude Code documentation (`docs-external/claude-code-docs/docs/`)
+- **dspy**: DSPy framework documentation (`docs-external/dspy/docs/docs/`)
+
+New submodules are automatically discovered by both search workflows.
