@@ -8,6 +8,7 @@ Automated system to keep external documentation repositories fresh via git submo
 
 ```
 docs-external/
+├── aerospace/                  # GitHub: nikitabobko/AeroSpace
 ├── claude-code-docs/           # GitHub: ericbuess/claude-code-docs
 └── dspy/                       # GitHub: stanfordnlp/dspy
 ```
@@ -69,13 +70,15 @@ Use the docs-search agent to find information about [topic]
 ### Command Search (full content)
 
 ```
-/c-docs-search claude [query]    # Search Claude Code docs
-/c-docs-search dspy [query]      # Search DSPy docs  
-/c-docs-search all [query]       # Search all documentation
+/c-docs-search claude [query]      # Search Claude Code docs
+/c-docs-search dspy [query]        # Search DSPy docs
+/c-docs-search aerospace [query]   # Search AeroSpace docs
+/c-docs-search all [query]         # Search all documentation
 ```
 
 ### Available Documentation Sources
 
+- **aerospace**: AeroSpace window manager documentation (`docs-external/aerospace/docs/`)
 - **claude**: Claude Code documentation (`docs-external/claude-code-docs/docs/`)
 - **dspy**: DSPy framework documentation (`docs-external/dspy/docs/docs/`)
 

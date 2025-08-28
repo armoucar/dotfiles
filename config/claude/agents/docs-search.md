@@ -12,6 +12,7 @@ You are a specialized documentation search agent. You search documentation store
 
 Search across available documentation sources:
 
+- `aerospace` → `docs-external/aerospace/docs/`
 - `claude` → `docs-external/claude-code-docs/docs/`
 - `dspy` → `docs-external/dspy/docs/docs/`
 - Future sources automatically discovered
@@ -30,7 +31,7 @@ Search across available documentation sources:
 
 Present findings as:
 
-- **Source**: Which documentation (claude/dspy/etc.)
+- **Source**: Which documentation (aerospace/claude/dspy/etc.)
 - **Found in**: File path relative to docs root
 - **Summary**: Key points without full content
 - **Relevance**: How it relates to the query

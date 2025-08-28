@@ -1,6 +1,6 @@
 ---
 allowed-tools: Grep, LS, Read, Glob
-argument-hint: [source: claude|dspy|all] [search query]
+argument-hint: [source: aerospace|claude|dspy|all] [search query]
 description: Search and retrieve documentation content into conversation context
 ---
 
@@ -10,11 +10,12 @@ Search documentation and include the full content in the conversation context fo
 
 ## Arguments
 
-- **$1**: Documentation source (`claude`, `dspy`, or `all`)
+- **$1**: Documentation source (`aerospace`, `claude`, `dspy`, or `all`)
 - **$2+**: Search query terms
 
 ## Available Sources
 
+- **aerospace**: AeroSpace window manager documentation (`docs-external/aerospace/docs/`)
 - **claude**: Claude Code documentation (`docs-external/claude-code-docs/docs/`)
 - **dspy**: DSPy framework documentation (`docs-external/dspy/docs/docs/`)
 - **all**: Search across all available documentation sources
@@ -40,7 +41,7 @@ Based on the specified source, search the documentation using:
 
 For each result, provide:
 
-- **Source**: Documentation type (Claude Code, DSPy, etc.)
+- **Source**: Documentation type (AeroSpace, Claude Code, DSPy, etc.)
 - **File**: Relative path within the documentation
 - **Content**: Relevant sections from the documentation
 - **Context**: Brief explanation of how it relates to the query
@@ -49,6 +50,7 @@ If no results are found, suggest alternative search terms or indicate what docum
 
 ## Examples
 
+- `/c-docs-search aerospace window` - Search AeroSpace docs for window management
 - `/c-docs-search claude hooks` - Search Claude docs for hook information
 - `/c-docs-search dspy signatures` - Search DSPy docs for signature information
 - `/c-docs-search all modules` - Search all docs for module-related content
