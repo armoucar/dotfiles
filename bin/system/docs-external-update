@@ -10,7 +10,7 @@ LOG_FILE="$HOME/Library/Logs/dotfiles-docs-update.log"
 # Function to log messages
 log() {
     local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
-    echo "[$timestamp] $1" | tee -a "$LOG_FILE"
+    echo "[$timestamp] $1" >> "$LOG_FILE"
 }
 
 # Ensure log directory exists
