@@ -25,6 +25,7 @@ dependencies = [
   "openinference-instrumentation-dspy>=0.1.28",
   "openinference-instrumentation-litellm>=0.1.25",
   "claude-code-sdk",
+  "boto3>=1.40.20",
 ]
 readme = "cli/README.md"
 

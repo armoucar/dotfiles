@@ -1,0 +1,230 @@
+#!/usr/bin/env python3
+"""
+AWS SSO Token Status Checker
+
+Shows the status and remaining time for all AWS SSO tokens.
+Color-coded output for easy status identification.
+"""
+
+import os
+import json
+import glob
+from datetime import datetime, timezone
+from pathlib import Path
+
+
+# ANSI color codes
+class Colors:
+    GREEN = '\033[92m'
+    YELLOW = '\033[93m'
+    RED = '\033[91m'
+    BLUE = '\033[94m'
+    BOLD = '\033[1m'
+    RESET = '\033[0m'
+
+
+def get_sso_cache_files():
+    """Get all SSO cache files."""
+    cache_dir = Path.home() / ".aws" / "sso" / "cache"
+    if not cache_dir.exists():
+        return []
+    return list(cache_dir.glob("*.json"))
+
+
+def load_token_data(cache_file):
+    """Load and parse token data from cache file."""
+    try:
+        with open(cache_file, 'r') as f:
+            return json.load(f)
+    except (json.JSONDecodeError, FileNotFoundError) as e:
+        return None
+
+
+def get_profile_for_start_url(start_url):
+    """Find profile name for given start URL."""
+    config_file = Path.home() / ".aws" / "config"
+    if not config_file.exists():
+        return "Unknown"
+    
+    try:
+        with open(config_file, 'r') as f:
+            content = f.read()
+            
+        # Simple parsing to find profile with matching start_url
+        lines = content.split('\n')
+        current_profile = None
+        
+        for line in lines:
+            line = line.strip()
+            if line.startswith('[profile '):
+                current_profile = line[9:-1]  # Remove '[profile ' and ']'
+            elif line.startswith('sso_start_url') and start_url in line:
+                return current_profile
+                
+    except Exception:
+        pass
+    
+    return "Unknown"
+
+
+def get_token_status(expires_at):
+    """Get token status with color coding."""
+    if not expires_at:
+        return "UNKNOWN", Colors.RED
+    
+    try:
+        expire_time = datetime.fromisoformat(expires_at.replace('Z', '+00:00'))
+        now = datetime.now(timezone.utc)
+        remaining = expire_time - now
+        total_seconds = remaining.total_seconds()
+        
+        if total_seconds < 0:
+            return "EXPIRED", Colors.RED
+        elif total_seconds < 3600:  # Less than 1 hour
+            return "EXPIRING", Colors.YELLOW
+        else:
+            return "VALID", Colors.GREEN
+            
+    except Exception:
+        return "ERROR", Colors.RED
+
+
+def format_time_remaining(expires_at):
+    """Format remaining time in human readable format."""
+    if not expires_at:
+        return "Unknown"
+    
+    try:
+        expire_time = datetime.fromisoformat(expires_at.replace('Z', '+00:00'))
+        now = datetime.now(timezone.utc)
+        remaining = expire_time - now
+        
+        if remaining.total_seconds() < 0:
+            return "EXPIRED"
+        
+        total_seconds = int(remaining.total_seconds())
+        hours = total_seconds // 3600
+        minutes = (total_seconds % 3600) // 60
+        
+        if hours > 0:
+            return f"{hours}h {minutes}m"
+        else:
+            return f"{minutes}m"
+            
+    except Exception:
+        return "Invalid"
+
+
+def format_expiry_time(expires_at):
+    """Format expiry time in local timezone."""
+    if not expires_at:
+        return "Unknown"
+    
+    try:
+        expire_time = datetime.fromisoformat(expires_at.replace('Z', '+00:00'))
+        local_time = expire_time.astimezone()
+        return local_time.strftime('%Y-%m-%d %H:%M:%S %Z')
+    except Exception:
+        return "Invalid"
+
+
+def cleanup_expired_cache_files():
+    """Remove ALL expired cache files."""
+    cache_files = get_sso_cache_files()
+    cleaned_count = 0
+    
+    for cache_file in cache_files:
+        token_data = load_token_data(cache_file)
+        if not token_data:
+            try:
+                cache_file.unlink()
+                cleaned_count += 1
+            except Exception:
+                pass
+            continue
+            
+        # Remove all expired files
+        expires_at = token_data.get('expiresAt')
+        
+        if expires_at:
+            try:
+                expire_time = datetime.fromisoformat(expires_at.replace('Z', '+00:00'))
+                now = datetime.now(timezone.utc)
+                
+                if expire_time < now:
+                    cache_file.unlink()
+                    cleaned_count += 1
+            except Exception:
+                pass
+    
+    return cleaned_count
+
+
+def main():
+    """Main function to show SSO token status."""
+    # Clean up expired cache files first (silently)
+    cleanup_expired_cache_files()
+    
+    cache_files = get_sso_cache_files()
+    
+    if not cache_files:
+        print("No AWS SSO cache files found. Run 'aws sso login' first.")
+        return
+    
+    print(f"{Colors.BOLD}AWS SSO Token Status{Colors.RESET}")
+    print("=" * 85)
+    
+    # Header
+    print(f"{'Profile':<35} {'Status':<12} {'Remaining':<12} {'Expires At':<25}")
+    print("-" * 85)
+    
+    expired_count = 0
+    expiring_count = 0
+    valid_count = 0
+    
+    for cache_file in cache_files:
+        token_data = load_token_data(cache_file)
+        if not token_data:
+            continue
+        
+        start_url = token_data.get('startUrl', '')
+        profile = get_profile_for_start_url(start_url)
+        expires_at = token_data.get('expiresAt')
+        
+        status_text, status_color = get_token_status(expires_at)
+        time_remaining = format_time_remaining(expires_at)
+        expiry_formatted = format_expiry_time(expires_at)
+        
+        # Count tokens by status
+        if status_text == "EXPIRED":
+            expired_count += 1
+        elif status_text == "EXPIRING":
+            expiring_count += 1
+        elif status_text == "VALID":
+            valid_count += 1
+        
+        # Print colored status line
+        profile = profile or "Unknown"
+        time_remaining = time_remaining or "Unknown"
+        expiry_formatted = expiry_formatted or "Unknown"
+        print(f"{profile:<35} {status_color}{status_text:<12}{Colors.RESET} {time_remaining:<12} {expiry_formatted:<25}")
+    
+    # Summary
+    print("\n" + "=" * 85)
+    total = expired_count + expiring_count + valid_count
+    
+    if total > 0:
+        print(f"{Colors.BOLD}Summary:{Colors.RESET}")
+        if valid_count > 0:
+            print(f"  {Colors.GREEN}✓ {valid_count} token(s) valid{Colors.RESET}")
+        if expiring_count > 0:
+            print(f"  {Colors.YELLOW}⚠ {expiring_count} token(s) expiring soon{Colors.RESET}")
+        if expired_count > 0:
+            print(f"  {Colors.RED}✗ {expired_count} token(s) expired{Colors.RESET}")
+        
+        if expired_count > 0 or expiring_count > 0:
+            print(f"\n{Colors.BLUE}💡 Run 'aws-sso-refresh' to refresh tokens{Colors.RESET}")
+
+
+if __name__ == "__main__":
+    main()

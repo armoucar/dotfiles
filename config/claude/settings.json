@@ -116,6 +116,7 @@
       "Bash(gh pr list:*)",
       "Bash(gh workflow:*)",
       "Bash(launchctl:*)",
+      "Bash(sed:*)",
 
       "Bash(aerospace:*)",
 

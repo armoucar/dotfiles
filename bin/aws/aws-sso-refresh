@@ -1,0 +1,235 @@
+#!/usr/bin/env python3
+"""
+AWS SSO Token Refresh Script
+
+Automatically refreshes AWS SSO access tokens using refresh tokens,
+extending session time without requiring browser interaction.
+"""
+
+import os
+import json
+import glob
+import boto3
+from datetime import datetime, timezone
+from pathlib import Path
+
+
+def get_sso_cache_files():
+    """Get all SSO cache files."""
+    cache_dir = Path.home() / ".aws" / "sso" / "cache"
+    if not cache_dir.exists():
+        return []
+    return list(cache_dir.glob("*.json"))
+
+
+def load_token_data(cache_file):
+    """Load and parse token data from cache file."""
+    try:
+        with open(cache_file, 'r') as f:
+            return json.load(f)
+    except (json.JSONDecodeError, FileNotFoundError) as e:
+        print(f"Error reading {cache_file}: {e}")
+        return None
+
+
+def is_token_expired(expires_at, buffer_minutes=60):
+    """Check if token expires within buffer time."""
+    if not expires_at:
+        return True
+    
+    expire_time = datetime.fromisoformat(expires_at.replace('Z', '+00:00'))
+    now = datetime.now(timezone.utc)
+    buffer = 60 * buffer_minutes  # Convert to seconds
+    
+    return (expire_time - now).total_seconds() < buffer
+
+
+def refresh_access_token(token_data):
+    """Use refresh token to get new access token."""
+    if not token_data.get('refreshToken'):
+        return None
+    
+    try:
+        client = boto3.client('sso-oidc', region_name=token_data.get('region', 'sa-east-1'))
+        
+        response = client.create_token(
+            clientId=token_data['clientId'],
+            clientSecret=token_data['clientSecret'],
+            grantType='refresh_token',
+            refreshToken=token_data['refreshToken']
+        )
+        
+        # Update token data with new access token
+        token_data['accessToken'] = response['accessToken']
+        
+        # Calculate new expiration time
+        expires_in = response.get('expiresIn', 28800)  # Default 8 hours
+        new_expiry = datetime.now(timezone.utc).timestamp() + expires_in
+        token_data['expiresAt'] = datetime.fromtimestamp(new_expiry, timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+        
+        # Update refresh token if provided
+        if 'refreshToken' in response:
+            token_data['refreshToken'] = response['refreshToken']
+        
+        return token_data
+        
+    except Exception as e:
+        print(f"Error refreshing token: {e}")
+        return None
+
+
+def save_token_data(cache_file, token_data):
+    """Save updated token data back to cache file."""
+    try:
+        with open(cache_file, 'w') as f:
+            json.dump(token_data, f, indent=2)
+        return True
+    except Exception as e:
+        print(f"Error saving {cache_file}: {e}")
+        return False
+
+
+def get_profile_for_start_url(start_url):
+    """Find profile name for given start URL."""
+    config_file = Path.home() / ".aws" / "config"
+    if not config_file.exists():
+        return "Unknown"
+    
+    try:
+        with open(config_file, 'r') as f:
+            content = f.read()
+            
+        # Simple parsing to find profile with matching start_url
+        lines = content.split('\n')
+        current_profile = None
+        
+        for line in lines:
+            line = line.strip()
+            if line.startswith('[profile '):
+                current_profile = line[9:-1]  # Remove '[profile ' and ']'
+            elif line.startswith('sso_start_url') and start_url in line:
+                return current_profile
+                
+    except Exception:
+        pass
+    
+    return "Unknown"
+
+
+def format_time_remaining(expires_at):
+    """Format remaining time in human readable format."""
+    if not expires_at:
+        return "Unknown"
+    
+    try:
+        expire_time = datetime.fromisoformat(expires_at.replace('Z', '+00:00'))
+        now = datetime.now(timezone.utc)
+        remaining = expire_time - now
+        
+        if remaining.total_seconds() < 0:
+            return "EXPIRED"
+        
+        hours = int(remaining.total_seconds() // 3600)
+        minutes = int((remaining.total_seconds() % 3600) // 60)
+        
+        if hours > 0:
+            return f"{hours}h {minutes}m"
+        else:
+            return f"{minutes}m"
+            
+    except Exception:
+        return "Invalid"
+
+
+def cleanup_expired_cache_files():
+    """Remove ALL expired cache files."""
+    cache_files = get_sso_cache_files()
+    cleaned_count = 0
+    
+    for cache_file in cache_files:
+        token_data = load_token_data(cache_file)
+        if not token_data:
+            try:
+                cache_file.unlink()
+                cleaned_count += 1
+            except Exception:
+                pass
+            continue
+            
+        # Remove all expired files
+        expires_at = token_data.get('expiresAt')
+        
+        if expires_at:
+            try:
+                expire_time = datetime.fromisoformat(expires_at.replace('Z', '+00:00'))
+                now = datetime.now(timezone.utc)
+                
+                if expire_time < now:
+                    cache_file.unlink()
+                    cleaned_count += 1
+            except Exception:
+                pass
+    
+    return cleaned_count
+
+
+def main():
+    """Main function to refresh SSO tokens."""
+    # Clean up expired cache files first (silently)
+    cleanup_expired_cache_files()
+    
+    cache_files = get_sso_cache_files()
+    
+    if not cache_files:
+        print("No AWS SSO cache files found. Run 'aws sso login' first.")
+        return
+    
+    refreshed_count = 0
+    total_count = 0
+    
+    print("AWS SSO Token Refresh Status")
+    print("=" * 50)
+    
+    for cache_file in cache_files:
+        token_data = load_token_data(cache_file)
+        if not token_data:
+            continue
+            
+        total_count += 1
+        start_url = token_data.get('startUrl', '')
+        profile = get_profile_for_start_url(start_url)
+        expires_at = token_data.get('expiresAt')
+        time_remaining = format_time_remaining(expires_at)
+        
+        print(f"\nProfile: {profile}")
+        print(f"Start URL: {start_url}")
+        print(f"Current expiry: {expires_at}")
+        print(f"Time remaining: {time_remaining}")
+        
+        if is_token_expired(expires_at):
+            print("Status: Refreshing token...")
+            
+            refreshed_data = refresh_access_token(token_data)
+            if refreshed_data and save_token_data(cache_file, refreshed_data):
+                refreshed_count += 1
+                new_time_remaining = format_time_remaining(refreshed_data.get('expiresAt'))
+                print(f"✓ Token refreshed successfully!")
+                print(f"New expiry: {refreshed_data.get('expiresAt')}")
+                print(f"New time remaining: {new_time_remaining}")
+            else:
+                print("✗ Failed to refresh token")
+        else:
+            print("Status: Token is still valid")
+    
+    print("\n" + "=" * 50)
+    print(f"Summary: {refreshed_count}/{total_count} tokens refreshed")
+    
+    if refreshed_count > 0:
+        print(f"✓ Successfully refreshed {refreshed_count} token(s)")
+    
+    if total_count - refreshed_count > 0:
+        print(f"• {total_count - refreshed_count} token(s) still valid")
+
+
+if __name__ == "__main__":
+    main()

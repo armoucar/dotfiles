@@ -55,6 +55,7 @@
       "Bash(pytest:*)",
       "Bash(python:*)",
       "Bash(launchctl:*)",
+      "Bash(sed:*)",
       "WebSearch",
       "WebFetch",
       "mcp__context7__resolve-library-id(*)",

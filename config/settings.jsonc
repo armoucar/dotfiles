@@ -180,5 +180,8 @@
   "cursor-retrieval.canAttemptGithubLogin": false,
   "cursor.general.disableHttp2": true,
   "cursor.composer.shouldChimeAfterChatFinishes": true,
-  "explorer.confirmPasteNative": false
+  "explorer.confirmPasteNative": false,
+  "[markdown]": {
+    "editor.defaultFormatter": "DavidAnson.vscode-markdownlint"
+  }
 }
