@@ -1,0 +1,189 @@
+#!/usr/bin/env python3
+"""
+Auto-fix missing language specifications in markdown fenced code blocks.
+
+This script finds fenced code blocks (``` or ~~~) without language specifications
+and adds a default language ('text') to make them compliant with MD040.
+
+Usage:
+    fix-markdown-code-languages <file.md> [<file2.md> ...]
+    fix-markdown-code-languages --help
+
+Examples:
+    fix-markdown-code-languages README.md
+    fix-markdown-code-languages docs/*.md
+"""
+
+import re
+import sys
+import argparse
+from pathlib import Path
+
+
+def fix_code_block_languages(content, default_language="text"):
+    """
+    Fix markdown fenced code blocks that are missing language specifications.
+    
+    Args:
+        content (str): The markdown content
+        default_language (str): Language to add to blocks missing specification
+    
+    Returns:
+        str: Fixed markdown content
+        int: Number of fixes made
+    """
+    fixes_made = 0
+    lines = content.split('\n')
+    result_lines = []
+    in_code_block = False
+    current_fence = None
+    
+    for line in lines:
+        # Check if this line is a fence
+        fence_match = re.match(r'^(```|~~~)(.*)$', line)
+        
+        if fence_match:
+            fence_chars = fence_match.group(1)  # ``` or ~~~
+            fence_info = fence_match.group(2).strip()  # language and other info
+            
+            if not in_code_block:
+                # This is an opening fence
+                in_code_block = True
+                current_fence = fence_chars
+                
+                # Check if language is missing
+                if not fence_info:
+                    # Add default language
+                    line = f"{fence_chars}{default_language}"
+                    fixes_made += 1
+                
+            elif in_code_block and fence_chars == current_fence and not fence_info:
+                # This is a closing fence (same type as opening, no info)
+                in_code_block = False
+                current_fence = None
+        
+        result_lines.append(line)
+    
+    return '\n'.join(result_lines), fixes_made
+
+
+def process_markdown_file(file_path, default_language="text", dry_run=False):
+    """
+    Process a single markdown file to fix missing code block languages.
+    
+    Args:
+        file_path (Path): Path to the markdown file
+        default_language (str): Language to add to blocks missing specification  
+        dry_run (bool): If True, don't write changes, just report what would be done
+    
+    Returns:
+        tuple: (success: bool, fixes_made: int, error_message: str)
+    """
+    try:
+        # Read the file
+        content = file_path.read_text(encoding='utf-8')
+        
+        # Fix the content
+        fixed_content, fixes_made = fix_code_block_languages(content, default_language)
+        
+        # Write back if changes were made and not in dry-run mode
+        if fixes_made > 0 and not dry_run:
+            file_path.write_text(fixed_content, encoding='utf-8')
+        
+        return True, fixes_made, ""
+        
+    except Exception as e:
+        return False, 0, str(e)
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Auto-fix missing language specifications in markdown fenced code blocks",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+    fix-markdown-code-languages README.md
+    fix-markdown-code-languages docs/*.md
+    fix-markdown-code-languages --language textplain *.md
+    fix-markdown-code-languages --dry-run --verbose *.md
+        """
+    )
+    
+    parser.add_argument(
+        "files",
+        nargs="+",
+        help="Markdown files to process"
+    )
+    
+    parser.add_argument(
+        "--language", "-l",
+        default="text",
+        help="Default language to add to code blocks (default: text)"
+    )
+    
+    parser.add_argument(
+        "--dry-run", "-n",
+        action="store_true",
+        help="Show what would be changed without making changes"
+    )
+    
+    parser.add_argument(
+        "--verbose", "-v",
+        action="store_true", 
+        help="Show detailed output"
+    )
+    
+    args = parser.parse_args()
+    
+    total_files = 0
+    total_fixes = 0
+    errors = []
+    
+    for file_arg in args.files:
+        file_path = Path(file_arg)
+        
+        if not file_path.exists():
+            errors.append(f"File not found: {file_path}")
+            continue
+            
+        if not file_path.suffix.lower() in ['.md', '.markdown']:
+            if args.verbose:
+                print(f"Skipping non-markdown file: {file_path}")
+            continue
+        
+        total_files += 1
+        success, fixes_made, error = process_markdown_file(file_path, args.language, args.dry_run)
+        
+        if not success:
+            errors.append(f"Error processing {file_path}: {error}")
+            continue
+        
+        total_fixes += fixes_made
+        
+        if args.verbose or fixes_made > 0:
+            action = "Would fix" if args.dry_run else "Fixed"
+            if fixes_made > 0:
+                print(f"✓ {action} {fixes_made} code block(s) in {file_path}")
+            elif args.verbose:
+                print(f"✓ No fixes needed in {file_path}")
+    
+    # Summary
+    if total_files > 0:
+        action = "Would fix" if args.dry_run else "Fixed"
+        if total_fixes > 0:
+            print(f"\n{action} {total_fixes} code block(s) across {total_files} file(s)")
+        elif args.verbose:
+            print(f"\nNo fixes needed across {total_files} file(s)")
+    
+    # Report errors
+    if errors:
+        print(f"\nErrors encountered:", file=sys.stderr)
+        for error in errors:
+            print(f"  {error}", file=sys.stderr)
+        sys.exit(1)
+    
+    sys.exit(0)
+
+
+if __name__ == "__main__":
+    main()

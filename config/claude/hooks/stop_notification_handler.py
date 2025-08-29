@@ -17,7 +17,6 @@ import json
 import sys
 import subprocess
 import os
-import re
 from pathlib import Path
 
 
@@ -131,6 +130,26 @@ try:
     # Auto-format markdown files
     if md_files:
         try:
+            # First, fix missing code block languages (MD040)
+            project_dir = os.environ.get("CLAUDE_PROJECT_DIR", os.getcwd())
+            fix_script = os.path.join(project_dir, "bin", "fix-markdown-code-languages")
+
+            if os.path.exists(fix_script):
+                for md_file in md_files:
+                    try:
+                        result = subprocess.run(
+                            [fix_script, "--language", "text", md_file],
+                            capture_output=True,
+                            text=True,
+                        )
+                        if result.returncode == 0 and result.stdout.strip():
+                            print(
+                                f"✓ Fixed code block languages: {os.path.basename(md_file)}"
+                            )
+                    except Exception:
+                        # Continue if language fixer fails
+                        pass
+
             # Find markdownlint config
             config_file = find_markdownlint_config(current_dir)
 

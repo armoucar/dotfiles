@@ -10,6 +10,11 @@
     "config/claude/todos": true
   },
 
+  // Exclude docs-external submodules from search
+  "search.exclude": {
+    "docs-external/": true
+  },
+
   // Fix Alt+arrow keys for word navigation in terminal
   "terminal.integrated.sendKeybindingsToShell": false,
   "terminal.integrated.commandsToSkipShell": [

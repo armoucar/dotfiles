@@ -171,12 +171,15 @@ The repository includes a `.markdownlint.json` configuration that disables line 
 
 ### Auto-formatting Behavior
 
-The Claude stop hook (`config/claude/hooks/stop_notification_handler.py`) automatically:
+The Claude stop hooks (`config/claude/hooks/stop/`) automatically:
 
-- Formats modified markdown files using `markdownlint --fix`
-- Formats modified Python files using `ruff format` (if available)
-- Intelligently discovers config files by walking up directory tree
-- Only processes files that were modified during the Claude session
+- **Markdown Formatting** (`stop_markdown_formatter.py`): Fixes MD040 code block language issues and runs `markdownlint --fix`
+- **Python Formatting** (`stop_python_formatter.py`): Formats Python files using `ruff format`
+- **Session Notifications** (`stop_notification.py`): Plays Submarine.aiff completion sound
+- **Tmux Integration** (`stop_tmux_bell.py`): Triggers tmux bell indicator for terminal notifications
+- **Session Summary** (`stop_session_summary.py`): Displays completion status with file counts
+
+All hooks run in parallel, use shared utilities for session isolation, and only process files modified during the current Claude session.
 
 ### Setup
 

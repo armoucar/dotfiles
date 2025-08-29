@@ -25,12 +25,19 @@ Claude Code hooks are managed through a centralized configuration system that:
 - **Script**: `command_logger.py`
 - **Purpose**: Logs all tool usage for tracking and debugging
 
-### 3. Stop Hook
+### 3. Stop Hooks (Modular System)
 
 - **Event**: `Stop`
-- **Script**: `stop_notification_handler.py`
-- **Purpose**: Plays completion sound when Claude finishes responding
-- **Audio**: Uses `Glass.aiff` system sound
+- **Scripts**: Multiple specialized hooks in `stop/` directory
+- **Purpose**: Handles session completion tasks with single-responsibility pattern
+
+#### Stop Hook Components
+
+- **`stop_markdown_formatter.py`** - Auto-formats markdown files (MD040 fixes + markdownlint)
+- **`stop_python_formatter.py`** - Auto-formats Python files with ruff
+- **`stop_notification.py`** - Plays Submarine.aiff completion sound
+- **`stop_tmux_bell.py`** - Triggers tmux bell indicator
+- **`stop_session_summary.py`** - Displays session completion summary
 
 ## Adding New Hooks
 
@@ -132,5 +139,13 @@ Available system sounds in `/System/Library/Sounds/`:
 
 ## Files Modified
 
-- `.claude/hooks/stop_notification_handler.py` (new)
-- `setup-claude.zsh` (updated with Stop hook config)
+- `.claude/hooks/stop/` directory (new modular hooks structure)
+  - `stop_markdown_formatter.py`
+  - `stop_python_formatter.py`
+  - `stop_notification.py`
+  - `stop_tmux_bell.py`
+  - `stop_session_summary.py`
+- `.claude/hooks/utils/` directory (shared utilities)
+  - `session_utils.py`
+  - `config_utils.py`
+- `setup-claude.zsh` (updated with modular Stop hooks config)

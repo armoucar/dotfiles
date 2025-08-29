@@ -111,15 +111,23 @@ The logging system uses `session_id` to isolate operations by session. This enab
 - Debugging specific sessions
 - Creating session activity reports
 
-## Integration with Stop Hook
+## Integration with Stop Hooks
 
-The stop hook (`stop_notification_handler.py`) reads the JSONL log to:
+The modular stop hooks read the JSONL log via shared utilities to:
 
-1. Filter entries by current `session_id`
-2. Extract files modified during the session
-3. Auto-format only those files (markdown with markdownlint, Python with ruff)
+1. **Session Filtering**: Filter entries by current `session_id` (`session_utils.py`)
+2. **File Discovery**: Extract files modified during the session by operation type
+3. **Specialized Processing**: Each hook processes only relevant files:
+   - `stop_markdown_formatter.py` - formats `.md` files only
+   - `stop_python_formatter.py` - formats `.py` files only
+   - `stop_session_summary.py` - counts files by type for reporting
 
-This ensures files are only formatted if they were actually modified in the current session, preventing unwanted formatting of unrelated files.
+This modular approach ensures:
+
+- Only modified files are processed (session isolation)
+- Each hook has single responsibility
+- Hooks run in parallel for better performance
+- Individual hook failures don't affect others
 
 ## Log Rotation
 

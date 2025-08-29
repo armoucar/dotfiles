@@ -1,6 +1,9 @@
 {
-  // Disable line length limits - auto-formatting handles this
   "MD013": false,
-  // Allow files without top-level heading - not all files need H1 first
-  "MD041": false
+  "MD041": false,
+  "MD033": false,
+  "MD040": {
+    "allowed_languages": [],
+    "language_only": false
+  }
 }

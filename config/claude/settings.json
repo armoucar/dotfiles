@@ -241,11 +241,23 @@
         "hooks": [
           {
             "type": "command",
-            "command": "~/.claude/hooks/stop_autoformat.py"
+            "command": "~/.claude/hooks/stop/stop_markdown_formatter.py"
           },
           {
             "type": "command",
-            "command": "~/.claude/hooks/stop_sound.py"
+            "command": "~/.claude/hooks/stop/stop_python_formatter.py"
+          },
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/stop/stop_notification.py"
+          },
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/stop/stop_tmux_bell.py"
+          },
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/stop/stop_session_summary.py"
           }
         ]
       }
