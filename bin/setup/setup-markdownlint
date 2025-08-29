@@ -2,7 +2,7 @@
 # Markdownlint Configuration Setup Script
 # Links markdownlint config to user's home directory for global access
 
-DOTFILES_CONFIG="$HOME/.oh-my-zsh/custom/.markdownlint.json"
+DOTFILES_CONFIG="$HOME/.oh-my-zsh/custom/.markdownlint.jsonc"
 GLOBAL_CONFIG="$HOME/.markdownlint.json"
 
 # Check if dotfiles config exists
@@ -20,7 +20,7 @@ elif [ -L "$GLOBAL_CONFIG" ] && [ ! -e "$GLOBAL_CONFIG" ]; then
     rm "$GLOBAL_CONFIG"
 fi
 
-# Create symlink if it doesn't exist or points to wrong location
+# Create symlink from .jsonc to .json if it doesn't exist or points to wrong location
 if [ ! -L "$GLOBAL_CONFIG" ] || [ "$(readlink "$GLOBAL_CONFIG")" != "$DOTFILES_CONFIG" ]; then
     ln -sfn "$DOTFILES_CONFIG" "$GLOBAL_CONFIG"
 fi

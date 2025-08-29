@@ -1,0 +1,428 @@
+#!/usr/bin/env python3
+
+import argparse
+import json
+import subprocess
+import sys
+from collections import defaultdict
+from datetime import datetime, timedelta, timezone
+from typing import Dict, List, Any, Optional
+
+
+def run_cmd(cmd: List[str], verbose: bool = False) -> str:
+    """Run a command and return its output."""
+    if verbose:
+        print(f"Executing: {' '.join(cmd)}")
+    
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+        return result.stdout
+    except subprocess.CalledProcessError as e:
+        print(f"Error executing command: {' '.join(cmd)}")
+        print(f"Error details: {e}")
+        print(f"stderr: {e.stderr}")
+        sys.exit(1)
+
+
+def get_current_user(verbose: bool = False) -> str:
+    """Get the current GitHub user."""
+    cmd = ["gh", "api", "user"]
+    output = run_cmd(cmd, verbose)
+    
+    try:
+        user_data = json.loads(output)
+        return user_data['login']
+    except (json.JSONDecodeError, KeyError) as e:
+        print(f"Error getting current user: {e}")
+        sys.exit(1)
+
+
+def fetch_github_events(verbose: bool = False) -> List[Dict[str, Any]]:
+    """Fetch GitHub events using gh CLI."""
+    username = get_current_user(verbose)
+    cmd = ["gh", "api", f"/users/{username}/events", "--paginate"]
+    output = run_cmd(cmd, verbose)
+    
+    try:
+        events = json.loads(output)
+        return events
+    except json.JSONDecodeError as e:
+        print(f"Error parsing JSON response: {e}")
+        sys.exit(1)
+
+
+def parse_date(date_str: str) -> datetime:
+    """Parse GitHub API date string to datetime object."""
+    return datetime.fromisoformat(date_str.replace('Z', '+00:00'))
+
+
+def filter_events_by_date(events: List[Dict[str, Any]], days: int) -> List[Dict[str, Any]]:
+    """Filter events to only include those from the last N days."""
+    cutoff_date = datetime.now(timezone.utc) - timedelta(days=days)
+    filtered_events = []
+    
+    for event in events:
+        event_date = parse_date(event['created_at'])
+        if event_date >= cutoff_date:
+            filtered_events.append(event)
+    
+    return filtered_events
+
+
+def categorize_events(events: List[Dict[str, Any]]) -> Dict[str, List[Dict[str, Any]]]:
+    """Categorize events by type."""
+    categories = defaultdict(list)
+    
+    for event in events:
+        event_type = event['type']
+        categories[event_type].append(event)
+    
+    return dict(categories)
+
+
+def analyze_push_events(events: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Analyze push events for commit statistics."""
+    stats = {
+        'total_pushes': len(events),
+        'total_commits': 0,
+        'repositories': set(),
+        'commit_details': []
+    }
+    
+    for event in events:
+        repo_name = event['repo']['name']
+        stats['repositories'].add(repo_name)
+        
+        payload = event.get('payload', {})
+        commits = payload.get('commits', [])
+        stats['total_commits'] += len(commits)
+        
+        for commit in commits:
+            stats['commit_details'].append({
+                'repo': repo_name,
+                'sha': commit['sha'][:7],
+                'message': commit['message'],
+                'date': event['created_at']
+            })
+    
+    stats['repositories'] = list(stats['repositories'])
+    return stats
+
+
+def analyze_pull_request_events(events: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Analyze pull request events."""
+    stats = {
+        'opened': 0,
+        'closed': 0,
+        'merged': 0,
+        'repositories': set(),
+        'pr_details': []
+    }
+    
+    for event in events:
+        payload = event.get('payload', {})
+        action = payload.get('action', '')
+        pr = payload.get('pull_request', {})
+        
+        repo_name = event['repo']['name']
+        stats['repositories'].add(repo_name)
+        
+        if action == 'opened':
+            stats['opened'] += 1
+        elif action == 'closed':
+            if pr.get('merged'):
+                stats['merged'] += 1
+            else:
+                stats['closed'] += 1
+        
+        # Get detailed PR information
+        pr_detail = {
+            'repo': repo_name,
+            'action': action,
+            'title': pr.get('title', 'N/A'),
+            'number': pr.get('number', 'N/A'),
+            'date': event['created_at'],
+            'body': pr.get('body', 'N/A'),
+            'url': pr.get('html_url', 'N/A'),
+            'state': pr.get('state', 'N/A'),
+            'merged': pr.get('merged', False),
+            'draft': pr.get('draft', False),
+            'additions': pr.get('additions', 0),
+            'deletions': pr.get('deletions', 0),
+            'changed_files': pr.get('changed_files', 0),
+            'base_branch': pr.get('base', {}).get('ref', 'N/A'),
+            'head_branch': pr.get('head', {}).get('ref', 'N/A')
+        }
+        
+        stats['pr_details'].append(pr_detail)
+    
+    stats['repositories'] = list(stats['repositories'])
+    return stats
+
+
+def analyze_issue_events(events: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Analyze issue events."""
+    stats = {
+        'opened': 0,
+        'closed': 0,
+        'repositories': set(),
+        'issue_details': []
+    }
+    
+    for event in events:
+        payload = event.get('payload', {})
+        action = payload.get('action', '')
+        issue = payload.get('issue', {})
+        
+        repo_name = event['repo']['name']
+        stats['repositories'].add(repo_name)
+        
+        if action == 'opened':
+            stats['opened'] += 1
+        elif action == 'closed':
+            stats['closed'] += 1
+        
+        # Get detailed issue information
+        issue_detail = {
+            'repo': repo_name,
+            'action': action,
+            'title': issue.get('title', 'N/A'),
+            'number': issue.get('number', 'N/A'),
+            'date': event['created_at'],
+            'body': issue.get('body', 'N/A'),
+            'url': issue.get('html_url', 'N/A'),
+            'state': issue.get('state', 'N/A'),
+            'labels': [label.get('name', '') for label in issue.get('labels', [])],
+            'assignees': [assignee.get('login', '') for assignee in issue.get('assignees', [])],
+            'milestone': issue.get('milestone', {}).get('title', 'N/A') if issue.get('milestone') else 'N/A',
+            'comments': issue.get('comments', 0)
+        }
+        
+        stats['issue_details'].append(issue_detail)
+    
+    stats['repositories'] = list(stats['repositories'])
+    return stats
+
+
+def format_table(headers: List[str], rows: List[List[str]]) -> str:
+    """Format data as a nice ASCII table."""
+    if not rows:
+        return "No data to display"
+    
+    # Calculate column widths
+    col_widths = [len(h) for h in headers]
+    for row in rows:
+        for i, cell in enumerate(row):
+            col_widths[i] = max(col_widths[i], len(str(cell)))
+    
+    # Create separator line
+    separator = "+" + "+".join("-" * (width + 2) for width in col_widths) + "+"
+    
+    # Create header
+    header = "|" + "|".join(f" {h:{col_widths[i]}} " for i, h in enumerate(headers)) + "|"
+    
+    # Create rows
+    formatted_rows = []
+    for row in rows:
+        formatted_row = "|" + "|".join(f" {str(cell):{col_widths[i]}} " for i, cell in enumerate(row)) + "|"
+        formatted_rows.append(formatted_row)
+    
+    # Combine all parts
+    table = [separator, header, separator, *formatted_rows, separator]
+    
+    return "\n".join(table)
+
+
+def display_activity_summary(events: List[Dict[str, Any]], days: int):
+    """Display a comprehensive activity summary."""
+    print(f"\n🚀 GitHub Activity Summary - Last {days} days")
+    print("=" * 50)
+    
+    if not events:
+        print("No activity found in the specified time period.")
+        return
+    
+    # Categorize events
+    categories = categorize_events(events)
+    
+    # Overall stats
+    print(f"\n📊 Overall Statistics:")
+    print(f"   Total Events: {len(events)}")
+    print(f"   Event Types: {len(categories)}")
+    
+    # Repositories involved
+    repos = set()
+    for event in events:
+        repos.add(event['repo']['name'])
+    print(f"   Repositories: {len(repos)}")
+    
+    # Detailed analysis by event type
+    event_type_mappings = {
+        'PushEvent': '📝 Code Pushes',
+        'PullRequestEvent': '🔀 Pull Requests',
+        'IssuesEvent': '🐛 Issues',
+        'IssueCommentEvent': '💬 Issue Comments',
+        'PullRequestReviewEvent': '👀 PR Reviews',
+        'PullRequestReviewCommentEvent': '📝 Review Comments',
+        'WatchEvent': '⭐ Stars',
+        'ForkEvent': '🍴 Forks',
+        'CreateEvent': '🆕 Created',
+        'DeleteEvent': '🗑️  Deleted',
+        'ReleaseEvent': '🏷️  Releases'
+    }
+    
+    print(f"\n📈 Activity Breakdown:")
+    headers = ["Event Type", "Count", "Percentage"]
+    rows = []
+    
+    total_events = len(events)
+    for event_type, event_list in sorted(categories.items(), key=lambda x: len(x[1]), reverse=True):
+        count = len(event_list)
+        percentage = (count / total_events * 100) if total_events > 0 else 0
+        display_name = event_type_mappings.get(event_type, event_type)
+        rows.append([display_name, str(count), f"{percentage:.1f}%"])
+    
+    print(format_table(headers, rows))
+    
+    # Detailed analysis for major event types
+    if 'PushEvent' in categories:
+        push_stats = analyze_push_events(categories['PushEvent'])
+        print(f"\n📝 Push Activity Details:")
+        print(f"   Total Pushes: {push_stats['total_pushes']}")
+        print(f"   Total Commits: {push_stats['total_commits']}")
+        print(f"   Repositories: {len(push_stats['repositories'])}")
+        
+        if push_stats['commit_details']:
+            print(f"\n   Recent Commits:")
+            for commit in push_stats['commit_details'][-10:]:  # Show last 10
+                date = parse_date(commit['date']).strftime('%m-%d %H:%M')
+                message = commit['message']
+                print(f"     {date} [{commit['sha']}] {commit['repo']}: {message}")
+    
+    if 'PullRequestEvent' in categories:
+        pr_stats = analyze_pull_request_events(categories['PullRequestEvent'])
+        print(f"\n🔀 Pull Request Activity:")
+        print(f"   Opened: {pr_stats['opened']}")
+        print(f"   Merged: {pr_stats['merged']}")
+        print(f"   Closed: {pr_stats['closed']}")
+        print(f"   Repositories: {len(pr_stats['repositories'])}")
+        
+        if pr_stats['pr_details']:
+            print(f"\n   📋 Pull Request Details:")
+            for pr in sorted(pr_stats['pr_details'], key=lambda x: x['date'], reverse=True):
+                date = parse_date(pr['date']).strftime('%m-%d %H:%M')
+                action_emoji = "🆕" if pr['action'] == 'opened' else ("✅" if pr['action'] == 'closed' and pr['merged'] else "❌")
+                draft_indicator = " [DRAFT]" if pr['draft'] else ""
+                
+                print(f"     {action_emoji} {date} #{pr['number']} ({pr['repo']}){draft_indicator}")
+                print(f"       Title: {pr['title']}")
+                
+                if pr['action'] == 'opened' and pr['body'] and pr['body'] != 'N/A':
+                    body_full = pr['body'].replace('\n', ' ')
+                    print(f"       Description: {body_full}")
+                
+                if pr['additions'] > 0 or pr['deletions'] > 0:
+                    print(f"       Changes: +{pr['additions']} -{pr['deletions']} ({pr['changed_files']} files)")
+                
+                if pr['base_branch'] != 'N/A' and pr['head_branch'] != 'N/A':
+                    print(f"       Branch: {pr['head_branch']} → {pr['base_branch']}")
+                
+                print(f"       URL: {pr['url']}")
+                print()
+    
+    if 'IssuesEvent' in categories:
+        issue_stats = analyze_issue_events(categories['IssuesEvent'])
+        print(f"\n🐛 Issue Activity:")
+        print(f"   Opened: {issue_stats['opened']}")
+        print(f"   Closed: {issue_stats['closed']}")
+        print(f"   Repositories: {len(issue_stats['repositories'])}")
+        
+        if issue_stats['issue_details']:
+            print(f"\n   📋 Issue Details:")
+            for issue in sorted(issue_stats['issue_details'], key=lambda x: x['date'], reverse=True):
+                date = parse_date(issue['date']).strftime('%m-%d %H:%M')
+                action_emoji = "🆕" if issue['action'] == 'opened' else "✅"
+                
+                print(f"     {action_emoji} {date} #{issue['number']} ({issue['repo']})")
+                print(f"       Title: {issue['title']}")
+                
+                if issue['body'] and issue['body'] != 'N/A':
+                    body_full = issue['body'].replace('\n', ' ')
+                    print(f"       Description: {body_full}")
+                
+                if issue['labels']:
+                    labels_str = ', '.join(issue['labels'])
+                    print(f"       Labels: {labels_str}")
+                
+                if issue['assignees']:
+                    assignees_str = ', '.join(issue['assignees'])
+                    print(f"       Assignees: {assignees_str}")
+                
+                if issue['milestone'] != 'N/A':
+                    print(f"       Milestone: {issue['milestone']}")
+                
+                if issue['comments'] > 0:
+                    print(f"       Comments: {issue['comments']}")
+                
+                print(f"       URL: {issue['url']}")
+                print()
+    
+    # Repository activity summary
+    print(f"\n🏗️  Repository Activity:")
+    repo_activity = defaultdict(int)
+    for event in events:
+        repo_activity[event['repo']['name']] += 1
+    
+    headers = ["Repository", "Events", "Percentage"]
+    rows = []
+    
+    for repo, count in sorted(repo_activity.items(), key=lambda x: x[1], reverse=True)[:10]:
+        percentage = (count / total_events * 100) if total_events > 0 else 0
+        rows.append([repo, str(count), f"{percentage:.1f}%"])
+    
+    print(format_table(headers, rows))
+
+
+def parse_arguments():
+    """Parse command line arguments."""
+    parser = argparse.ArgumentParser(
+        description="Display GitHub activity statistics using the GitHub API"
+    )
+    parser.add_argument(
+        "-d",
+        type=int,
+        default=14,
+        help="Number of days to look back (default: 14)"
+    )
+    return parser.parse_args()
+
+
+def main():
+    """Main function."""
+    args = parse_arguments()
+    
+    # Always use verbose mode
+    verbose = True
+    
+    # Check if gh CLI is available
+    try:
+        run_cmd(["gh", "--version"], verbose)
+    except Exception:
+        print("Error: GitHub CLI (gh) is not installed or not authenticated.")
+        print("Please install gh CLI and authenticate with 'gh auth login'")
+        sys.exit(1)
+    
+    print("🔍 Fetching GitHub activity...")
+    
+    # Fetch events
+    events = fetch_github_events(verbose)
+    
+    # Filter by date
+    filtered_events = filter_events_by_date(events, args.d)
+    
+    # Display results
+    display_activity_summary(filtered_events, args.d)
+
+
+if __name__ == "__main__":
+    main()

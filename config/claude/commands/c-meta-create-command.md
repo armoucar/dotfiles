@@ -6,7 +6,7 @@ description: Create a new user command with c- prefix and full guidance
 
 # Create New User Command
 
-Create a new user command named `/c-$ARGUMENTS` in the ~/.claude/commands/ directory.
+Create a new user command in the ~/.claude/commands/ directory with the `c-` prefix naming convention.
 
 ## Process
 
@@ -14,16 +14,19 @@ Create a new user command named `/c-$ARGUMENTS` in the ~/.claude/commands/ direc
    - Read @docs-external/claude-code-docs/docs/slash-commands.md
    - Review custom slash command features and syntax
 
-2. Create the command following these guidelines:
-   - Use the `c-` prefix naming convention
+2. Parse the arguments to extract command name and description from `$ARGUMENTS`
+
+3. Create the command following these guidelines:
+   - **IMPORTANT**: Always use the `c-` prefix in the filename (e.g., `c-git-approve.md`)
    - Save as `.md` file in `~/.claude/commands/`
+   - The actual slash command will be `/c-[name]` (e.g., `/c-git-approve`)
    - Include proper frontmatter with:
      - `description`: Brief command description
      - `allowed-tools`: Tools the command can use
      - `argument-hint`: Expected arguments format
      - `model`: Specific model if needed
 
-3. Template structure:
+4. Template structure:
 
    ```markdown
    ---
@@ -32,7 +35,7 @@ Create a new user command named `/c-$ARGUMENTS` in the ~/.claude/commands/ direc
    description: [brief description]
    ---
 
-   [Command prompt content]
+   [Command prompt content using $ARGUMENTS]
    ```
 
-Extract the command name (without c- prefix) and description from the arguments to create a well-structured, functional user command.
+**Critical**: The filename MUST start with `c-` prefix. For example, if creating a git approval command, the file should be named `c-git-approve.md`, making the command available as `/c-git-approve`.
